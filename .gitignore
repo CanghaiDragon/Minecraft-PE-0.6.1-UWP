@@ -1,0 +1,56 @@
+# Visual Studio caches
+.vs/
+.build-temp/
+*.VC.db
+*.VC.opendb
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# UWP build output directories
+/handheld/project/uwp/x64/Debug/
+/handheld/project/uwp/x64/Release/
+
+/handheld/project/uwp/MCPEUWP/MCPEUWP/x64/Debug/
+/handheld/project/uwp/MCPEUWP/MCPEUWP/x64/Release/
+
+/handheld/project/uwp/MCPEUWP/MCPEUWP/MCPEUWP/x64/Debug/
+/handheld/project/uwp/MCPEUWP/MCPEUWP/MCPEUWP/x64/Release/
+
+# UWP generated files
+**/Generated Files/
+**/AppPackages/
+**/BundleArtifacts/
+
+# Compiler and linker outputs
+*.obj
+*.pch
+*.ipch
+*.pdb
+*.map
+*.tlog
+*.lastbuildstate
+*.ilk
+*.exp
+*.iobj
+*.ipdb
+*.idb
+
+# AppX packaging outputs
+*.appx
+*.appxbundle
+*.appxsym
+*.appxrecipe
+*.build.appxrecipe
+*.xbf
+
+# Local signing certificates
+*.pfx
+
+# Temporary logs
+*.log
+
+#Cache
+**/Debug/
+**/Release/

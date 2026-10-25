@@ -1,0 +1,176 @@
+﻿<Page
+    x:Class="MCPEUWP.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:MCPEUWP"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid Background="#FF101010">
+        <SwapChainPanel x:Name="AnglePanel" />
+
+        <!-- Temporary startup diagnostics.  The EGL surface can be completely
+             white when initialization stops before the first present, so keep
+             the state visible in XAML until the first frame is confirmed. -->
+        <Border x:Name="StartupDiagnostic"
+                Canvas.ZIndex="100"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Margin="16"
+                Padding="8"
+                Background="#DD000000"
+                IsHitTestVisible="False">
+            <StackPanel>
+                <TextBlock x:Name="StartupStage"
+                           Foreground="White"
+                           FontSize="16"
+                           Text="Starting MCPE UWP..." />
+                <TextBlock x:Name="StartupDetails"
+                           Foreground="#FFFFD080"
+                           FontSize="12"
+                           TextWrapping="Wrap"
+                           Text="DIAG 2026-10-02 | waiting for MainPage.OnLoaded" />
+            </StackPanel>
+        </Border>
+
+        <!-- The original MCPE menu opens this native UWP surface through the
+             bridge.  Keeping it as an overlay leaves the original menu and
+             game loop alive underneath, so returning to the menu is instant. -->
+        <Grid x:Name="SkinOverlay"
+              Canvas.ZIndex="200"
+              Visibility="Collapsed"
+              Background="Transparent">
+            <Canvas x:Name="SkinDirtBackground"
+                    SizeChanged="OnSkinBackgroundSizeChanged"
+                    IsHitTestVisible="False" />
+            <Rectangle Fill="#18000000"
+                       IsHitTestVisible="False" />
+            <Border HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    Padding="48"
+                    Background="#55000000"
+                    BorderThickness="0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Text="Skin"
+                               Foreground="White"
+                               FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                               FontSize="28"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,20" />
+
+                    <StackPanel Grid.Row="1"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                Margin="0,0,0,20">
+                            <Border Width="160"
+                                    Height="160"
+                                    Background="#FF101010"
+                                    BorderBrush="#FF606060"
+                                    BorderThickness="1"
+                                    Padding="8">
+                                <Image x:Name="SkinPreview"
+                                       Stretch="Uniform" />
+                            </Border>
+                            <StackPanel Width="300"
+                                        Margin="24,0,0,0"
+                                        VerticalAlignment="Center">
+                                <TextBlock Text="Arm Type"
+                                           Foreground="White"
+                                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                           FontSize="16"
+                                           Margin="0,0,0,8" />
+                                <ComboBox x:Name="SkinArmTypeComboBox"
+                                          FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                          SelectedIndex="0"
+                                          SelectionChanged="OnSkinArmTypeChanged">
+                                    <ComboBoxItem Content="Classic"
+                                                  FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft" />
+                                    <ComboBoxItem Content="Slim"
+                                                  FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft" />
+                                </ComboBox>
+                                <TextBlock Text="Use a 64x64 PNG skin."
+                                           Foreground="#FFB0B0B0"
+                                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                           TextWrapping="Wrap"
+                                           Margin="0,14,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+                        <TextBlock x:Name="SkinStatusText"
+                                   Foreground="#FFFFD080"
+                                   FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                   TextWrapping="Wrap"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,0,0,18" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="2"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                Margin="0,24,0,24">
+                        <Button Content="Import Skin"
+                                Click="OnSkinImportClick"
+                                FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                Width="210"
+                                Height="64"
+                                FontSize="20"
+                                Foreground="White"
+                                Margin="0,0,12,0" />
+                        <Button Content="Clear Skin"
+                                Click="OnSkinClearClick"
+                                FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                Width="210"
+                                Height="64"
+                                FontSize="20"
+                                Foreground="White"
+                                Margin="0,0,12,0" />
+                        <Button Content="Back"
+                                Click="OnSkinBackClick"
+                                FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                Width="180"
+                                Height="64"
+                                FontSize="20"
+                                Foreground="White" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Grid x:Name="KeyMappingOverlay"
+              Canvas.ZIndex="210"
+              Visibility="Collapsed"
+              Background="Transparent">
+            <Canvas x:Name="KeyMappingDirtBackground"
+                    SizeChanged="OnSkinBackgroundSizeChanged"
+                    IsHitTestVisible="False" />
+            <Rectangle Fill="#18000000"
+                       IsHitTestVisible="False" />
+            <Frame x:Name="KeyMappingFrame"
+                   Background="Transparent" />
+        </Grid>
+
+        <Grid x:Name="WorldEditOverlay"
+              Canvas.ZIndex="220"
+              Visibility="Collapsed"
+              Background="Transparent">
+            <Canvas x:Name="WorldEditDirtBackground"
+                    SizeChanged="OnSkinBackgroundSizeChanged"
+                    IsHitTestVisible="False" />
+            <Rectangle Fill="#18000000"
+                       IsHitTestVisible="False" />
+            <Frame x:Name="WorldEditFrame"
+                   Background="Transparent" />
+        </Grid>
+    </Grid>
+</Page>

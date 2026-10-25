@@ -1,0 +1,689 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{3e3a1c1d-4c6d-4c5c-9f5a-47e5dcc7a31a}</ProjectGuid>
+    <RootNamespace>MCPEUWP</RootNamespace>
+    <DefaultLanguage>zh-CN</DefaultLanguage>
+    <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
+    <AppContainerApplication>true</AppContainerApplication>
+    <ApplicationType>Windows Store</ApplicationType>
+    <WindowsTargetPlatformVersion Condition=" '$(WindowsTargetPlatformVersion)' == '' ">10.0.26100.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.10240.0</WindowsTargetPlatformMinVersion>
+    <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
+    <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|ARM64">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM64">
+      <Configuration>Release</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <UseDotNetNativeToolchain>true</UseDotNetNativeToolchain>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v143</PlatformToolset>
+    <UseDotNetNativeToolchain>true</UseDotNetNativeToolchain>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v143</PlatformToolset>
+    <UseDotNetNativeToolchain>true</UseDotNetNativeToolchain>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v143</PlatformToolset>
+    <UseDotNetNativeToolchain>true</UseDotNetNativeToolchain>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <AngleRoot>$(ProjectDir)..\..\..\..\..\third_party\angle_windowsstore</AngleRoot>
+    <AnglePlatform Condition="'$(Platform)' == 'Win32'">Win32</AnglePlatform>
+    <AnglePlatform Condition="'$(Platform)' == 'x64'">x64</AnglePlatform>
+    <AnglePlatform Condition="'$(Platform)' == 'ARM'">ARM</AnglePlatform>
+    <AngleLibDir>$(AngleRoot)\bin\UAP\$(AnglePlatform)</AngleLibDir>
+    <ZlibRoot>$(ProjectDir)..\..\..\..\lib</ZlibRoot>
+    <ZlibPlatform Condition="'$(Platform)' == 'Win32'">x86</ZlibPlatform>
+    <ZlibPlatform Condition="'$(Platform)' == 'x64'">x64</ZlibPlatform>
+    <ZlibPlatform Condition="'$(Platform)' == 'ARM'">arm</ZlibPlatform>
+    <ZlibPlatform Condition="'$(Platform)' == 'ARM64'">arm64</ZlibPlatform>
+    <ZlibLibDir>$(ZlibRoot)\lib\$(ZlibPlatform)</ZlibLibDir>
+    <ZlibBinDir>$(ZlibRoot)\bin\$(ZlibPlatform)</ZlibBinDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(AngleRoot)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(AngleLibDir);$(ZlibLibDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libEGL.lib;libGLESv2.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <!-- RakNet predates the UCRT's POSIX-name policy.  Keep its original
+           cross-platform calls, but suppress only the UWP target's CRT
+           deprecation diagnostics; the Win32 projects are unaffected. -->
+      <PreprocessorDefinitions>MCPE_UWP;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\src;$(ProjectDir)..\..\..\..\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <!-- RakNet's original Win32 socket transport uses Winsock.  The
+           UWP target still links the platform-approved Winsock import
+           library; the networking code itself remains behind the AppContainer
+           networking capability in Package.appxmanifest. -->
+      <AdditionalLibraryDirectories>$(ZlibLibDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>dwrite.lib;xaudio2.lib;ws2_32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros">
+    <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
+    <PackageCertificateThumbprint>454A3461584CC671165F8430913FD684E4324B69</PackageCertificateThumbprint>
+    <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
+    <AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
+    <AppxPackageDir>D:\MCPE_0.6.1\MCPEUWP_Pack\</AppxPackageDir>
+    <GenerateTestArtifacts>True</GenerateTestArtifacts>
+    <AppxBundle>Always</AppxBundle>
+    <AppxBundlePlatforms>x64</AppxBundlePlatforms>
+    <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+    <ClCompile>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
+    <ClCompile>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <!-- Do not emit CodeView/PDB data in Release.  The UWP XAML PCH step
+           otherwise depends on a matching installed PDB provider and can
+           fail with C1902 on mixed VS toolsets. -->
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <PreprocessorDefinitions>NDEBUG;MCPE_UWP_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <PreprocessorDefinitions>NDEBUG;MCPE_UWP_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <!-- The original client closure is split across several item groups;
+           MSBuild can invoke more than one CL process even with /MP1.  Force
+           serialized PDB writes so a source error is not masked by C1041 and
+           the follow-on CompileXaml/MSB4181 diagnostic. -->
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <!-- TileRenderer.cpp contains original GUI/entity-tile entry points that
+           are not part of this round's cube seam.  Keep function-level
+           linking and discard those unreferenced COMDATs in Debug too, so
+           their dispatcher symbols are not made artificial UWP dependencies. -->
+      <OptimizeReferences>true</OptimizeReferences>
+      <LinkIncremental>false</LinkIncremental>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalOptions>/bigobj /FS %(AdditionalOptions)</AdditionalOptions>
+      <!-- Use ordinary /Zi PDBs for package diagnostics.  Edit-and-Continue
+           (/ZI) is incompatible with Release whole-program optimization
+           (/GL), and causes D8016 during the XAML build. -->
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <PreprocessorDefinitions>NDEBUG;MCPE_UWP_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="..\..\..\..\src\AppPlatform_uwp.h" />
+    <ClInclude Include="..\..\..\..\src\platform\uwp\UwpAngleContext.h" />
+    <ClInclude Include="..\..\..\..\src\platform\uwp\UwpCoreSession.h" />
+    <ClInclude Include="..\..\..\..\src\platform\uwp\UwpGameLoop.h" />
+    <ClInclude Include="..\..\..\..\src\platform\uwp\UwpLevelDatSmoke.h" />
+    <ClInclude Include="..\..\..\..\src\platform\uwp\UwpOriginalClientHost.h" />
+    <ClInclude Include="..\..\..\..\src\platform\uwp\UwpOriginalClientBridge.h" />
+    <ClInclude Include="..\..\..\..\src\platform\uwp\UwpStoragePaths.h" />
+    <ClInclude Include="..\..\..\..\src\platform\uwp\UwpUiRenderer.h" />
+    <ClInclude Include="..\..\..\..\src\platform\uwp\UwpWorldRenderer.h" />
+    <ClInclude Include="..\..\..\..\src\platform\uwp\UwpSettingsModel.h" />
+    <ClInclude Include="..\..\..\..\src\platform\audio\SoundSystemUwp.h" />
+    <ClInclude Include="..\..\..\..\src\client\renderer\MatrixStack.h" />
+    <ClInclude Include="..\..\..\..\src\client\renderer\gles.h" />
+    <ClInclude Include="..\..\..\..\src\client\renderer\Textures.h" />
+    <ClInclude Include="..\..\..\..\src\client\gui\Font.h" />
+    <ClInclude Include="..\..\..\..\src\client\renderer\Tesselator.h" />
+    <ClInclude Include="..\..\..\..\src\client\renderer\RenderChunk.h" />
+    <ClInclude Include="..\..\..\..\src\client\renderer\Chunk.h" />
+    <ClInclude Include="..\..\..\..\src\client\renderer\RenderList.h" />
+    <ClInclude Include="..\..\..\..\src\client\renderer\TileRenderer.h" />
+    <ClInclude Include="App.xaml.h">
+      <DependentUpon>App.xaml</DependentUpon>
+    </ClInclude>
+    <ClInclude Include="MainPage.xaml.h">
+      <DependentUpon>MainPage.xaml</DependentUpon>
+    </ClInclude>
+    <ClInclude Include="WorldsPage.xaml.h">
+      <DependentUpon>WorldsPage.xaml</DependentUpon>
+    </ClInclude>
+    <ClInclude Include="KeyMappingPage.xaml.h">
+      <DependentUpon>KeyMappingPage.xaml</DependentUpon>
+    </ClInclude>
+    <ClInclude Include="WorldEditPage.xaml.h">
+      <DependentUpon>WorldEditPage.xaml</DependentUpon>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ApplicationDefinition Include="App.xaml">
+      <SubType>Designer</SubType>
+    </ApplicationDefinition>
+    <Page Include="MainPage.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="WorldsPage.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="KeyMappingPage.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="WorldEditPage.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <AppxManifest Include="Package.appxmanifest">
+      <SubType>Designer</SubType>
+    </AppxManifest>
+  </ItemGroup>
+  <ItemGroup Condition="'$(Platform)' == 'x64'">
+    <Content Include="$(AngleLibDir)\libEGL.dll">
+      <Link>libEGL.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(AngleLibDir)\libGLESv2.dll">
+      <Link>libGLESv2.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="$(ZlibBinDir)\zlib1.dll">
+      <Link>zlib1.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="data\images\**\*">
+      <DeploymentContent>true</DeploymentContent>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="data\fonts\**\*">
+      <DeploymentContent>true</DeploymentContent>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\..\data\lang\en_US.lang">
+      <Link>data\lang\en_US.lang</Link>
+      <DeploymentContent>true</DeploymentContent>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Assets\LockScreenLogo.scale-200.png" />
+    <Image Include="Assets\SplashScreen.scale-200.png" />
+    <Image Include="Assets\Square150x150Logo.scale-200.png" />
+    <Image Include="Assets\Square44x44Logo.scale-200.png" />
+    <Image Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
+    <Image Include="Assets\Square71x71Logo.scale-200.png" />
+    <Image Include="Assets\StoreLogo.png" />
+    <Image Include="Assets\Wide310x150Logo.scale-200.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="App.xaml.cpp">
+      <DependentUpon>App.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="MainPage.xaml.cpp">
+      <DependentUpon>MainPage.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="WorldsPage.xaml.cpp">
+      <DependentUpon>WorldsPage.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="KeyMappingPage.xaml.cpp">
+      <DependentUpon>KeyMappingPage.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="WorldEditPage.xaml.cpp">
+      <DependentUpon>WorldEditPage.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\AppPlatform_uwp.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\platform\uwp\UwpAngleContext.cpp" />
+    <ClCompile Include="..\..\..\..\src\platform\uwp\UwpCoreSession.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <!-- UwpCoreSession now constructs LocalPlayer for the original
+           Minecraft::tick hand-off.  Keep its class layout identical to the
+           non-server client translation units; the fallback simulation still
+           remains available when no original client is bound. -->
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;MCPE_UWP_ORIGINAL_CLIENT_LOOP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4703;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\platform\uwp\UwpGameLoop.cpp" />
+    <!-- Minecraft::setLevel uses the original background generation thread
+	     wrapper; keep its real Win32 implementation in the UWP closure. -->
+    <ClCompile Include="..\..\..\..\src\platform\CThread.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\platform\uwp\UwpLevelDatSmoke.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;STANDALONE_SERVER;NO_NETWORK;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\platform\uwp\UwpOriginalClientHost.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <!-- Original client bridge.  MainPage enters the real init/update path
+         only after its packaged texture preload and keeps UWP presentation
+         and world ownership explicit. -->
+    <ClCompile Include="..\..\..\..\src\platform\uwp\UwpOriginalClientBridge.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;MCPE_UWP_ORIGINAL_CLIENT_LOOP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\platform\uwp\UwpStoragePaths.cpp" />
+    <ClCompile Include="..\..\..\..\src\platform\uwp\UwpUiRenderer.cpp" />
+    <ClCompile Include="..\..\..\..\src\platform\uwp\UwpWorldRenderer.cpp" />
+    <ClCompile Include="..\..\..\..\src\platform\uwp\UwpSettingsModel.cpp" />
+    <ClCompile Include="..\..\..\..\src\NinecraftApp.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;MCPE_UWP_ORIGINAL_CLIENT_LOOP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\Minecraft.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;MCPE_UWP_ORIGINAL_CLIENT_LOOP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <!-- Original client dependency closure.  Most units retain the lifecycle
+         guard; NinecraftApp/Minecraft opt into the controlled UWP loop above. -->
+    <ClCompile Include="..\..\..\..\src\client\gamemode\GameMode.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\gamemode\CreativeMode.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\gamemode\SurvivalMode.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\gamemode\CreatorMode.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\gui\Gui.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\gui\GuiComponent.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\gui\Screen.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\gui\screens\ScreenChooser.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\particle\Particle.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\particle\ParticleEngine.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\renderer\ItemInHandRenderer.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\renderer\culling\Frustum.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\renderer\GameRenderer.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\renderer\LevelRenderer.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <!-- The remaining original client translation units are included as a
+          compile/link closure for the non-server Minecraft layout.  Wildcards
+          keep this list aligned with the Win32 client without activating the
+         lifecycle host.  UWP uses the native XAudio2 backend while retaining
+         the original embedded PCM descriptors and SoundEngine call sites. -->
+    <ClCompile Include="..\..\..\..\src\client\sound\SoundEngine.cpp;..\..\..\..\src\client\sound\Sound.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\platform\audio\SoundSystemUwp.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\gui\components\**\*.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\gui\screens\**\*.cpp" Exclude="..\..\..\..\src\client\gui\screens\ScreenChooser.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\model\**\*.cpp" Exclude="..\..\..\..\src\client\model\geom\**\*.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\renderer\entity\**\*.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\player\**\*.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\IConfigListener.cpp;..\..\..\..\src\client\MouseHandler.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\platform\input\Controller.cpp;..\..\..\..\src\platform\input\Mouse.cpp;..\..\..\..\src\platform\input\Multitouch.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <!-- Minecraft::init() constructs the original performance overlay after
+         GameRenderer.  Compile its real implementation now, but leave the
+         init/update entry points lifecycle-gated so UWP remains the owner. -->
+    <ClCompile Include="..\..\..\..\src\util\PerfRenderer.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <!-- GLES2 fixed-function compatibility seam.  The original
+         Textures/Font/Tesselator/TileRenderer sources remain the validated
+         UWP graphics path; the client renderer closure above is compiled but
+         remains dormant behind the lifecycle host. -->
+    <ClCompile Include="..\..\..\..\src\client\renderer\MatrixStack.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\renderer\gles.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\renderer\ptexture\DynamicTexture.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\renderer\Textures.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <!-- Options is used by the original Textures constructor.  Keep its
+         small file-backed dependency separate from the full client/options
+         subsystem; no options UI or persistence path is enabled here. -->
+    <ClCompile Include="..\..\..\..\src\client\OptionsFile.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\Options.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\OptionStrings.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <!-- Original bitmap Font smoke path.  Tesselator and RenderChunk are
+         linked only because Font's original drawSlow/buildChar methods refer
+         to them; no original GUI screen is constructed yet. -->
+    <ClCompile Include="..\..\..\..\src\client\gui\Font.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\renderer\Tesselator.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\renderer\RenderChunk.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <!-- Original Chunk/RenderList seam.  This keeps the MCPE chunk
+         tessellation, dirty flags and RenderChunk VBO records intact; the
+         UWP renderer only supplies the bounded window and GLES2 submission. -->
+    <ClCompile Include="..\..\..\..\src\client\renderer\Chunk.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\renderer\RenderList.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <!-- Original single-block renderer seam.  This is intentionally kept
+         outside Chunk/LevelRenderer; UwpWorldRenderer owns the fallback and
+         calls only TileRenderer::tesselateBlockInWorld for one real block. -->
+    <ClCompile Include="..\..\..\..\src\client\renderer\TileRenderer.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+    </ClCompile>
+    <!-- TileRenderer's original renderTile() entry point is retained by the
+         UWP linker even though this round calls only the cube seam.  Keep its
+         real MCPE dependency closure available; no replacement renderer or
+         empty symbol shim is used. -->
+    <ClCompile Include="..\..\..\..\src\client\renderer\EntityTileRenderer.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\renderer\tileentity\TileEntityRenderer.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\renderer\tileentity\TileEntityRenderDispatcher.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\renderer\tileentity\ChestRenderer.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\renderer\tileentity\SignRenderer.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\model\geom\ModelPart.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\model\geom\Cube.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\client\model\geom\Polygon.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <!--
+      Native MCPE core sources.  These files deliberately use the
+      STANDALONE_SERVER/NO_NETWORK configuration and do not consume the UWP
+      project's precompiled header.  Keeping the definitions item-local is
+      important: applying OPENGL_ES to the EGL bridge itself changes ANGLE's
+      Windows Store headers and breaks the UWP surface setup.
+    -->
+    <ClCompile Include="..\..\..\..\src\SharedConstants.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;STANDALONE_SERVER;NO_NETWORK;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\platform\time.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;STANDALONE_SERVER;NO_NETWORK;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\platform\input\Keyboard.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;STANDALONE_SERVER;NO_NETWORK;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\server\CreatorLevel.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;STANDALONE_SERVER;NO_NETWORK;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\locale\I18n.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;STANDALONE_SERVER;NO_NETWORK;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\world\level\storage\ExternalFileLevelStorage.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;STANDALONE_SERVER;NO_NETWORK;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4703;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\world\level\storage\ExternalFileLevelStorageSource.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <!-- This is the client storage source used by original SelectWorld and
+	       UwpCoreSession.  Do not compile it as STANDALONE_SERVER: that
+	       intentionally omits /games/com.mojang/minecraftWorlds from
+	       ExternalFileLevelStorageSource::basePath. -->
+      <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4703;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\network\Packet.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;MCPE_UWP_ORIGINAL_CLIENT_LOOP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <!-- Original client/server network handlers.  These are deliberately
+         compiled with the same non-NO_NETWORK client layout as Minecraft and
+         NinecraftApp; the local UWP world is attached to this path without
+         creating a second Level. -->
+    <ClCompile Include="..\..\..\..\src\network\ClientSideNetworkHandler.cpp;..\..\..\..\src\network\NATPunchHandler.cpp;..\..\..\..\src\network\NetEventCallback.cpp;..\..\..\..\src\network\PHPDirectoryServer2.cpp;..\..\..\..\src\network\RakNetInstance.cpp;..\..\..\..\src\network\ServerSideNetworkHandler.cpp;..\..\..\..\src\network\command\CommandServer.cpp;..\..\..\..\src\server\ServerPlayer.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;MCPE_UWP_ORIGINAL_CLIENT_LOOP;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4703;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <!-- RakNet is kept as the original transport closure rather than a new
+         UWP networking implementation.  The existing core list below keeps
+         its STANDALONE_SERVER objects; this client list is the real peer,
+         socket, reliability and serialization implementation required by
+         RakNetInstance. -->
+    <ClCompile Include="..\..\..\..\src\raknet\**\*.cpp" Exclude="..\..\..\..\src\raknet\Rackspace.cpp;..\..\..\..\src\raknet\VitaIncludes.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;MCPE_UWP_ORIGINAL_CLIENT_LOOP;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4703;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\world\**\*.cpp" Exclude="..\..\..\..\src\world\level\storage\ExternalFileLevelStorage.cpp;..\..\..\..\src\world\level\storage\ExternalFileLevelStorageSource.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;STANDALONE_SERVER;NO_NETWORK;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4703;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\nbt\**\*.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;STANDALONE_SERVER;NO_NETWORK;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\util\**\*.cpp" Exclude="..\..\..\..\src\util\PerfRenderer.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;STANDALONE_SERVER;NO_NETWORK;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="MCPEUWP_TemporaryKey.pfx" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

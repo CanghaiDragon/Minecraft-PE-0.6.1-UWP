@@ -1,0 +1,121 @@
+#include "RenderList.h"
+
+#include "gles.h"
+#include "RenderChunk.h"
+#include "Tesselator.h"
+
+
+RenderList::RenderList()
+	:	inited(false),
+	rendered(false)
+{
+	lists = new int[MAX_NUM_OBJECTS];
+	rlists = new RenderChunk[MAX_NUM_OBJECTS];
+
+	for (int i = 0; i < MAX_NUM_OBJECTS; ++i)
+		rlists[i].vboId = -1;
+}
+
+RenderList::~RenderList() {
+	delete[] lists;
+	delete[] rlists;
+}
+
+void RenderList::init(float xOff, float yOff, float zOff) {
+	inited = true;
+	listIndex = 0;
+
+	this->xOff = (float) xOff;
+	this->yOff = (float) yOff;
+	this->zOff = (float) zOff;
+}
+
+void RenderList::add(int list) {
+	lists[listIndex] = list;
+	if (listIndex == MAX_NUM_OBJECTS) /*lists.remaining() == 0)*/ render();
+}
+
+void RenderList::addR(const RenderChunk& chunk) {
+	rlists[listIndex] = chunk;
+}
+
+void RenderList::render() {
+
+	if (!inited) return;
+	if (!rendered) {
+		bufferLimit = listIndex;
+		listIndex = 0;
+		rendered = true;
+	}
+	if (listIndex < bufferLimit) {
+		glPushMatrix2();
+		glTranslatef2(-xOff, -yOff, -zOff);
+
+		#if defined(USE_VBO) || defined(MCPE_CLIENT_MESH)
+			renderChunks();
+		#else
+			glCallLists(bufferLimit, GL_UNSIGNED_INT, lists);
+		#endif/*!USE_VBO*/
+
+		glPopMatrix2();
+	}
+}
+
+void RenderList::renderChunks() {
+	const int Stride = VertexSizeBytes;
+
+#if !defined(__APPLE__) || defined(MACOS)
+	// Desktop: enable client-state arrays for VBO rendering
+	glEnableClientState2(GL_VERTEX_ARRAY);
+	glEnableClientState2(GL_TEXTURE_COORD_ARRAY);
+	glEnableClientState2(GL_COLOR_ARRAY);
+#endif
+
+	for (int i = 0; i < bufferLimit; ++i) {
+		RenderChunk& rc = rlists[i];
+
+		#if defined(MCPE_CLIENT_MESH)
+			if (!rc.clientData || rc.vertexCount <= 0) continue;
+			glVertexPointer2(3, GL_FLOAT, Stride, rc.clientData);
+			glTexCoordPointer2(2, GL_FLOAT, Stride,
+				(const GLvoid*)((const unsigned char*)rc.clientData + 3 * 4));
+			glColorPointer2(4, GL_UNSIGNED_BYTE, Stride,
+				(const GLvoid*)((const unsigned char*)rc.clientData + 5 * 4));
+			glDrawArrays2(GL_TRIANGLES, 0, rc.vertexCount);
+			continue;
+		#else
+		glBindBuffer2(GL_ARRAY_BUFFER, rc.vboId);
+		#endif
+
+#if defined(MCPE_UWP) || (defined(__APPLE__) && !defined(MACOS))
+		// GLES2/ANGLE: the original fixed-function pointers are intentionally
+		// no-ops in gles.h, so bind the shared shader attributes explicitly.
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, Stride, 0);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, Stride, (GLvoid*)(3*4));
+		glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, Stride, (GLvoid*)(5*4));
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+		glEnableVertexAttribArray(2);
+		if (g_loc_useVertexColor >= 0)
+			glUniform1i(g_loc_useVertexColor, 1);
+		shaderSyncUniforms();
+		glDrawArrays(GL_TRIANGLES, 0, rc.vertexCount);
+#else
+		glVertexPointer2	(3, GL_FLOAT, Stride,  0);
+		glTexCoordPointer2	(2, GL_FLOAT, Stride, (GLvoid*) (3 * 4));
+		glColorPointer2		(4, GL_UNSIGNED_BYTE, Stride, (GLvoid*) (5 * 4));
+		glDrawArrays2(GL_TRIANGLES, 0, rc.vertexCount);
+#endif
+	}
+
+#if !defined(__APPLE__) || defined(MACOS)
+	glDisableClientState2(GL_VERTEX_ARRAY);
+	glDisableClientState2(GL_TEXTURE_COORD_ARRAY);
+	glDisableClientState2(GL_COLOR_ARRAY);
+#endif
+}
+
+void RenderList::clear() {
+	inited = false;
+	rendered = false;
+}

@@ -1,0 +1,64 @@
+<Page
+    x:Class="MCPEUWP.KeyMappingPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+    Background="Transparent">
+
+    <Grid Background="Transparent">
+        <Grid Margin="34,22,34,22">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,16">
+                <TextBlock Text="Key Mapping"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           Foreground="White"
+                           FontSize="30"
+                           HorizontalAlignment="Left" />
+                <TextBlock Text="Select a button, then press a keyboard key"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           Foreground="#FFD0D0D0"
+                           FontSize="14"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Center" />
+            </Grid>
+
+            <ScrollViewer Grid.Row="1"
+                          HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto">
+                <StackPanel x:Name="BindingList" />
+            </ScrollViewer>
+
+            <Grid Grid.Row="2" Margin="0,18,0,0">
+                <TextBlock x:Name="MappingStatus"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           Foreground="#FFFFD080"
+                           FontSize="15"
+                           VerticalAlignment="Center"
+                           Text="Keyboard bindings are saved automatically." />
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right">
+                    <Button Content="Reset Defaults"
+                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                            Click="OnResetClick"
+                            Width="190"
+                            Height="54"
+                            FontSize="17"
+                            Foreground="White"
+                            Margin="0,0,12,0" />
+                    <Button Content="Back"
+                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                            Click="OnBackClick"
+                            Width="150"
+                            Height="54"
+                            FontSize="17"
+                            Foreground="White" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Grid>
+</Page>

@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>ANGLE.WindowsStore</id>
+    <version>2.1.13</version>
+    <title>ANGLE for Windows Store (UWP)</title>
+    <authors>Microsoft</authors>
+    <owners>angle,microsoft</owners>
+    <licenseUrl>http://github.com/MSOpenTech/angle/blob/ms-master/LICENSE</licenseUrl>
+    <projectUrl>http://github.com/MSOpenTech/angle/wiki</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Runs OpenGL ES content on Windows by translating OpenGL ES API calls to DirectX 11 API calls.
+Targets Universal Windows 10 apps (UWP). See 'ANGLE.WindowsStore.win81' for 8.1 apps.</description>
+    <copyright>Copyright (C) 2002-2013 The ANGLE Project Authors. Portions Copyright (C) Microsoft Corporation.</copyright>
+    <tags>OpenGL ES GLES GLSL Direct3D graphics 3D</tags>
+  </metadata>
+</package>

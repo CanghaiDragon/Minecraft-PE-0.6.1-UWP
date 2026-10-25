@@ -1,0 +1,50 @@
+#ifndef NET_MINECRAFT_CLIENT_GUI_SCREENS__StartMenuScreen_H__
+#define NET_MINECRAFT_CLIENT_GUI_SCREENS__StartMenuScreen_H__
+
+#include "../Screen.h"
+#include "../components/Button.h"
+
+class StartMenuScreen: public Screen
+{
+public:
+	StartMenuScreen();
+	virtual ~StartMenuScreen();
+
+	void init();
+	void setupPositions();
+
+	void tick();
+	void render(int xm, int ym, float a);
+
+	void buttonClicked(Button* button);
+	void mouseClicked(int x, int y, int buttonNum);
+	bool handleBackEvent(bool isDown);
+	bool isInGameScreen();
+
+protected:
+	// UWP adds a small optional icon beside the original quit button.  Expose
+	// the original layout object without changing its ownership or behavior.
+	Button& getQuitButtonForPlatform() { return bQuit; }
+
+private:
+	void _updateLicense();
+
+	Button bHost;
+	Button bJoin;
+	Button bOptions;
+	Button bQuit;
+	Button bTest;
+	Button bBuy;
+
+	std::string copyright;
+	int copyrightPosX;
+
+	std::string version;
+	int versionPosX;
+
+	std::string githubUrl;
+	std::string githubLabel;
+	std::string buildInfo;
+};
+
+#endif /*NET_MINECRAFT_CLIENT_GUI_SCREENS__StartMenuScreen_H__*/
