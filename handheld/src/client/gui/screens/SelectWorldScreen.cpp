@@ -275,9 +275,11 @@ void SelectWorldScreen::buttonClicked(Button* button)
 		}
 	}
 	if (button->id == bImport.id) {
-		// Import UI will be connected in the next step. Keep this as a
-		// visible, harmless entry point while the file workflow is designed.
-		LOGI("World import placeholder selected\n");
+	#if defined(MCPE_UWP)
+		UwpOriginalClientRequestWorldImport();
+	#else
+		LOGI("World import is only available on UWP\n");
+	#endif
 	}
 	if (button->id == bBack.id) {
 		minecraft->cancelLocateMultiplayer();

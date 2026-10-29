@@ -14,7 +14,7 @@
   <mp:PhoneIdentity PhoneProductId="a9e259b9-3d19-49ed-86a7-9b072b11c8b8" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>MCPE UWP</DisplayName>
+    <DisplayName>Minecraft PE 0.6.1</DisplayName>
     <PublisherDisplayName>dufu2</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -32,7 +32,7 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="MCPEUWP.App">
       <uap:VisualElements
-        DisplayName="MCPE UWP"
+        DisplayName="Minecraft PE 0.6.1"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png"
         Description="MCPE 0.6.1 UWP ANGLE platform shell"

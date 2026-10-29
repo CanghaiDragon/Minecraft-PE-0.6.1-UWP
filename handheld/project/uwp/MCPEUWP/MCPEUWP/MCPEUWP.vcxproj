@@ -246,14 +246,14 @@
     <ClInclude Include="MainPage.xaml.h">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </ClInclude>
-    <ClInclude Include="WorldsPage.xaml.h">
-      <DependentUpon>WorldsPage.xaml</DependentUpon>
-    </ClInclude>
     <ClInclude Include="KeyMappingPage.xaml.h">
       <DependentUpon>KeyMappingPage.xaml</DependentUpon>
     </ClInclude>
-    <ClInclude Include="WorldEditPage.xaml.h">
-      <DependentUpon>WorldEditPage.xaml</DependentUpon>
+    <ClInclude Include="WorldEditShellPage.xaml.h">
+      <DependentUpon>WorldEditShellPage.xaml</DependentUpon>
+    </ClInclude>
+    <ClInclude Include="WorldImportPage.xaml.h">
+      <DependentUpon>WorldImportPage.xaml</DependentUpon>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -263,13 +263,13 @@
     <Page Include="MainPage.xaml">
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="WorldsPage.xaml">
-      <SubType>Designer</SubType>
-    </Page>
     <Page Include="KeyMappingPage.xaml">
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="WorldEditPage.xaml">
+    <Page Include="WorldEditShellPage.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="WorldImportPage.xaml">
       <SubType>Designer</SubType>
     </Page>
   </ItemGroup>
@@ -326,14 +326,14 @@
     <ClCompile Include="MainPage.xaml.cpp">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </ClCompile>
-    <ClCompile Include="WorldsPage.xaml.cpp">
-      <DependentUpon>WorldsPage.xaml</DependentUpon>
-    </ClCompile>
     <ClCompile Include="KeyMappingPage.xaml.cpp">
       <DependentUpon>KeyMappingPage.xaml</DependentUpon>
     </ClCompile>
-    <ClCompile Include="WorldEditPage.xaml.cpp">
-      <DependentUpon>WorldEditPage.xaml</DependentUpon>
+    <ClCompile Include="WorldEditShellPage.xaml.cpp">
+      <DependentUpon>WorldEditShellPage.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="WorldImportPage.xaml.cpp">
+      <DependentUpon>WorldImportPage.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="..\..\..\..\src\AppPlatform_uwp.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>

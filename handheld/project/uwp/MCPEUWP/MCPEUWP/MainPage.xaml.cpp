@@ -25,6 +25,7 @@
 #include <windows.storage.h>
 #include <windows.storage.pickers.h>
 #include <windows.storage.streams.h>
+#include <windows.h>
 #include <windows.ui.xaml.media.imaging.h>
 #include <windows.ui.core.h>
 #include <windows.ui.input.h>
@@ -38,6 +39,33 @@ using namespace MCPEUWP;
 using namespace Platform;
 using namespace concurrency;
 using namespace Windows::Foundation;
+
+namespace
+{
+	void WorldEditDiagnostic(const std::wstring& message)
+	{
+#if defined(_DEBUG)
+		const std::wstring line = L"[WorldEditDiag] Main: " + message + L"\n";
+		OutputDebugStringW(line.c_str());
+#else
+		(void)message;
+#endif
+	}
+
+	void WorldEditExceptionDiagnostic(Exception^ error)
+	{
+#if defined(_DEBUG)
+		std::wstringstream message;
+		message << L"exception HRESULT=0x" << std::hex
+			<< static_cast<unsigned int>(error == nullptr ? 0 : error->HResult);
+		if (error != nullptr && error->Message != nullptr)
+			message << L" message=" << error->Message->Data();
+		WorldEditDiagnostic(message.str());
+#else
+		(void)error;
+#endif
+	}
+}
 using namespace Windows::UI::Xaml;
 using namespace Windows::UI::Xaml::Controls;
 using namespace Windows::UI::Xaml::Controls::Primitives;
@@ -860,56 +888,108 @@ void MainPage::HideKeyMappingPage()
 
 void MainPage::ShowWorldEditPage(const std::string& worldId)
 {
+	WorldEditDiagnostic(L"ShowWorldEditPage entered");
 	if (WorldEditOverlay == nullptr || WorldEditFrame == nullptr || worldId.empty())
+	{
+		WorldEditDiagnostic(L"ShowWorldEditPage returned: missing overlay/frame/world id");
 		return;
+	}
 
 	// The action is consumed from the original client's tick.  Defer the XAML
 	// tree mutation to the next dispatcher turn so it cannot happen while the
 	// original screen is still processing the same button event.
 	const std::string requestedWorldId = worldId;
+	// The request arrives from the original client menu tick.  Keep that
+	// screen in place while the XAML tree is switched, but stop its update and
+	// render callbacks immediately.  Without this pause the non-debug build
+	// can process the same menu transition while the dispatcher is mounting
+	// the overlay, leaving the UI apparently frozen.
+	m_worldEditSuspendedOriginalLoop =
+		m_originalClientHost.isOriginalClientLoopEnabled();
+	if (m_worldEditSuspendedOriginalLoop)
+	{
+		m_originalClientHost.setLoopEnabled(false);
+		WorldEditDiagnostic(L"original client loop paused for world edit");
+	}
+	WorldEditDiagnostic(L"before Dispatcher->RunAsync");
 	Dispatcher->RunAsync(CoreDispatcherPriority::Normal,
 		ref new DispatchedHandler([this, requestedWorldId]()
 		{
 			try
 			{
+				WorldEditDiagnostic(L"dispatcher callback begin");
 				if (WorldEditOverlay == nullptr || WorldEditFrame == nullptr)
-					return;
-
-				if (m_worldEditPage == nullptr)
 				{
-					m_worldEditPage = ref new WorldEditPage();
-					m_worldEditPage->BackRequested +=
+					WorldEditDiagnostic(L"callback returned: missing overlay/frame");
+					return;
+				}
+
+				if (m_worldEditShellPage == nullptr)
+				{
+					WorldEditDiagnostic(L"before new WorldEditShellPage");
+					m_worldEditShellPage = ref new WorldEditShellPage();
+					WorldEditDiagnostic(L"after new WorldEditShellPage");
+					WorldEditDiagnostic(L"before BackRequested subscription");
+					m_worldEditShellPage->BackRequested +=
 						ref new EventHandler<Object^>([this](Object^, Object^)
 						{
 							HideWorldEditPage();
 						});
+					WorldEditDiagnostic(L"after BackRequested subscription");
 				}
 				const std::wstring wideId(requestedWorldId.begin(), requestedWorldId.end());
-				WorldEditFrame->Content = m_worldEditPage;
+				WorldEditDiagnostic(L"before WorldEditFrame->Content");
+				WorldEditFrame->Content = m_worldEditShellPage;
+				WorldEditDiagnostic(L"after WorldEditFrame->Content");
 				// Mount the page before populating it.  This is important on the older
 				// UWP XAML runtime: touching child controls while a new Page is not
 				// yet in its Frame can fail-fast inside Windows.UI.Xaml.
-				m_worldEditPage->SetWorldId(ref new String(wideId.c_str()));
+				WorldEditDiagnostic(L"before SetWorldId");
+				m_worldEditShellPage->SetWorldId(ref new String(wideId.c_str()));
+				WorldEditDiagnostic(L"after SetWorldId");
 				m_worldEditPageVisible = true;
+				WorldEditDiagnostic(L"before WorldEditOverlay visible");
 				WorldEditOverlay->Visibility = Windows::UI::Xaml::Visibility::Visible;
-				// The Canvas SizeChanged handler rebuilds the dirt background after
-				// the overlay has a real size.  Rebuilding here would be reentrant on
-				// older XAML versions.
+				WorldEditDiagnostic(L"after WorldEditOverlay visible");
+				// WorldEditDirtBackground is intentionally not rebuilt from its own
+				// SizeChanged event.  Older UWP XAML versions can fail-fast when that
+				// handler changes Canvas.Children during layout.  Wait until this
+				// dispatcher turn has completed layout instead.
+				WorldEditDiagnostic(L"before dirt background rebuild scheduling");
+				ScheduleWorldEditDirtBackgroundRebuild();
+				WorldEditDiagnostic(L"after dirt background rebuild scheduling");
+				WorldEditDiagnostic(L"before AnimateOverlay");
 				AnimateOverlay(WorldEditOverlay, true);
+				WorldEditDiagnostic(L"after AnimateOverlay");
 				Keyboard::reset();
+				WorldEditDiagnostic(L"dispatcher callback complete");
 			}
-			catch (Exception^)
+			catch (Exception^ error)
 			{
+				WorldEditExceptionDiagnostic(error);
 				m_worldEditPageVisible = false;
 				if (WorldEditOverlay != nullptr)
 					WorldEditOverlay->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
+				if (m_worldEditSuspendedOriginalLoop)
+				{
+					m_originalClientHost.setLoopEnabled(true);
+					m_originalMenuActive = m_originalClientHost.showSelectWorld();
+					m_worldEditSuspendedOriginalLoop = false;
+				}
 				m_ui.setStatusText(L"World editor could not be opened");
 			}
 			catch (...)
 			{
+				WorldEditDiagnostic(L"unknown non-WinRT exception");
 				m_worldEditPageVisible = false;
 				if (WorldEditOverlay != nullptr)
 					WorldEditOverlay->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
+				if (m_worldEditSuspendedOriginalLoop)
+				{
+					m_originalClientHost.setLoopEnabled(true);
+					m_originalMenuActive = m_originalClientHost.showSelectWorld();
+					m_worldEditSuspendedOriginalLoop = false;
+				}
 				m_ui.setStatusText(L"World editor could not be opened");
 			}
 		}));
@@ -925,8 +1005,81 @@ void MainPage::HideWorldEditPage()
 
 	// Recreate the original selection screen so folder/name/deletion changes
 	// are reflected immediately when the XAML page closes.
-	if (m_originalClientHost.isOriginalClientLoopEnabled())
+	if (m_worldEditSuspendedOriginalLoop)
+	{
+		m_originalClientHost.setLoopEnabled(true);
 		m_originalMenuActive = m_originalClientHost.showSelectWorld();
+		m_worldEditSuspendedOriginalLoop = false;
+	}
+}
+
+void MainPage::ShowWorldImportPage()
+{
+	if (WorldImportOverlay == nullptr || WorldImportFrame == nullptr)
+		return;
+	if (m_worldImportPage == nullptr)
+		m_worldImportPage = ref new WorldImportPage();
+	WorldImportFrame->Content = m_worldImportPage;
+	m_worldImportPageVisible = true;
+	m_worldImportSuspendedOriginalLoop = m_originalMenuActive;
+	if (m_worldImportSuspendedOriginalLoop)
+	{
+		m_originalClientHost.setLoopEnabled(false);
+		m_originalMenuActive = false;
+	}
+	WorldImportOverlay->Visibility = Windows::UI::Xaml::Visibility::Visible;
+	RebuildSkinDirtBackground();
+	AnimateOverlay(WorldImportOverlay, true);
+	Keyboard::reset();
+}
+
+void MainPage::HideWorldImportPage()
+{
+	m_worldImportPageVisible = false;
+	if (WorldImportOverlay != nullptr)
+		AnimateOverlay(WorldImportOverlay, false);
+	Keyboard::reset();
+	UpdateMoveInput();
+	if (m_worldImportSuspendedOriginalLoop)
+	{
+		m_originalClientHost.setLoopEnabled(true);
+		m_originalMenuActive = m_originalClientHost.showSelectWorld();
+		m_worldImportSuspendedOriginalLoop = false;
+	}
+}
+
+void MainPage::ScheduleWorldEditDirtBackgroundRebuild()
+{
+	if (m_worldEditDirtRebuildPending || Dispatcher == nullptr)
+		return;
+
+	m_worldEditDirtRebuildPending = true;
+	Dispatcher->RunAsync(CoreDispatcherPriority::Low,
+		ref new DispatchedHandler([this]()
+		{
+			m_worldEditDirtRebuildPending = false;
+			if (!m_worldEditPageVisible || WorldEditDirtBackground == nullptr)
+			{
+				m_worldEditDirtRebuildAttempts = 0;
+				return;
+			}
+
+			// The first dispatcher turn can run before the newly visible overlay
+			// has received its final layout size.  Retry a few later turns instead
+			// of rebuilding an empty Canvas and waiting for the next page visit.
+			if (WorldEditDirtBackground->ActualWidth <= 0.0 ||
+				WorldEditDirtBackground->ActualHeight <= 0.0)
+			{
+				if (m_worldEditDirtRebuildAttempts++ < 4)
+					ScheduleWorldEditDirtBackgroundRebuild();
+				else
+					m_worldEditDirtRebuildAttempts = 0;
+				return;
+			}
+
+			m_worldEditDirtRebuildAttempts = 0;
+			RebuildSkinDirtBackground();
+		}));
 }
 
 void MainPage::AnimateSkinPage(bool entering)
@@ -998,7 +1151,7 @@ void MainPage::OnSkinBackgroundSizeChanged(Object^, SizeChangedEventArgs^)
 void MainPage::RebuildSkinDirtBackground()
 {
 	if (SkinDirtBackground == nullptr && KeyMappingDirtBackground == nullptr &&
-		WorldEditDirtBackground == nullptr)
+		WorldEditDirtBackground == nullptr && WorldImportDirtBackground == nullptr)
 		return;
 	if (m_rebuildingSkinDirtBackground)
 		return;
@@ -1014,6 +1167,8 @@ void MainPage::RebuildSkinDirtBackground()
 	auto rebuild = [source, tileSize](Canvas^ canvas)
 	{
 		if (canvas == nullptr)
+			return;
+		if (canvas->ActualWidth <= 0.0 || canvas->ActualHeight <= 0.0)
 			return;
 		const int columns = static_cast<int>(canvas->ActualWidth / tileSize) + 1;
 		const int rows = static_cast<int>(canvas->ActualHeight / tileSize) + 1;
@@ -1036,6 +1191,7 @@ void MainPage::RebuildSkinDirtBackground()
 	rebuild(SkinDirtBackground);
 	rebuild(KeyMappingDirtBackground);
 	rebuild(WorldEditDirtBackground);
+	rebuild(WorldImportDirtBackground);
 	if (SkinDirtBackground != nullptr)
 	{
 		m_skinDirtColumns = static_cast<int>(SkinDirtBackground->ActualWidth / tileSize) + 1;
@@ -1270,6 +1426,19 @@ void MainPage::LoadSkinPreview()
 
 void MainPage::OnGameTick(std::uint64_t tick)
 {
+	// The import page pauses the original menu loop while it is visible, so
+	// its Back request must be consumed outside the normal menu-update branch.
+	if (!m_originalClientHost.isOriginalClientLoopEnabled())
+	{
+		const UwpOriginalMenuAction pausedAction =
+			m_originalClientHost.consumeMenuAction();
+		if (pausedAction == UwpOriginalMenuAction::CloseWorldImport)
+		{
+			HideWorldImportPage();
+			return;
+		}
+	}
+
 	if (m_pendingSkinAction != PendingSkinAction::None)
 	{
 		const PendingSkinAction action = m_pendingSkinAction;
@@ -1331,6 +1500,16 @@ void MainPage::OnGameTick(std::uint64_t tick)
 			std::string worldId;
 			if (m_originalClientHost.consumeWorldEdit(worldId))
 				ShowWorldEditPage(worldId);
+			return;
+		}
+		if (menuAction == UwpOriginalMenuAction::OpenWorldImport)
+		{
+			ShowWorldImportPage();
+			return;
+		}
+		if (menuAction == UwpOriginalMenuAction::CloseWorldImport)
+		{
+			HideWorldImportPage();
 			return;
 		}
 		if (menuAction == UwpOriginalMenuAction::LeaveWorld)
@@ -1632,6 +1811,18 @@ void MainPage::OnKeyDown(Windows::UI::Core::CoreWindow^,
 		e->Handled = true;
 		return;
 	}
+	if (m_worldImportPageVisible)
+	{
+		if (m_worldImportPage != nullptr)
+		{
+			if (e->VirtualKey == VirtualKey::Enter)
+				m_worldImportPage->HandleEnterKey();
+			else if (e->VirtualKey == VirtualKey::Escape)
+				m_worldImportPage->HandleEscapeKey();
+		}
+		e->Handled = true;
+		return;
+	}
 	if (m_skinPageVisible)
 	{
 		if (e->VirtualKey == VirtualKey::Escape && !m_skinOperationPending)
@@ -1699,6 +1890,11 @@ void MainPage::OnKeyUp(Windows::UI::Core::CoreWindow^,
 		e->Handled = true;
 		return;
 	}
+	if (m_worldImportPageVisible)
+	{
+		e->Handled = true;
+		return;
+	}
 	if (m_skinPageVisible)
 	{
 		e->Handled = true;
@@ -1737,6 +1933,58 @@ void MainPage::OnKeyUp(Windows::UI::Core::CoreWindow^,
 		break;
 	}
 	UpdateMoveInput();
+}
+
+void MainPage::OnSystemBackRequested(
+	Platform::Object^,
+	Windows::UI::Core::BackRequestedEventArgs^ e)
+{
+	if (e == nullptr)
+		return;
+
+	// Keep the system Back button identical to the existing Escape routing.
+	// XAML overlays own the input while visible, so the native client must not
+	// receive a second Back/Escape event underneath them.
+	if (m_keyMappingPageVisible)
+	{
+		if (m_keyMappingPage != nullptr && m_keyMappingPage->IsCapturing())
+			m_keyMappingPage->HandleKeyDown(Keyboard::KEY_ESCAPE);
+		else
+			HideKeyMappingPage();
+		e->Handled = true;
+		return;
+	}
+	if (m_worldEditPageVisible)
+	{
+		HideWorldEditPage();
+		e->Handled = true;
+		return;
+	}
+	if (m_worldImportPageVisible)
+	{
+		if (m_worldImportPage != nullptr)
+			m_worldImportPage->HandleEscapeKey();
+		e->Handled = true;
+		return;
+	}
+	if (m_skinPageVisible)
+	{
+		if (!m_skinOperationPending)
+			HideSkinPage();
+		e->Handled = true;
+		return;
+	}
+
+	// Feed exactly the same native Escape event used by the keyboard path.
+	// This preserves Minecraft::tickInput()'s existing key.pause mapping,
+	// including opening and closing PauseScreen with the normal pause behavior.
+	if (m_originalClientHost.isOriginalClientLoopEnabled() ||
+		m_originalClientHost.isOriginalWorldTickEnabled())
+	{
+		Keyboard::feed(static_cast<unsigned char>(Keyboard::KEY_ESCAPE),
+			KeyboardAction::KEYDOWN);
+		e->Handled = true;
+	}
 }
 
 void MainPage::OnCharacterReceived(Windows::UI::Core::CoreWindow^,
@@ -1799,20 +2047,33 @@ void MainPage::UpdateMoveInput()
 
 void MainPage::AttachKeyboard()
 {
-	if (m_keyDownToken.Value != 0 || Window::Current == nullptr ||
+	if (Window::Current == nullptr ||
 		Window::Current->CoreWindow == nullptr)
 		return;
 	auto window = Window::Current->CoreWindow;
-	m_keyDownToken = window->KeyDown += ref new TypedEventHandler<
-		Windows::UI::Core::CoreWindow^, Windows::UI::Core::KeyEventArgs^>(
-		this, &MainPage::OnKeyDown);
-	m_keyUpToken = window->KeyUp += ref new TypedEventHandler<
-		Windows::UI::Core::CoreWindow^, Windows::UI::Core::KeyEventArgs^>(
-		this, &MainPage::OnKeyUp);
-	m_characterReceivedToken = window->CharacterReceived += ref new TypedEventHandler<
-		Windows::UI::Core::CoreWindow^,
-		Windows::UI::Core::CharacterReceivedEventArgs^>(
-		this, &MainPage::OnCharacterReceived);
+	if (m_keyDownToken.Value == 0)
+	{
+		m_keyDownToken = window->KeyDown += ref new TypedEventHandler<
+			Windows::UI::Core::CoreWindow^, Windows::UI::Core::KeyEventArgs^>(
+			this, &MainPage::OnKeyDown);
+		m_keyUpToken = window->KeyUp += ref new TypedEventHandler<
+			Windows::UI::Core::CoreWindow^, Windows::UI::Core::KeyEventArgs^>(
+			this, &MainPage::OnKeyUp);
+		m_characterReceivedToken = window->CharacterReceived += ref new TypedEventHandler<
+			Windows::UI::Core::CoreWindow^,
+			Windows::UI::Core::CharacterReceivedEventArgs^>(
+			this, &MainPage::OnCharacterReceived);
+	}
+	if (m_systemBackToken.Value == 0)
+	{
+		m_systemNavigationManager =
+			Windows::UI::Core::SystemNavigationManager::GetForCurrentView();
+		if (m_systemNavigationManager != nullptr)
+			m_systemBackToken = m_systemNavigationManager->BackRequested +=
+				ref new EventHandler<
+					Windows::UI::Core::BackRequestedEventArgs^>(
+						this, &MainPage::OnSystemBackRequested);
+	}
 	if (m_mouseMovedToken.Value == 0)
 	{
 		auto mouse = Windows::Devices::Input::MouseDevice::GetForCurrentView();
@@ -1836,6 +2097,8 @@ void MainPage::DetachKeyboard()
 		if (m_characterReceivedToken.Value != 0)
 			window->CharacterReceived -= m_characterReceivedToken;
 	}
+	if (m_systemNavigationManager != nullptr && m_systemBackToken.Value != 0)
+		m_systemNavigationManager->BackRequested -= m_systemBackToken;
 	if (m_mouseMovedToken.Value != 0)
 	{
 		auto mouse = Windows::Devices::Input::MouseDevice::GetForCurrentView();
@@ -1844,8 +2107,10 @@ void MainPage::DetachKeyboard()
 	}
 	m_keyDownToken.Value = 0;
 	m_keyUpToken.Value = 0;
+	m_systemBackToken.Value = 0;
 	m_characterReceivedToken.Value = 0;
 	m_mouseMovedToken.Value = 0;
+	m_systemNavigationManager = nullptr;
 	m_keyW = m_keyA = m_keyS = m_keyD = m_keySpace = false;
 }
 

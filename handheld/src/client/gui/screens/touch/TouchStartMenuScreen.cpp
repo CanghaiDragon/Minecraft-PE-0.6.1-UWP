@@ -156,9 +156,9 @@ void StartMenuScreen::init()
 	#endif
 
 	copyright = "\xffMojang AB";//. Do not distribute!";
-	githubUrl = "https://github.com/CanghaiDragon/Minecraft-PE-0.6.1-Windows-Universal/tree/master";
+	githubUrl = "https://github.com/CanghaiDragon/Minecraft-PE-0.6.1-UWP";
 	githubLabel = "Visit Github Repository";
-	buildInfo = std::string("Windows Universal v1.0 build ") + getBuildArchitecture();
+	buildInfo = std::string("UWP v1.1 build ") + getBuildArchitecture();
 
 	#ifdef PRE_ANDROID23
 		std::string versionString = Common::getGameVersionString("j");

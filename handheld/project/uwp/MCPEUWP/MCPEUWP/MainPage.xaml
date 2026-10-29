@@ -9,6 +9,16 @@
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Grid Background="#FF101010">
+        <Grid.Resources>
+            <Style x:Key="DirtShadeRectangle" TargetType="Rectangle">
+                <Setter Property="Fill" Value="#18000000" />
+                <Setter Property="IsHitTestVisible" Value="False" />
+            </Style>
+            <Style x:Key="DirtOverlayRectangle" TargetType="Rectangle">
+                <Setter Property="Fill" Value="#55000000" />
+                <Setter Property="IsHitTestVisible" Value="False" />
+            </Style>
+        </Grid.Resources>
         <SwapChainPanel x:Name="AnglePanel" />
 
         <!-- Temporary startup diagnostics.  The EGL surface can be completely
@@ -26,7 +36,7 @@
                 <TextBlock x:Name="StartupStage"
                            Foreground="White"
                            FontSize="16"
-                           Text="Starting MCPE UWP..." />
+                           Text="Starting Minecraft PE 0.6.1..." />
                 <TextBlock x:Name="StartupDetails"
                            Foreground="#FFFFD080"
                            FontSize="12"
@@ -45,12 +55,12 @@
             <Canvas x:Name="SkinDirtBackground"
                     SizeChanged="OnSkinBackgroundSizeChanged"
                     IsHitTestVisible="False" />
-            <Rectangle Fill="#18000000"
-                       IsHitTestVisible="False" />
+            <Rectangle Style="{StaticResource DirtShadeRectangle}" />
+            <Rectangle Style="{StaticResource DirtOverlayRectangle}" />
             <Border HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
                     Padding="48"
-                    Background="#55000000"
+                    Background="Transparent"
                     BorderThickness="0">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -154,8 +164,8 @@
             <Canvas x:Name="KeyMappingDirtBackground"
                     SizeChanged="OnSkinBackgroundSizeChanged"
                     IsHitTestVisible="False" />
-            <Rectangle Fill="#18000000"
-                       IsHitTestVisible="False" />
+            <Rectangle Style="{StaticResource DirtShadeRectangle}" />
+            <Rectangle Style="{StaticResource DirtOverlayRectangle}" />
             <Frame x:Name="KeyMappingFrame"
                    Background="Transparent" />
         </Grid>
@@ -167,9 +177,21 @@
             <Canvas x:Name="WorldEditDirtBackground"
                     SizeChanged="OnSkinBackgroundSizeChanged"
                     IsHitTestVisible="False" />
-            <Rectangle Fill="#18000000"
-                       IsHitTestVisible="False" />
+            <Rectangle Style="{StaticResource DirtShadeRectangle}" />
+            <Rectangle Style="{StaticResource DirtOverlayRectangle}" />
             <Frame x:Name="WorldEditFrame"
+                   Background="Transparent" />
+        </Grid>
+        <Grid x:Name="WorldImportOverlay"
+              Canvas.ZIndex="230"
+              Visibility="Collapsed"
+              Background="Transparent">
+            <Canvas x:Name="WorldImportDirtBackground"
+                    SizeChanged="OnSkinBackgroundSizeChanged"
+                    IsHitTestVisible="False" />
+            <Rectangle Style="{StaticResource DirtShadeRectangle}" />
+            <Rectangle Style="{StaticResource DirtOverlayRectangle}" />
+            <Frame x:Name="WorldImportFrame"
                    Background="Transparent" />
         </Grid>
     </Grid>

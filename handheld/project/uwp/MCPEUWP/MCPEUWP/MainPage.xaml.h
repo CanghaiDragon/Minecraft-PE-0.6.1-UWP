@@ -7,7 +7,8 @@
 
 #include "MainPage.g.h"
 #include "KeyMappingPage.xaml.h"
-#include "WorldEditPage.xaml.h"
+#include "WorldEditShellPage.xaml.h"
+#include "WorldImportPage.xaml.h"
 #include "../../../../src/AppPlatform_uwp.h"
 #include "../../../../src/platform/uwp/UwpAngleContext.h"
 #include "../../../../src/platform/uwp/UwpCoreSession.h"
@@ -17,6 +18,7 @@
 #include "../../../../src/platform/uwp/UwpUiRenderer.h"
 #include "../../../../src/platform/uwp/UwpWorldRenderer.h"
 #include <windows.devices.input.h>
+#include <windows.ui.core.h>
 #include <windows.ui.xaml.media.animation.h>
 #include <chrono>
 #include <cstdint>
@@ -58,6 +60,9 @@ namespace MCPEUWP
 			Windows::Devices::Input::MouseEventArgs^ e);
 		void OnKeyDown(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::KeyEventArgs^ e);
 		void OnKeyUp(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::KeyEventArgs^ e);
+		void OnSystemBackRequested(
+			Platform::Object^ sender,
+			Windows::UI::Core::BackRequestedEventArgs^ e);
 		void OnCharacterReceived(Windows::UI::Core::CoreWindow^ sender,
 			Windows::UI::Core::CharacterReceivedEventArgs^ e);
 		void UpdateMoveInput();
@@ -89,6 +94,9 @@ namespace MCPEUWP
 		void HideKeyMappingPage();
 		void ShowWorldEditPage(const std::string& worldId);
 		void HideWorldEditPage();
+		void ShowWorldImportPage();
+		void HideWorldImportPage();
+		void ScheduleWorldEditDirtBackgroundRebuild();
 		void AnimateSkinPage(bool entering);
 		void AnimateOverlay(Windows::UI::Xaml::Controls::Grid^ overlay, bool entering);
 		void OnSkinBackgroundSizeChanged(Platform::Object^ sender,
@@ -120,12 +128,18 @@ namespace MCPEUWP
 		bool m_skinPageVisible = false;
 		bool m_keyMappingPageVisible = false;
 		bool m_worldEditPageVisible = false;
+		bool m_worldImportPageVisible = false;
+		bool m_worldImportSuspendedOriginalLoop = false;
+		bool m_worldEditDirtRebuildPending = false;
+		int m_worldEditDirtRebuildAttempts = 0;
+		bool m_worldEditSuspendedOriginalLoop = false;
 		bool m_skinOperationPending = false;
 		bool m_skinArmTypeLoading = false;
 		std::uint64_t m_skinPreviewGeneration = 0;
 		Windows::UI::Xaml::Media::Animation::Storyboard^ m_skinPageTransition;
 		KeyMappingPage^ m_keyMappingPage;
-		WorldEditPage^ m_worldEditPage;
+		WorldEditShellPage^ m_worldEditShellPage;
+		WorldImportPage^ m_worldImportPage;
 		Windows::Foundation::EventRegistrationToken m_skinPageTransitionCompletedToken{};
 		int m_skinDirtColumns = 0;
 		int m_skinDirtRows = 0;
@@ -151,8 +165,10 @@ namespace MCPEUWP
 		bool m_originalPointerCursorHidden = false;
 		Windows::Foundation::EventRegistrationToken m_keyDownToken{};
 		Windows::Foundation::EventRegistrationToken m_keyUpToken{};
+		Windows::Foundation::EventRegistrationToken m_systemBackToken{};
 		Windows::Foundation::EventRegistrationToken m_characterReceivedToken{};
 		Windows::Foundation::EventRegistrationToken m_mouseMovedToken{};
+		Windows::UI::Core::SystemNavigationManager^ m_systemNavigationManager;
 		std::wstring m_platformSmokeResult;
 		unsigned int m_clientTexturePreloadCompleted = 0;
 		unsigned int m_clientTexturePreloadSucceeded = 0;

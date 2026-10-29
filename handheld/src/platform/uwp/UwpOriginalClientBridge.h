@@ -24,7 +24,9 @@ enum class UwpOriginalMenuAction
 	LeaveWorld,
 	OpenSkin,
 	OpenKeyMapping,
-	OpenWorldEdit
+	OpenWorldEdit,
+	OpenWorldImport,
+	CloseWorldImport
 };
 
 UwpOriginalClientHandle UwpOriginalClientCreate();
@@ -33,6 +35,8 @@ bool UwpOriginalClientBindContext(UwpOriginalClientHandle handle,
 bool UwpOriginalClientSetStoragePaths(UwpOriginalClientHandle handle,
 	const std::string& externalStoragePath,
 	const std::string& externalCacheStoragePath);
+void UwpOriginalClientRequestWorldImport();
+void UwpOriginalClientRequestCloseWorldImport();
 // Enters the original App::init -> NinecraftApp::init -> Minecraft::init
 // chain after the UWP host has completed the packaged-texture preload.
 bool UwpOriginalClientInitialize(UwpOriginalClientHandle handle,

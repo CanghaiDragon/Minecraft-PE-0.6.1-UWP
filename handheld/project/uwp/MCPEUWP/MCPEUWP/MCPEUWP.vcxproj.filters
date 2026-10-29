@@ -424,8 +424,7 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="MainPage.xaml" />
-    <Page Include="WorldsPage.xaml" />
     <Page Include="KeyMappingPage.xaml" />
-    <Page Include="WorldEditPage.xaml" />
+    <Page Include="WorldImportPage.xaml" />
   </ItemGroup>
 </Project>

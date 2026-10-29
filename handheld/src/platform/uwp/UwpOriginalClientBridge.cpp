@@ -214,8 +214,8 @@ namespace
 			drawCenteredString(font,
 				"This world is in an unsupported legacy format.",
 				width / 2, height / 2 - 42, 0xffffff);
-			drawCenteredString(font,
-				"Use Windows Universal v1.0 to open it.",
+				drawCenteredString(font,
+					"Use UWP v1.1 to open it.",
 				width / 2, height / 2 - 26, 0xffffff);
 			super::render(xm, ym, a);
 		}
@@ -526,6 +526,17 @@ void UwpOriginalClientRequestWorldEdit(const std::string& worldId)
 	g_pendingLevelName.clear();
 	g_pendingWorldEditId = worldId;
 	g_pendingMenuAction = UwpOriginalMenuAction::OpenWorldEdit;
+}
+
+void UwpOriginalClientRequestWorldImport()
+{
+	g_pendingWorldEditId.clear();
+	g_pendingMenuAction = UwpOriginalMenuAction::OpenWorldImport;
+}
+
+void UwpOriginalClientRequestCloseWorldImport()
+{
+	g_pendingMenuAction = UwpOriginalMenuAction::CloseWorldImport;
 }
 
 bool UwpOriginalClientConsumeLevelSelection(UwpOriginalClientHandle handle,

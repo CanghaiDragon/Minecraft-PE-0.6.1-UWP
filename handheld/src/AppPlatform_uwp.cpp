@@ -6,6 +6,7 @@
 #include <windows.ui.viewmanagement.h>
 
 #include <cstdio>
+#include <ctime>
 #include <string>
 #include <utility>
 
@@ -169,7 +170,19 @@ std::string AppPlatform_uwp::getPlatformStringVar(int stringId)
 
 std::string AppPlatform_uwp::getDateString(int seconds)
 {
-	return std::to_string(seconds) + " s (UTC)";
+	if (seconds <= 0)
+		return "Unknown";
+
+	const time_t rawTime = static_cast<time_t>(seconds);
+	tm localTime = {};
+	if (localtime_s(&localTime, &rawTime) != 0)
+		return "Unknown";
+
+	char date[32] = {};
+	if (strftime(date, sizeof(date), "%Y-%m-%d", &localTime) == 0)
+		return "Unknown";
+
+	return date;
 }
 
 void AppPlatform_uwp::openUrl(const std::string& url)

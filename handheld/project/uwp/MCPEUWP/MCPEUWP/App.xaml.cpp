@@ -6,6 +6,9 @@
 #include "pch.h"
 #include "MainPage.xaml.h"
 
+#include <windows.h>
+#include <sstream>
+
 using namespace MCPEUWP;
 
 using namespace Platform;
@@ -29,7 +32,23 @@ using namespace Windows::UI::Xaml::Navigation;
 App::App()
 {
     InitializeComponent();
+#if defined(_DEBUG)
+    UnhandledException += ref new UnhandledExceptionEventHandler(
+        this, &App::OnUnhandledException);
+#endif
     Suspending += ref new SuspendingEventHandler(this, &App::OnSuspending);
+}
+
+void App::OnUnhandledException(Object^, UnhandledExceptionEventArgs^ e)
+{
+#if defined(_DEBUG)
+    OutputDebugStringW(L"[WorldEditDiag] App: unhandled exception message=");
+    if (e != nullptr && e->Message != nullptr)
+        OutputDebugStringW(e->Message->Data());
+    OutputDebugStringW(L"\n");
+#else
+    (void)e;
+#endif
 }
 
 /// <summary>

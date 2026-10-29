@@ -22,6 +22,8 @@ namespace MCPEUWP
 
 	private:
 		void OnSuspending(Platform::Object^ sender, Windows::ApplicationModel::SuspendingEventArgs^ e);
+		void OnUnhandledException(Platform::Object^ sender,
+			Windows::UI::Xaml::UnhandledExceptionEventArgs^ e);
 		void OnNavigationFailed(Platform::Object ^sender, Windows::UI::Xaml::Navigation::NavigationFailedEventArgs ^e);
 	};
 }
