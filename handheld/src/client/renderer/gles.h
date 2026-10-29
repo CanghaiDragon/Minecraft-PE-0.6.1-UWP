@@ -296,6 +296,10 @@ void glFogx_shader(GLenum pname, GLint param);
 
 #endif // shader platforms
 
+#if defined(MCPE_UWP)
+bool shaderIsDepthTestEnabled();
+#endif
+
 // Fog state has to be mirrored into the programmable pipeline.  Keep the
 // wrapper explicit (like the existing *2 helpers) so desktop GL headers and
 // the real functions remain usable inside gles.cpp.

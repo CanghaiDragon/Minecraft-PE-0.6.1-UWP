@@ -2428,6 +2428,16 @@ void MainPage::BeginOriginalClientTexturePreload()
 		"terrain/sun.png",
 		"terrain/moon.png",
 		"mob/char.png",
+		"armor/cloth_1.png",
+		"armor/cloth_2.png",
+		"armor/chain_1.png",
+		"armor/chain_2.png",
+		"armor/iron_1.png",
+		"armor/iron_2.png",
+		"armor/diamond_1.png",
+		"armor/diamond_2.png",
+		"armor/gold_1.png",
+		"armor/gold_2.png",
 		// EntityRenderDispatcher resolves the original mob renderers lazily.
 		// AppPlatform_uwp intentionally exposes a synchronous cache-only
 		// texture API, so every mob skin that can be requested by those

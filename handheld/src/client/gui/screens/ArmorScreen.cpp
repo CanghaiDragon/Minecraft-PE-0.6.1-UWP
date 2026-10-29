@@ -353,7 +353,22 @@ void ArmorScreen::renderPlayer(float xo, float yo) {
 
 	EntityRenderDispatcher* rd = EntityRenderDispatcher::getInstance();
 	rd->playerRotY = 180;
+
+#if defined(MCPE_UWP)
+	const bool depthTestBefore = shaderIsDepthTestEnabled();
+	// The player preview is a 3D pass.  Establish depth testing explicitly
+	// because the surrounding GUI pass may have left it disabled.
+	glEnable2(GL_DEPTH_TEST);
+#endif
+
 	rd->render(player, 0, 0, 0, 0, 1);
+
+#if defined(MCPE_UWP)
+	if (depthTestBefore)
+		glEnable2(GL_DEPTH_TEST);
+	else
+		glDisable2(GL_DEPTH_TEST);
+#endif
 
 	// Pop walking anim
 	player->walkAnimPos = oldWAP;

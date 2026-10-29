@@ -457,6 +457,13 @@ void glFogx_shader(GLenum pname, GLint param) {
 
 #endif // shader platforms
 
+#if defined(MCPE_UWP)
+bool shaderIsDepthTestEnabled()
+{
+	return glIsEnabled(GL_DEPTH_TEST) == GL_TRUE;
+}
+#endif
+
 static const float __glPi = 3.14159265358979323846f;
 
 static void __gluMakeIdentityf(GLfloat m[16]);
