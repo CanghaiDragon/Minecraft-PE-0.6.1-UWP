@@ -46,7 +46,7 @@ void Options::initDefaultValues() {
 	sensitivity = 0.5f;
 	fieldOfView = 70.0f;
 	invertYMouse = false;
-	viewDistance = 2;
+	viewDistance = 1;
 	bobView = true;
 	anaglyph3d = false;
 	limitFramerate = false;
@@ -108,7 +108,7 @@ void Options::initDefaultValues() {
 #if defined(MACOS) || defined(LINUX) || defined(WIN32)
 	fancyGraphics = true;
 	useMouseForDigging = true;
-	viewDistance = 0; // 0=far, 1=normal, 2=short, 3=tiny
+	viewDistance = 1; // 0=far, 1=normal, 2=short, 3=tiny
 	keyUp.key    = Keyboard::KEY_W;
 	keyDown.key  = Keyboard::KEY_S;
 	keyLeft.key  = Keyboard::KEY_A;

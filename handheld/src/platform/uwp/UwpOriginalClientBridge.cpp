@@ -9,6 +9,7 @@
 #include "../../network/RakNetInstance.h"
 #include "../../network/ServerSideNetworkHandler.h"
 #include "../../client/gui/screens/StartMenuScreen.h"
+#include "../../client/gui/screens/WelcomeScreen.h"
 #include "../../client/gui/screens/ProgressScreen.h"
 #include "../../client/gui/screens/OptionsScreen.h"
 #include "../../client/gui/Screen.h"
@@ -215,7 +216,7 @@ namespace
 				"This world is in an unsupported legacy format.",
 				width / 2, height / 2 - 42, 0xffffff);
 				drawCenteredString(font,
-					"Use UWP v1.1 to open it.",
+					"Use Windows Universal v1.0 to open it.",
 				width / 2, height / 2 - 26, 0xffffff);
 			super::render(xm, ym, a);
 		}
@@ -341,6 +342,12 @@ bool UwpOriginalClientShowStartMenu(UwpOriginalClientHandle handle)
 	Minecraft* minecraft = UwpOriginalClientGetMinecraft(handle);
 	if (minecraft == nullptr)
 		return false;
+	// Minecraft::init() creates the first-run welcome screen before the UWP
+	// host asks for the initial menu.  Keep that screen instead of replacing
+	// it with the normal start menu; installations with an existing options
+	// file never enter this branch because no WelcomeScreen is created.
+	if (dynamic_cast<WelcomeScreen*>(minecraft->screen) != nullptr)
+		return true;
 	// Keep the original menu navigation independent from the selected world
 	// input mode.  In particular, do not overwrite Touch here: the setting is
 	// intentionally carried into the borrowed world so it can be tested.

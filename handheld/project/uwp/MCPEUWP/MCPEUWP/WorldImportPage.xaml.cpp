@@ -70,6 +70,21 @@ namespace
 		return true;
 	}
 
+	bool IsAsciiWorldName(const std::wstring& name)
+	{
+		// UwpStoragePaths::enumerateWorldFolderNamesBlocking() uses the same
+		// byte-oriented contract as the original 0.6.1 storage code and skips
+		// folder names containing code points above ASCII.
+		if (name.empty())
+			return false;
+		for (const wchar_t character : name)
+		{
+			if (character > 0x7f)
+				return false;
+		}
+		return true;
+	}
+
 	bool GetRelativeZipPath(const std::wstring& archivePath,
 		const std::wstring& worldRoot, std::wstring& relativePath)
 	{
@@ -574,6 +589,14 @@ void WorldImportPage::ShowMultipleLevelDatDialog()
 			L"The selected ZIP contains multiple level.dat files. Please select one world archive at a time."));
 }
 
+void WorldImportPage::ShowUnsupportedArchiveNameDialog()
+{
+	ShowRejectDialog(
+		ref new String(L"World Cannot Be Imported"),
+		ref new String(
+			L"The ZIP file name contains characters that Minecraft PE 0.6.1 cannot recognize. Please rename it using ASCII characters only."));
+}
+
 void WorldImportPage::ShowInvalidArchiveDialog(String^ error)
 {
 	std::wstring message = L"The selected ZIP does not contain a valid Minecraft PE world.";
@@ -635,6 +658,12 @@ void WorldImportPage::OnSelectZipClick(Object^, RoutedEventArgs^)
 
 		m_importWorldName = file->DisplayName;
 		m_importArchiveName = file->Name;
+		if (!IsAsciiWorldName(m_importWorldName->Data()))
+		{
+			StatusText->Text = ref new String(L"Import rejected: unsupported ZIP file name.");
+			ShowUnsupportedArchiveNameDialog();
+			return task_from_result<StorageFile^>(nullptr);
+		}
 		StatusText->Text = ref new String(L"Checking world format...");
 		return create_task(file->CopyAsync(
 			ApplicationData::Current->TemporaryFolder,

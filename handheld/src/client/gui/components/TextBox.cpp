@@ -19,6 +19,13 @@ void TextBox::setFocus(Minecraft* minecraft) {
 		focused = true;
 		blinkTicks = 0;
 		blink = false;
+		// Native MCPE text boxes are rendered by OpenGL rather than backed by a
+		// XAML TextBox.  In touch mode, explicitly request UWP's input pane when
+		// the user taps a field so the existing CharacterReceived bridge can feed
+		// the focused native control.
+		if (minecraft != nullptr && minecraft->useTouchscreen()
+			&& minecraft->platform() != nullptr)
+			minecraft->platform()->showKeyboard();
 	}
 }
 

@@ -2,6 +2,7 @@
 
 #include "StartMenuScreen.h"
 #include "DialogDefinitions.h"
+#include "WelcomeScreen.h"
 #include "../../Minecraft.h"
 #include "../../../AppPlatform.h"
 #include "../../../locale/I18n.h"
@@ -20,6 +21,7 @@ OptionsScreen::OptionsScreen()
   currentOptionPane(NULL),
   usernameBox(NULL),
   selectedCategory(0),
+  _resettingOptions(false),
   _catScrollY(0),
   _catScrollVelocity(0),
   _catContentHeight(0),
@@ -183,7 +185,8 @@ void OptionsScreen::render( int xm, int ym, float a ) {
 
 void OptionsScreen::removed()
 {
-	saveUsername();
+	if (!_resettingOptions)
+		saveUsername();
 }
 
 void OptionsScreen::saveUsername()
@@ -234,7 +237,8 @@ void OptionsScreen::generateOptionScreens() {
 	usernameBox = gameGroup.addTextInput("Username", "Username", minecraft->options.username);
 	gameGroup.addOptionItem(&Options::Option::DIFFICULTY, minecraft)
 		.addOptionItem(&Options::Option::THIRD_PERSON, minecraft)
-		.addOptionItem(&Options::Option::SERVER_VISIBLE, minecraft);
+		.addOptionItem(&Options::Option::SERVER_VISIBLE, minecraft)
+		.addRestoreDefaultsItem(minecraft);
 
 	// Controls
 	OptionsGroup& controlsGroup = optionPanes[1]->createOptionsGroup("options.group.controls");
@@ -246,7 +250,7 @@ void OptionsScreen::generateOptionScreens() {
 		.addOptionItem(&Options::Option::USE_TOUCH_JOYPAD, minecraft)
 		.addOptionItem(&Options::Option::INVERT_MOUSE, minecraft)
 		.addKeyMappingItem(minecraft)
-		.addDisabledItem("Vibrate on Destroy", "Unavailable");
+		.addOptionItem(&Options::Option::DESTROY_VIBRATION, minecraft);
 
 	// Graphics
 	optionPanes[2]->createOptionsGroup("options.group.graphics")
@@ -393,6 +397,18 @@ void OptionsScreen::keyboardNewChar(char inputChar)
 }
 
 void OptionsScreen::tick() {
+	if (minecraft->consumeOptionsResetRequest()) {
+		// Reset before replacing this screen.  OptionsScreen::removed() normally
+		// saves the text box value, so suppress that cleanup for this path; this
+		// ensures the old username cannot be written back over the defaults.
+		_resettingOptions = true;
+		minecraft->options.initDefaultValues();
+		minecraft->options.deleteSavedOptions();
+		minecraft->setSize(minecraft->width, minecraft->height);
+		minecraft->setScreen(new WelcomeScreen());
+		return;
+	}
+
 	// Sidebar scroll handling
 	if (_catDragging) {
 		int mx = Mouse::getX();

@@ -23,6 +23,7 @@ public:
 	std::string getPlatformStringVar(int stringId) override;
 	std::string getDateString(int seconds) override;
 	void openUrl(const std::string& url) override;
+	void vibrate(int milliSeconds) override;
 	void showKeyboard() override;
 	void hideKeyboard() override;
 

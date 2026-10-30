@@ -22,6 +22,7 @@ public:
 	OptionsGroup& addDisabledItem(const std::string& label, const std::string& value);
 	OptionsGroup& addKeyMappingItem(Minecraft* minecraft);
 	OptionsGroup& addDescription(const std::string& text);
+	OptionsGroup& addRestoreDefaultsItem(Minecraft* minecraft);
 	OptionsGroup& addClearSkinCacheItem(Minecraft* minecraft);
 	OptionsGroup& addImportSkinItem(Minecraft* minecraft);
 protected:

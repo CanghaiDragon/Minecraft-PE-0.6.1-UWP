@@ -86,6 +86,8 @@ static std::string sliderValueText(SliderType sliderType, const Options::Option*
 static int sliderTextAreaWidth(const Options::Option* option) {
 	if (option == &Options::Option::INPUT_MODE || option == &Options::Option::SKIN_ARM_TYPE)
 		return 56;
+	if (option == &Options::Option::DIFFICULTY)
+		return 48;
 	if (option == &Options::Option::THIRD_PERSON)
 		return 150;
 	return 32;
@@ -94,7 +96,13 @@ static int sliderTextAreaWidth(const Options::Option* option) {
 static int sliderContentOffset(const Options::Option* option) {
 	// The Camera row has a wider value area. Keep its track and value text
 	// slightly farther from the left label for visual balance.
-	return option == &Options::Option::THIRD_PERSON ? 40 : 0;
+	if (option == &Options::Option::THIRD_PERSON)
+		return 40;
+	// Peaceful is wider than the old 32px value area.  Keep the whole
+	// difficulty control slightly left so its state text stays inside the pane.
+	if (option == &Options::Option::DIFFICULTY)
+		return -8;
+	return 0;
 }
 
 void Slider::render( Minecraft* minecraft, int xm, int ym ) {

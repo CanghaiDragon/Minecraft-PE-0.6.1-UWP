@@ -18,10 +18,8 @@ Screen* ScreenChooser::createScreen( ScreenId id )
 
 	// UI presentation is deliberately independent from input mode. Java UI is
 	// opt-in; the default is the PE/touch presentation even with a mouse and
-	// keyboard. Join Game remains input-mode driven because it is not one of
-	// the screens covered by the Java UI switch.
+	// keyboard.
 	const bool useJavaUi = _mc->options.javaUi;
-	const bool useTouchJoinUi = _mc->useTouchscreen();
 
 	switch (id) {
 	case SCREEN_STARTMENU:
@@ -33,8 +31,8 @@ Screen* ScreenChooser::createScreen( ScreenId id )
 		                   : static_cast<Screen*>(new Touch::SelectWorldScreen());
 		break;
 	case SCREEN_JOINGAME:
-		screen = useTouchJoinUi ? static_cast<Screen*>(new Touch::JoinGameScreen())
-		                        : static_cast<Screen*>(new JoinGameScreen());
+		screen = useJavaUi ? static_cast<Screen*>(new JoinGameScreen())
+		                        : static_cast<Screen*>(new Touch::JoinGameScreen());
 		break;
 	case SCREEN_PAUSE:
 		screen = new PauseScreen(false);

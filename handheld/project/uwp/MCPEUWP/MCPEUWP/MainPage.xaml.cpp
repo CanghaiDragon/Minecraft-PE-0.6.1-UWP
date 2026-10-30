@@ -12,6 +12,7 @@
 #include "../../../../src/platform/input/Mouse.h"
 #include "../../../../src/platform/input/Multitouch.h"
 #include "../../../../src/client/Minecraft.h"
+#include "../../../../src/client/gui/screens/ProgressScreen.h"
 #include "../../../../src/client/Options.h"
 #include "../../../../src/client/gui/Font.h"
 #include "../../../../src/client/renderer/Tesselator.h"
@@ -291,11 +292,10 @@ void MainPage::OnLoaded(Object^, RoutedEventArgs^)
 		{
 			return UwpStoragePaths::ensureTemporaryWorldsFolderAsync();
 		})
-		.then([](Windows::Storage::StorageFolder^)
-		{
-			return UwpStoragePaths::ensureOptionsFileAsync();
-		})
-		.then([this](Windows::Storage::StorageFile^)
+		// Do not create options.txt here.  Minecraft::init() checks whether this
+		// file exists to decide whether to show WelcomeScreen on first launch.
+		// The regular Options::save() path will create it after initialization.
+		.then([this](Windows::Storage::StorageFolder^)
 		{
 			const UwpLevelDatSmokeResult levelDatResult = UwpLevelDatSmoke::run();
 			if (!m_core.isActive())
@@ -1563,6 +1563,19 @@ void MainPage::OnGameTick(std::uint64_t tick)
 		// NinecraftApp::updateFixedStep -> Minecraft::updateUwpFixedStep ->
 		// Minecraft::tick.  This avoids a second wall-clock Timer cadence.
 		m_originalClientHost.fixedTick();
+		// A remote join uses the original client path rather than
+		// UwpCoreSession.  ProgressScreen normally removes itself from its
+		// render callback, but the UWP shell can keep the original menu state
+		// latched while the guest world is already ticking.  Clear only that
+		// loading screen once the network level has finished generation.
+		Minecraft* originalMinecraft = m_originalClientHost.minecraft();
+		if (originalMinecraft != nullptr && originalMinecraft->level != nullptr &&
+			originalMinecraft->isLevelGenerated() &&
+			dynamic_cast<ProgressScreen*>(originalMinecraft->screen) != nullptr)
+		{
+			originalMinecraft->setScreen(nullptr);
+			m_originalMenuActive = false;
+		}
 		const UwpOriginalMenuAction worldAction =
 			m_originalClientHost.consumeMenuAction();
 		if (worldAction == UwpOriginalMenuAction::LeaveWorld)
@@ -1614,15 +1627,25 @@ void MainPage::OnGameRender(float alpha)
 	if (m_originalClientHost.isOriginalClientLoopEnabled() &&
 		!m_core.isActive())
 	{
-		// Main-menu screens use the original Minecraft -> GameRenderer ->
-		// Screen path.  Do not draw the custom UWP menu over it.
+		// Main-menu screens and remote multiplayer both use the original
+		// Minecraft -> GameRenderer path.  A remote client does not activate
+		// UwpCoreSession, so use the original client's Level as the world
+		// presentation signal; otherwise the UWP overlay would keep drawing
+		// its dirt loading background over the already-running guest world.
 		m_originalClientHost.render(alpha);
 		// UWP advances simulation at a fixed rate but renders at the display
 		// rate. Consume the relative mouse accumulator after this render so a
 		// single OS pointer delta is not applied again before the next tick's
 		// normal NinecraftApp::update() reset2() call.
 		Mouse::reset2();
-		m_ui.setRealWorldRendering(false);
+		Minecraft* originalMinecraft = m_originalClientHost.minecraft();
+		// A remote client can still be finishing the original generation
+		// handshake while its Level is already active and receiving ticks.  The
+		// original renderer now draws such a Level directly, so do not paint the
+		// UWP dirt loading background over it merely because the handshake flag
+		// has not caught up yet.
+		m_ui.setRealWorldRendering(originalMinecraft != nullptr &&
+			originalMinecraft->level != nullptr);
 		return;
 	}
 	if (m_ui.screen() != UwpUiRenderer::Screen::Game)
@@ -2286,12 +2309,21 @@ bool MainPage::AttachOriginalWorldForTick()
 	// original LevelRenderer now owns native Chunk scheduling/submission.
 	m_worldRenderer.setOriginalLevelRenderer(
 		originalLevelRenderer, m_core.nativeLocalPlayer());
-	// Keep a local UWP world offline until the user explicitly chooses
-	// "Open to LAN" from PauseScreen. Automatically hosting here makes
-	// LocalPlayer::tick() send movement packets while the player is still the
-	// sole local authority; a delayed server MovePlayerPacket can then feed the
-	// normal three-tick interpolation path back into the same player and feel
-	// like a pull in the opposite direction.
+	// Match the original Server visible preference: when it is enabled, a
+	// newly entered local world starts as a LAN host. When disabled, preserve
+	// the ordinary offline local-world path until the player chooses Open to
+	// LAN from PauseScreen.
+	Minecraft* originalMinecraft = m_originalClientHost.minecraft();
+	if (originalMinecraft != nullptr && originalMinecraft->options.serverVisible)
+	{
+		if (!m_originalClientHost.hostMultiplayer())
+		{
+			m_worldRenderer.setOriginalLevelRenderer(
+				nullptr, static_cast<LocalPlayer*>(nullptr));
+			m_originalClientHost.detachWorld();
+			return false;
+		}
+	}
 	m_originalPointerX = -1.0f;
 	m_originalPointerY = -1.0f;
 	m_originalClientHost.setWorldTickEnabled(true);

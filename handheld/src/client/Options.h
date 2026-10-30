@@ -443,6 +443,7 @@ public:
 
 	void setSettingsPath(const std::string& path);
 	bool hasSavedOptions() const { return optionsFile.exists(); }
+	void deleteSavedOptions() { optionsFile.remove(); }
 	void update();
     void load();
     void save();

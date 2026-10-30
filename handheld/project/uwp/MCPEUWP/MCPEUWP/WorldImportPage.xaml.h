@@ -25,6 +25,7 @@ namespace MCPEUWP
 		void AnimateRejectDialog(bool entering);
 		void ShowTooNewVersionDialog(unsigned int formatVersion);
 		void ShowMultipleLevelDatDialog();
+		void ShowUnsupportedArchiveNameDialog();
 		void ShowInvalidArchiveDialog(Platform::String^ error);
 		void ShowImportSuccess(unsigned int formatVersion, Platform::String^ worldRoot);
 		Windows::Storage::StorageFile^ m_importTemporaryFile;

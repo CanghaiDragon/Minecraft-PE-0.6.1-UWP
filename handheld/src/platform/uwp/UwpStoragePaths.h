@@ -22,7 +22,6 @@ namespace UwpStoragePaths
 	concurrency::task<Windows::Storage::StorageFolder^> ensureWorldsFolderAsync();
 	concurrency::task<Windows::Storage::StorageFolder^> ensureTemporaryWorldsFolderAsync();
 	concurrency::task<Windows::Storage::StorageFolder^> ensureSkinFolderAsync();
-	concurrency::task<Windows::Storage::StorageFile^> ensureOptionsFileAsync();
 	// Synchronous directory enumeration for the original LevelStorageSource
 	// contract.  It is safe to call from the original SelectWorldScreen UI tick
 	// because the implementation uses the app-local Win32 directory API rather

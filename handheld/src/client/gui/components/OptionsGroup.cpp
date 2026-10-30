@@ -57,6 +57,19 @@ public:
 		}
 	}
 };
+
+class RestoreDefaultsButton : public Touch::TButton {
+public:
+	RestoreDefaultsButton() : Touch::TButton(0, "Apply") {}
+	virtual void mouseClicked(Minecraft* minecraft, int x, int y, int buttonNum) {
+		if (buttonNum == MouseAction::ACTION_LEFT && clicked(minecraft, x, y)) {
+			if (minecraft != nullptr)
+				minecraft->requestOptionsReset();
+			if (minecraft != nullptr && minecraft->soundEngine != nullptr)
+				minecraft->soundEngine->playUI("random.click", 1, 1);
+		}
+	}
+};
 }
 
 OptionsGroup::OptionsGroup( std::string labelID )  {
@@ -132,6 +145,16 @@ OptionsGroup& OptionsGroup::addKeyMappingItem(Minecraft* minecraft) {
 
 OptionsGroup& OptionsGroup::addDescription(const std::string& text) {
 	addChild(new OptionsDescription(text));
+	setupPositions();
+	return *this;
+}
+
+OptionsGroup& OptionsGroup::addRestoreDefaultsItem(Minecraft* minecraft) {
+	(void)minecraft;
+	RestoreDefaultsButton* element = new RestoreDefaultsButton();
+	element->width = 70;
+	element->height = 20;
+	addChild(new OptionsItem("Restore Default Settings", element));
 	setupPositions();
 	return *this;
 }
@@ -228,7 +251,8 @@ void OptionsGroup::createStepSlider( const Options::Option* option, Minecraft* m
 	// Camera has three longer value labels, so it needs a wider control than
 	// the compact two/three-step sliders. Otherwise its value area would be
 	// wider than the control itself, leaving no draggable track.
-	element->width = (option == &Options::Option::THIRD_PERSON) ? 240 : 120;
+	element->width = (option == &Options::Option::THIRD_PERSON) ? 240
+		: (option == &Options::Option::DIFFICULTY ? 128 : 120);
 	element->height = 24;
 	std::string itemLabel = I18n::get(option->getCaptionId());
 	OptionsItem* item = new OptionsItem(itemLabel, element);

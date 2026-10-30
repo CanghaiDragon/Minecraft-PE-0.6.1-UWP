@@ -39,6 +39,7 @@ private:
 	OptionsPane* currentOptionPane;
 	TextBox* usernameBox;
 	int selectedCategory;
+	bool _resettingOptions;
 
 	// Sidebar scroll state
 	float _catScrollY;

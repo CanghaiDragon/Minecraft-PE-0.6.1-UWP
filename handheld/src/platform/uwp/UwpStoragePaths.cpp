@@ -15,7 +15,6 @@ namespace
 	const wchar_t* kGamesFolder = L"games";
 	const wchar_t* kMojangFolder = L"com.mojang";
 	const wchar_t* kWorldsFolder = L"minecraftWorlds";
-	const wchar_t* kOptionsFile = L"options.txt";
 
 	task<StorageFolder^> createChildFolder(StorageFolder^ parent, const wchar_t* name)
 	{
@@ -150,13 +149,6 @@ namespace UwpStoragePaths
 	task<StorageFolder^> ensureSkinFolderAsync()
 	{
 		return ensureSkinTreeAsync(ApplicationData::Current->LocalFolder);
-	}
-
-	task<StorageFile^> ensureOptionsFileAsync()
-	{
-		return create_task(ApplicationData::Current->LocalFolder->CreateFileAsync(
-			ref new String(kOptionsFile),
-			CreationCollisionOption::OpenIfExists));
 	}
 
 	std::vector<std::string> enumerateWorldFolderNamesBlocking()

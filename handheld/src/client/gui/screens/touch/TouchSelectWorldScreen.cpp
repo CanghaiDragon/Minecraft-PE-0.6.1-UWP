@@ -282,7 +282,6 @@ void TouchWorldSelectionList::tweenInited() {
 //
 SelectWorldScreen::SelectWorldScreen()
 :	bEdit   (1, "Edit"),
-	bCreate (2, "Create new"),
 	bImport (3, "Import"),
 	bBack   (4, "Back"),
 	bHeader (0, "Select world"),
@@ -306,7 +305,6 @@ void SelectWorldScreen::init()
 	worldsList->commit();
 
 	buttons.push_back(&bEdit);
-	buttons.push_back(&bCreate);
 	buttons.push_back(&bImport);
 	buttons.push_back(&bBack);
 	buttons.push_back(&bHeader);
@@ -315,38 +313,28 @@ void SelectWorldScreen::init()
 
 	tabButtons.push_back(&bWorldView);
 	tabButtons.push_back(&bEdit);
-	tabButtons.push_back(&bCreate);
 	tabButtons.push_back(&bImport);
 	tabButtons.push_back(&bBack);
 }
 
 void SelectWorldScreen::setupPositions() {
 	//#ifdef ANDROID
-	bCreate.y =	0;
 	bImport.y = 0;
 	bBack.y   = 0;
 	bHeader.y = 0;
 	bEdit.y   = height - 30;
 
-	// Keep Back on the left and place Import immediately to the left of
-	// Create new in the touch top bar.
-	bCreate.x   = width - bCreate.width;
-	bImport.x   = bCreate.x - bImport.width;
+	// Keep Back on the left and place Import on the right in the touch top bar.
+	bImport.x   = width - bImport.width;
 	bBack.x     = 0;
 	bHeader.x   = bBack.width;
-	bHeader.width   = width - (bBack.width + bImport.width + bCreate.width);
+	bHeader.width   = width - (bBack.width + bImport.width);
 	bEdit.x     = (width - bEdit.width) / 2;
-	bHeader.height   = bCreate.height;
+	bHeader.height   = bImport.height;
 }
 
 void SelectWorldScreen::buttonClicked(Button* button)
 {
-	if (button->id == bCreate.id) {
-		if (_state == _STATE_DEFAULT && !_hasStartedLevel) {
-			minecraft->platform()->createUserInput(DialogDefinitions::DIALOG_CREATE_NEW_WORLD);
-			_state = _STATE_CREATEWORLD;
-		}
-	}
 	if (button->id == bEdit.id) {
 		if (isIndexValid(worldsList->selectedItem)) {
 		#if defined(MCPE_UWP)
@@ -359,7 +347,11 @@ void SelectWorldScreen::buttonClicked(Button* button)
 		}
 	}
 	if (button->id == bImport.id) {
-		LOGI("World import placeholder selected\n");
+	#if defined(MCPE_UWP)
+		UwpOriginalClientRequestWorldImport();
+	#else
+		LOGI("World import is only available on UWP\n");
+	#endif
 	}
 	if (button->id == bBack.id) {
 		minecraft->cancelLocateMultiplayer();

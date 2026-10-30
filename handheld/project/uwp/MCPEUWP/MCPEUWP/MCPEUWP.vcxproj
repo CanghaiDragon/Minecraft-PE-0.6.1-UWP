@@ -7,13 +7,17 @@
     <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
     <AppContainerApplication>true</AppContainerApplication>
     <ApplicationType>Windows Store</ApplicationType>
-    <WindowsTargetPlatformVersion Condition=" '$(WindowsTargetPlatformVersion)' == '' ">10.0.26100.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion Condition=" '$(WindowsTargetPlatformVersion)' == '' ">10.0.19041.0</WindowsTargetPlatformVersion>
     <WindowsTargetPlatformMinVersion>10.0.10240.0</WindowsTargetPlatformMinVersion>
     <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
     <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|ARM">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|ARM64">
       <Configuration>Debug</Configuration>
       <Platform>ARM64</Platform>
@@ -29,6 +33,10 @@
     <ProjectConfiguration Include="Release|ARM64">
       <Configuration>Release</Configuration>
       <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM">
+      <Configuration>Release</Configuration>
+      <Platform>ARM</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|Win32">
       <Configuration>Release</Configuration>
@@ -55,6 +63,12 @@
     <PlatformToolset>v143</PlatformToolset>
     <UseDotNetNativeToolchain>true</UseDotNetNativeToolchain>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <UseDotNetNativeToolchain>true</UseDotNetNativeToolchain>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
@@ -76,12 +90,27 @@
     <PlatformToolset>v143</PlatformToolset>
     <UseDotNetNativeToolchain>true</UseDotNetNativeToolchain>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v143</PlatformToolset>
+    <UseDotNetNativeToolchain>true</UseDotNetNativeToolchain>
+  </PropertyGroup>
+  <!-- Keep the ARM32 linker on ARM libraries.  Some VS installations carry
+       an inherited x64 VC++ directory in the project defaults; explicitly
+       prepend the platform-specific MSVC, Windows SDK and UCRT paths so
+       LIBCMT.lib and the UWP system libraries resolve for ARM. -->
+  <PropertyGroup Condition="'$(Platform)'=='ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' != 'true'">
+    <LibraryPath>$(VCToolsInstallDir)lib\ARM;$(VC_LibraryPath_ARM);$(WindowsSDK_LibraryPath_ARM);$(UniversalCRTSdkDir)Lib\$(UCRTVersion)\ucrt\ARM</LibraryPath>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup>
     <AngleRoot>$(ProjectDir)..\..\..\..\..\third_party\angle_windowsstore</AngleRoot>
     <AnglePlatform Condition="'$(Platform)' == 'Win32'">Win32</AnglePlatform>
     <AnglePlatform Condition="'$(Platform)' == 'x64'">x64</AnglePlatform>
     <AnglePlatform Condition="'$(Platform)' == 'ARM'">ARM</AnglePlatform>
+    <AnglePlatform Condition="'$(Platform)' == 'ARM64'">ARM64</AnglePlatform>
     <AngleLibDir>$(AngleRoot)\bin\UAP\$(AnglePlatform)</AngleLibDir>
     <ZlibRoot>$(ProjectDir)..\..\..\..\lib</ZlibRoot>
     <ZlibPlatform Condition="'$(Platform)' == 'Win32'">x86</ZlibPlatform>
@@ -91,7 +120,7 @@
     <ZlibLibDir>$(ZlibRoot)\lib\$(ZlibPlatform)</ZlibLibDir>
     <ZlibBinDir>$(ZlibRoot)\bin\$(ZlibPlatform)</ZlibBinDir>
   </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64'">
+  <ItemDefinitionGroup Condition="('$(Platform)' == 'x64' Or '$(Platform)' == 'Win32' Or '$(Platform)' == 'ARM64') Or ('$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' != 'true')">
     <ClCompile>
       <AdditionalIncludeDirectories>$(AngleRoot)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
@@ -100,7 +129,15 @@
       <AdditionalDependencies>libEGL.lib;libGLESv2.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' != 'true'">
+    <Link>
+      <!-- The ARM UWP defaults may not propagate the SDK library macros
+           after a project inherits an x64 VC++ directory.  Put the ARM
+           system-library roots directly on the linker search path. -->
+      <AdditionalLibraryDirectories>$(VCToolsInstallDir)lib\ARM;$(VC_LibraryPath_ARM);$(WindowsSDK_LibraryPath_ARM);$(UniversalCRTSdkDir)Lib\$(UCRTVersion)\ucrt\ARM;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' != 'true'">
     <ClCompile>
       <!-- RakNet predates the UCRT's POSIX-name policy.  Keep its original
            cross-platform calls, but suppress only the UWP target's CRT
@@ -135,14 +172,37 @@
     <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
     <PackageCertificateThumbprint>454A3461584CC671165F8430913FD684E4324B69</PackageCertificateThumbprint>
     <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
-    <AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
+    <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
     <AppxPackageDir>D:\MCPE_0.6.1\MCPEUWP_Pack\</AppxPackageDir>
     <GenerateTestArtifacts>True</GenerateTestArtifacts>
     <AppxBundle>Always</AppxBundle>
-    <AppxBundlePlatforms>x64</AppxBundlePlatforms>
+    <AppxBundlePlatforms>arm</AppxBundlePlatforms>
     <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Platform)' == 'ARM'">
+    <!-- Set only for the ARM32 startup probe; normal ARM32 builds remain unchanged. -->
+    <MCPE_ARM32_STARTUP_DIAGNOSTIC>true</MCPE_ARM32_STARTUP_DIAGNOSTIC>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' == 'true'">
+    <ClCompile>
+      <PreprocessorDefinitions>MCPE_ARM32_STARTUP_DIAGNOSTIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>WindowsApp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <PropertyGroup Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' == 'true'">
+    <!-- Keep the diagnostic target on the ARM UWP/Store libraries.  This is
+         needed when the VS user property sheet supplies an x64 library path. -->
+    <LibraryPath>$(VCToolsInstallDir)lib\ARM\store;$(WindowsSdkDir)Lib\$(WindowsTargetPlatformVersion)\um\ARM;$(UniversalCRTSdkDir)Lib\$(UCRTVersion)\ucrt\ARM;$(VC_LibraryPath_ARM);$(WindowsSDK_LibraryPath_ARM)</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+    <ClCompile>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
@@ -154,6 +214,19 @@
       <!-- Do not emit CodeView/PDB data in Release.  The UWP XAML PCH step
            otherwise depends on a matching installed PDB provider and can
            fail with C1902 on mixed VS toolsets. -->
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <PreprocessorDefinitions>NDEBUG;MCPE_UWP_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+    <ClCompile>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <DebugInformationFormat>None</DebugInformationFormat>
       <PreprocessorDefinitions>NDEBUG;MCPE_UWP_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
@@ -243,16 +316,19 @@
     <ClInclude Include="App.xaml.h">
       <DependentUpon>App.xaml</DependentUpon>
     </ClInclude>
-    <ClInclude Include="MainPage.xaml.h">
+    <ClInclude Include="MainPage.xaml.h" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' != 'true'">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </ClInclude>
-    <ClInclude Include="KeyMappingPage.xaml.h">
+    <ClInclude Include="Arm32StartupTestPage.xaml.h">
+      <DependentUpon>Arm32StartupTestPage.xaml</DependentUpon>
+    </ClInclude>
+    <ClInclude Include="KeyMappingPage.xaml.h" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' != 'true'">
       <DependentUpon>KeyMappingPage.xaml</DependentUpon>
     </ClInclude>
-    <ClInclude Include="WorldEditShellPage.xaml.h">
+    <ClInclude Include="WorldEditShellPage.xaml.h" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' != 'true'">
       <DependentUpon>WorldEditShellPage.xaml</DependentUpon>
     </ClInclude>
-    <ClInclude Include="WorldImportPage.xaml.h">
+    <ClInclude Include="WorldImportPage.xaml.h" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' != 'true'">
       <DependentUpon>WorldImportPage.xaml</DependentUpon>
     </ClInclude>
   </ItemGroup>
@@ -260,17 +336,25 @@
     <ApplicationDefinition Include="App.xaml">
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Page Include="MainPage.xaml">
+    <Page Include="MainPage.xaml" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' != 'true'">
       <SubType>Designer</SubType>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' == 'true'">true</ExcludedFromBuild>
     </Page>
-    <Page Include="KeyMappingPage.xaml">
+    <Page Include="Arm32StartupTestPage.xaml">
       <SubType>Designer</SubType>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' == 'true'">false</ExcludedFromBuild>
     </Page>
-    <Page Include="WorldEditShellPage.xaml">
+    <Page Include="KeyMappingPage.xaml" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' != 'true'">
       <SubType>Designer</SubType>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' == 'true'">true</ExcludedFromBuild>
     </Page>
-    <Page Include="WorldImportPage.xaml">
+    <Page Include="WorldEditShellPage.xaml" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' != 'true'">
       <SubType>Designer</SubType>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' == 'true'">true</ExcludedFromBuild>
+    </Page>
+    <Page Include="WorldImportPage.xaml" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' != 'true'">
+      <SubType>Designer</SubType>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' == 'true'">true</ExcludedFromBuild>
     </Page>
   </ItemGroup>
   <ItemGroup>
@@ -278,7 +362,7 @@
       <SubType>Designer</SubType>
     </AppxManifest>
   </ItemGroup>
-  <ItemGroup Condition="'$(Platform)' == 'x64'">
+  <ItemGroup Condition="'$(Platform)' == 'x64' Or '$(Platform)' == 'Win32' Or '$(Platform)' == 'ARM64' Or ('$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' != 'true')">
     <Content Include="$(AngleLibDir)\libEGL.dll">
       <Link>libEGL.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -288,7 +372,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <ItemGroup>
+  <ItemGroup Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' != 'true'">
     <Content Include="$(ZlibBinDir)\zlib1.dll">
       <Link>zlib1.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -322,18 +406,27 @@
   <ItemGroup>
     <ClCompile Include="App.xaml.cpp">
       <DependentUpon>App.xaml</DependentUpon>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' == 'true'">false</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="MainPage.xaml.cpp">
+    <ClCompile Include="Arm32StartupTestPage.xaml.cpp">
+      <DependentUpon>Arm32StartupTestPage.xaml</DependentUpon>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' == 'true'">false</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="MainPage.xaml.cpp" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' != 'true'">
       <DependentUpon>MainPage.xaml</DependentUpon>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' == 'true'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="KeyMappingPage.xaml.cpp">
+    <ClCompile Include="KeyMappingPage.xaml.cpp" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' != 'true'">
       <DependentUpon>KeyMappingPage.xaml</DependentUpon>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' == 'true'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="WorldEditShellPage.xaml.cpp">
+    <ClCompile Include="WorldEditShellPage.xaml.cpp" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' != 'true'">
       <DependentUpon>WorldEditShellPage.xaml</DependentUpon>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' == 'true'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="WorldImportPage.xaml.cpp">
+    <ClCompile Include="WorldImportPage.xaml.cpp" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' != 'true'">
       <DependentUpon>WorldImportPage.xaml</DependentUpon>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' == 'true'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\..\..\..\src\AppPlatform_uwp.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -672,12 +765,35 @@
       <PreprocessorDefinitions>WIN32;STANDALONE_SERVER;NO_NETWORK;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Include="pch.cpp">
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' == 'true'">false</ExcludedFromBuild>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' == 'true'">
+    <!-- Remove the game translation units from this diagnostic target.  The
+         XAML-generated translation units are not project items here and are
+         therefore left intact. -->
+    <ClCompile Remove="MainPage.xaml.cpp;KeyMappingPage.xaml.cpp;WorldEditShellPage.xaml.cpp;WorldImportPage.xaml.cpp;..\..\..\..\src\**\*.cpp" />
+    <!-- Exclude only project-listed game sources.  XAML-generated .cpp items
+         are not touched and remain available for InitializeComponent. -->
+    <ClCompile Update="@(ClCompile)">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Update="App.xaml.cpp">
+      <ExcludedFromBuild>false</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Update="Arm32StartupTestPage.xaml.cpp">
+      <ExcludedFromBuild>false</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Update="pch.cpp">
+      <ExcludedFromBuild>false</ExcludedFromBuild>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

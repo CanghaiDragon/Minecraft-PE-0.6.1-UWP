@@ -1,0 +1,19 @@
+<Page
+    x:Class="MCPEUWP.Arm32StartupTestPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="White">
+    <Grid>
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock Text="ARM32 UWP startup test succeeded"
+                       Foreground="Black"
+                       FontSize="28"
+                       HorizontalAlignment="Center" />
+            <TextBlock Text="Minecraft engine, ANGLE, resources, audio and networking were not initialized."
+                       Foreground="DarkGray"
+                       FontSize="16"
+                       Margin="0,16,0,0"
+                       HorizontalAlignment="Center" />
+        </StackPanel>
+    </Grid>
+</Page>

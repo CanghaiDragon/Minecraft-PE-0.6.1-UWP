@@ -11,15 +11,15 @@
 #undef glIsEnabled
 #undef glDrawArrays
 // Provide the real glGetIntegerv wrapper that gles.h's inline calls
-extern "C" void glGetIntegerv(GLenum pname, GLint* params);
+extern "C" GL_APICALL void GL_APIENTRY glGetIntegerv(GLenum pname, GLint* params);
 void _real_glGetIntegerv(GLenum pname, GLint* params) {
     glGetIntegerv(pname, params);
 }
-extern "C" void glEnable(GLenum cap);
-extern "C" void glDisable(GLenum cap);
-extern "C" GLboolean glIsEnabled(GLenum cap);
-extern "C" void glDrawArrays(GLenum mode, GLint first, GLsizei count);
-extern "C" void glGetFloatv(GLenum pname, GLfloat* params);
+extern "C" GL_APICALL void GL_APIENTRY glEnable(GLenum cap);
+extern "C" GL_APICALL void GL_APIENTRY glDisable(GLenum cap);
+extern "C" GL_APICALL GLboolean GL_APIENTRY glIsEnabled(GLenum cap);
+extern "C" GL_APICALL void GL_APIENTRY glDrawArrays(GLenum mode, GLint first, GLsizei count);
+extern "C" GL_APICALL void GL_APIENTRY glGetFloatv(GLenum pname, GLfloat* params);
 #endif
 
 #if defined(MACOS) || defined(LINUX)

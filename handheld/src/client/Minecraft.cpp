@@ -180,6 +180,7 @@ Minecraft::Minecraft()
 #ifndef STANDALONE_SERVER
 	scheduledScreen(NULL),
 	hasScheduledScreen(false),
+	_optionsResetRequested(false),
 	soundEngine(NULL),
 #endif
 	ticks(0),
@@ -690,9 +691,13 @@ void Minecraft::renderFrame(float alpha)
 	// The controlled UWP frame source also uses this entry for original
 	// screens and for a network-owned MultiPlayerLevel.  GameRenderer has a
 	// real no-level branch which establishes the GUI projection and renders
-	// Minecraft::screen; an active generated Level takes the normal world path.
+	// Minecraft::screen.  A network Level is already usable by the client
+	// while its generation-finished handshake is being settled; in particular,
+	// after a remote player respawns there may be no Screen to keep the original
+	// renderer alive.  Keep drawing the Level whenever it is attached so the
+	// guest does not fall back to the dirt loading background.
 	if (gameRenderer != NULL &&
-		(isLevelGenerated() || screen != NULL))
+		(level != NULL || screen != NULL))
 		gameRenderer->render(alpha);
 #else
 	(void)alpha;
@@ -1678,6 +1683,16 @@ void Minecraft::reloadOptions() {
     //            an options screen (Android recreates OpenGL surface)
     setSize(width, height);
 #endif
+}
+
+void Minecraft::requestOptionsReset() {
+	_optionsResetRequested = true;
+}
+
+bool Minecraft::consumeOptionsResetRequest() {
+	const bool requested = _optionsResetRequested;
+	_optionsResetRequested = false;
+	return requested;
 }
 
 void Minecraft::_reloadInput() {

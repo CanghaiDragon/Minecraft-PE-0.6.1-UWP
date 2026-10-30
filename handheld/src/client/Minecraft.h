@@ -57,6 +57,8 @@ public:
 	void init();
 	void setSize(int width, int height);
 	void reloadOptions();
+	void requestOptionsReset();
+	bool consumeOptionsResetRequest();
 
 	bool supportNonTouchScreen();
 	bool useTouchscreen();
@@ -238,6 +240,7 @@ private:
 	int ticks;
 	bool screenMutex;
 	bool hasScheduledScreen;
+	bool _optionsResetRequested;
 	Screen* scheduledScreen;
 
 	int _licenseId;

@@ -1,20 +1,26 @@
 #include "AppPlatform_uwp.h"
 
 #include <windows.applicationmodel.h>
+#include <windows.devices.haptics.h>
+#include <windows.foundation.metadata.h>
 #include <windows.graphics.display.h>
 #include <windows.system.h>
 #include <windows.ui.viewmanagement.h>
 
 #include <cstdio>
 #include <ctime>
+#include <ppltasks.h>
 #include <string>
 #include <utility>
 
 using namespace Platform;
+using namespace Concurrency;
 using namespace Windows::ApplicationModel;
 using namespace Windows::Foundation;
+using namespace Windows::Devices::Haptics;
 using namespace Windows::Graphics::Display;
 using namespace Windows::System;
+using namespace Windows::Foundation::Metadata;
 using namespace Windows::UI::ViewManagement;
 
 namespace
@@ -197,6 +203,65 @@ void AppPlatform_uwp::openUrl(const std::string& url)
 	}
 	catch (...)
 	{
+	}
+}
+
+void AppPlatform_uwp::vibrate(int milliSeconds)
+{
+	if (milliSeconds <= 0)
+		return;
+
+	// Windows.Devices.Haptics is part of the universal contract from Windows
+	// 10.0.15063 onward. Older Windows 10 versions and devices without a
+	// vibration motor simply take the no-op path below.
+	try
+	{
+		if (!ApiInformation::IsTypePresent(
+			L"Windows.Devices.Haptics.VibrationDevice"))
+			return;
+
+		// GetDefaultAsync is intentionally kept asynchronous. Block destruction
+		// runs in the game loop, so waiting for WinRT device discovery here would
+		// introduce a frame stall on the first vibration.
+		create_task(VibrationDevice::GetDefaultAsync()).then(
+			[milliSeconds](VibrationDevice^ device)
+			{
+				if (device == nullptr || device->SimpleHapticsController == nullptr)
+					return;
+
+				SimpleHapticsController^ controller = device->SimpleHapticsController;
+				if (controller->SupportedFeedback == nullptr
+					|| controller->SupportedFeedback->Size == 0)
+					return;
+
+				SimpleHapticsControllerFeedback^ feedback =
+					controller->SupportedFeedback->GetAt(0);
+				if (feedback == nullptr)
+					return;
+
+				TimeSpan duration;
+				duration.Duration = static_cast<long long>(milliSeconds) * 10000;
+				if (controller->IsPlayDurationSupported)
+					controller->SendHapticFeedbackForDuration(feedback, 1.0, duration);
+				else
+					controller->SendHapticFeedback(feedback, 1.0);
+			})
+			.then([](task<void> completed)
+			{
+				try
+				{
+					completed.get();
+				}
+				catch (...)
+				{
+					// Haptics are optional and must never interrupt gameplay.
+				}
+			});
+	}
+	catch (...)
+	{
+		// A missing haptics contract, device, or permission must not affect block
+		// destruction or the game loop.
 	}
 }
 
