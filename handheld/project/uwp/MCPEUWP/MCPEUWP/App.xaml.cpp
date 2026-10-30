@@ -4,10 +4,9 @@
 //
 
 #include "pch.h"
+#include "MainPage.xaml.h"
 #if defined(MCPE_ARM32_STARTUP_DIAGNOSTIC)
 #include "Arm32StartupTestPage.xaml.h"
-#else
-#include "MainPage.xaml.h"
 #endif
 
 #include <windows.h>
@@ -136,11 +135,9 @@ void App::OnSuspending(Object^ sender, SuspendingEventArgs^ e)
     auto rootFrame = dynamic_cast<Frame^>(Window::Current->Content);
     if (rootFrame != nullptr)
     {
-#if !defined(MCPE_ARM32_STARTUP_DIAGNOSTIC)
         auto page = dynamic_cast<MainPage^>(rootFrame->Content);
         if (page != nullptr)
             page->SaveActiveWorld();
-#endif
     }
     deferral->Complete();
 }
