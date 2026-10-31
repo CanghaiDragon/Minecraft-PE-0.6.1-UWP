@@ -246,10 +246,10 @@ void OptionsScreen::generateOptionScreens() {
 		.addOptionItem(&Options::Option::INPUT_MODE, minecraft)
 		.addOptionItem(&Options::Option::SENSITIVITY, minecraft)
 		.addOptionItem(&Options::Option::DPAD_SIZE, minecraft)
+		.addKeyMappingItem(minecraft)
 		.addOptionItem(&Options::Option::LEFT_HANDED, minecraft)
 		.addOptionItem(&Options::Option::USE_TOUCH_JOYPAD, minecraft)
 		.addOptionItem(&Options::Option::INVERT_MOUSE, minecraft)
-		.addKeyMappingItem(minecraft)
 		.addOptionItem(&Options::Option::DESTROY_VIBRATION, minecraft);
 
 	// Graphics

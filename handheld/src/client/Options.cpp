@@ -27,7 +27,7 @@ void Options::initDefaultValues() {
 	flySpeed = 1;
 	cameraSpeed = 1;
 	guiScale = 0;
-	dpadSize = 0;
+	dpadSize = 1;
 
 	useMouseForDigging = false;
 	destroyVibration = true;
@@ -66,7 +66,7 @@ void Options::initDefaultValues() {
 
 	//skin     = "Default";
 	username = "Steve";
-	serverVisible = true;
+	serverVisible = false;
 
 	resetKeyMappings();
 

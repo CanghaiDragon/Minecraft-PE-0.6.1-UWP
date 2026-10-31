@@ -45,6 +45,32 @@
             </StackPanel>
         </Border>
 
+        <!-- ARM32-only XAML reachability probe.  It is independent of the
+             SwapChainPanel and remains above the game surface. -->
+        <Border x:Name="Arm32XamlProbe"
+                Canvas.ZIndex="300"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Margin="0,36,0,0"
+                Padding="18,10"
+                Background="#EE202020"
+                Visibility="Collapsed"
+                IsHitTestVisible="False">
+            <StackPanel>
+                <TextBlock Text="XAML MAIN PAGE LOADED"
+                           Foreground="#FFFFFF00"
+                           FontSize="24"
+                           FontWeight="Bold"
+                           HorizontalAlignment="Center" />
+                <TextBlock x:Name="Arm32StartupStage"
+                           Foreground="White"
+                           FontSize="14"
+                           TextWrapping="Wrap"
+                           MaxWidth="900"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
+        </Border>
+
         <!-- The original MCPE menu opens this native UWP surface through the
              bridge.  Keeping it as an overlay leaves the original menu and
              game loop alive underneath, so returning to the menu is instant. -->

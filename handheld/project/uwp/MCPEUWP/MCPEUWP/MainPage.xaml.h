@@ -152,6 +152,7 @@ namespace MCPEUWP
 		PendingSkinAction m_pendingSkinAction = PendingSkinAction::None;
 		bool m_rebuildingSkinDirtBackground = false;
 	bool m_firstFramePresented = false;
+		bool m_firstGameRenderCall = false;
 	std::uint64_t m_lastPerformanceDisplayTick = 0;
 	double m_maxFrameMilliseconds = 0.0;
 		std::vector<std::uint32_t> m_touchPointerIds;

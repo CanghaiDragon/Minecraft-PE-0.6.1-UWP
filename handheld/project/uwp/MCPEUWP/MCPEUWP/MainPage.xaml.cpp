@@ -142,6 +142,14 @@ namespace
 MainPage::MainPage()
 {
 	InitializeComponent();
+	// This probe is intentionally independent of ANGLE and the Minecraft
+	// client.  It verifies that MainPage XAML was constructed on ARM32.
+#if defined(_M_ARM)
+	if (Arm32XamlProbe != nullptr)
+		Arm32XamlProbe->Visibility = Windows::UI::Xaml::Visibility::Visible;
+	if (Arm32StartupStage != nullptr)
+		Arm32StartupStage->Text = L"MainPage XAML constructed; waiting for Loaded";
+#endif
 	m_touchPointerIds.assign(Multitouch::MAX_POINTERS,
 		(std::numeric_limits<std::uint32_t>::max)());
 	// StartupDiagnostic is a developer aid.  Release packages should present
@@ -217,12 +225,16 @@ void MainPage::ResetTouchSlots()
 
 void MainPage::OnLoaded(Object^, RoutedEventArgs^)
 {
-	SetStartupDiagnostic(L"MainPage.OnLoaded reached", L"Creating ANGLE EGL display...");
+	SetStartupDiagnostic(L"XAML MainPage Loaded", L"Render host creation begins");
 	if (m_angle.isInitialized())
 	{
 		SetStartupDiagnostic(L"ANGLE already initialized", L"Resuming render callback");
 		return;
 	}
+	std::wostringstream hostDetails;
+	hostDetails << L"SwapChainPanel=" << static_cast<int>(AnglePanel->ActualWidth)
+		<< L"x" << static_cast<int>(AnglePanel->ActualHeight);
+	SetStartupDiagnostic(L"SwapChainPanel created", hostDetails.str());
 
 	if (!m_angle.initialize(AnglePanel))
 	{
@@ -235,6 +247,7 @@ void MainPage::OnLoaded(Object^, RoutedEventArgs^)
 		SetStartupDiagnostic(L"ANGLE initialization failed", error.str());
 		return;
 	}
+	SetStartupDiagnostic(L"EGL Display/Surface/Context ready", m_angle.lastDetails());
 	if (!m_originalClientHost.bind(m_platform.get(), m_angle))
 	{
 		SetStartupDiagnostic(L"Original client host binding failed",
@@ -578,6 +591,11 @@ void MainPage::OnRendering(Object^, Object^)
 	// lockstep with the current ANGLE surface before its update/render call.
 	m_originalClientHost.setSize(static_cast<int>(width), static_cast<int>(height));
 	m_angle.beginFrame(width, height);
+	if (!m_firstGameRenderCall)
+	{
+		m_firstGameRenderCall = true;
+		SetStartupDiagnostic(L"First game render call", L"MainPage::OnRendering entered; EGL context is current");
+	}
 	if (!m_originalTexturesSmokeDone &&
 		m_clientTexturePreloadExpected > 0 &&
 		m_clientTexturePreloadCompleted >= m_clientTexturePreloadExpected)
@@ -655,10 +673,10 @@ void MainPage::OnRendering(Object^, Object^)
 			L"eglSwapBuffers error: 0x" +
 			std::to_wstring(static_cast<unsigned int>(m_angle.lastError())));
 	}
-	if (!m_firstFramePresented)
+	if (!m_firstFramePresented && m_angle.lastError() == EGL_SUCCESS)
 	{
 		m_firstFramePresented = true;
-		SetStartupDiagnostic(L"First EGL frame presented", L"If the screen is still white, this is likely a surface/overlay or stale-package issue");
+		SetStartupDiagnostic(L"First eglSwapBuffers succeeded", L"EGL returned EGL_SUCCESS");
 	}
 
 	// Keep diagnostics to the existing lower second line.  Update once per
@@ -679,6 +697,15 @@ void MainPage::OnRendering(Object^, Object^)
 
 void MainPage::SetStartupDiagnostic(const std::wstring& stage, const std::wstring& details)
 {
+	#if defined(_M_ARM)
+	if (Arm32StartupStage != nullptr)
+	{
+		std::wstring text = stage;
+		if (!details.empty())
+			text += L"\n" + details;
+		Arm32StartupStage->Text = ref new Platform::String(text.c_str());
+	}
+	#endif
 	if (StartupStage != nullptr)
 		StartupStage->Text = ref new Platform::String(stage.c_str());
 	if (StartupDetails != nullptr)

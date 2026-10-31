@@ -100,6 +100,10 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup>
     <AngleRoot>$(ProjectDir)..\..\..\..\..\third_party\angle_windowsstore</AngleRoot>
+    <!-- ARM64 uses the independently built ANGLE tree.  Keep the legacy
+         ANGLE.WindowsStore tree above unchanged for Win32/x64/ARM. -->
+    <AngleArm64Root>$(ProjectDir)..\..\..\..\..\..\ANGLE_ARM64_UWP</AngleArm64Root>
+    <AngleArm64LibDir>$(AngleArm64Root)\out\arm64-uwp-release</AngleArm64LibDir>
     <AnglePlatform Condition="'$(Platform)' == 'Win32'">Win32</AnglePlatform>
     <AnglePlatform Condition="'$(Platform)' == 'x64'">x64</AnglePlatform>
     <AnglePlatform Condition="'$(Platform)' == 'ARM'">ARM</AnglePlatform>
@@ -119,13 +123,22 @@
     <ZlibBinDir Condition="'$(Platform)' == 'ARM'">$(ZlibRoot)\bin\arm</ZlibBinDir>
     <ZlibLinkName Condition="'$(Platform)' == 'ARM'">zlib.lib</ZlibLinkName>
   </PropertyGroup>
-  <ItemDefinitionGroup Condition="('$(Platform)' == 'x64' Or '$(Platform)' == 'Win32' Or '$(Platform)' == 'ARM64') Or ('$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true')">
+  <ItemDefinitionGroup Condition="('$(Platform)' == 'x64' Or '$(Platform)' == 'Win32') Or ('$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true')">
     <ClCompile>
       <AdditionalIncludeDirectories>$(AngleRoot)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(AngleLibDir);$(ZlibLibDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>libEGL.lib;libGLESv2.lib;$(ZlibLinkName);%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'ARM64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(AngleArm64Root)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(AngleArm64LibDir);$(ZlibLibDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libEGL.dll.lib;libGLESv2.dll.lib;$(ZlibLinkName);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
@@ -177,7 +190,8 @@
     <AppxPackageDir>D:\MCPE_0.6.1\MCPEUWP_Pack\</AppxPackageDir>
     <GenerateTestArtifacts>True</GenerateTestArtifacts>
     <AppxBundle>Always</AppxBundle>
-    <AppxBundlePlatforms>arm</AppxBundlePlatforms>
+    <AppxBundlePlatforms Condition="'$(Platform)' == 'ARM64'">arm64</AppxBundlePlatforms>
+    <AppxBundlePlatforms Condition="'$(Platform)' != 'ARM64'">arm</AppxBundlePlatforms>
     <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Platform)' == 'ARM'">
@@ -364,13 +378,27 @@
       <SubType>Designer</SubType>
     </AppxManifest>
   </ItemGroup>
-  <ItemGroup Condition="'$(Platform)' == 'x64' Or '$(Platform)' == 'Win32' Or '$(Platform)' == 'ARM64' Or ('$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true')">
+  <ItemGroup Condition="'$(Platform)' == 'x64' Or '$(Platform)' == 'Win32' Or ('$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true')">
     <Content Include="$(AngleLibDir)\libEGL.dll">
       <Link>libEGL.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="$(AngleLibDir)\libGLESv2.dll">
       <Link>libGLESv2.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup Condition="'$(Platform)' == 'ARM64'">
+    <Content Include="$(AngleArm64LibDir)\libEGL.dll">
+      <Link>libEGL.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(AngleArm64LibDir)\libGLESv2.dll">
+      <Link>libGLESv2.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(AngleArm64LibDir)\d3dcompiler_47.dll">
+      <Link>d3dcompiler_47.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
