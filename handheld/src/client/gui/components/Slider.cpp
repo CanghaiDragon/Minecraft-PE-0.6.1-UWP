@@ -75,6 +75,12 @@ static std::string sliderValueText(SliderType sliderType, const Options::Option*
 			return I18n::get(curStepValue ? "options.skinArmType.slim" : "options.skinArmType.classic");
 		} else if (option == &Options::Option::GRAPHICS) {
 			return curStepValue ? I18n::get("options.graphics.fancy") : I18n::get("options.graphics.fast");
+		} else if (option == &Options::Option::DYNAMIC_TILE) {
+			if (curStepValue == Options::DYNAMIC_TILE_SIMPLE)
+				return I18n::get("options.dynamicTile.simple");
+			if (curStepValue == Options::DYNAMIC_TILE_FULL)
+				return I18n::get("options.dynamicTile.full");
+			return I18n::get("options.dynamicTile.off");
 		}
 		std::stringstream ss; ss << curStepValue; return ss.str();
 	} else {
@@ -86,6 +92,8 @@ static std::string sliderValueText(SliderType sliderType, const Options::Option*
 static int sliderTextAreaWidth(const Options::Option* option) {
 	if (option == &Options::Option::INPUT_MODE || option == &Options::Option::SKIN_ARM_TYPE)
 		return 56;
+	if (option == &Options::Option::DYNAMIC_TILE)
+		return 48;
 	if (option == &Options::Option::DIFFICULTY)
 		return 48;
 	if (option == &Options::Option::THIRD_PERSON)

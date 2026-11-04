@@ -6,6 +6,7 @@
 #include "pch.h"
 #include "MainPage.xaml.h"
 #include "../../../../src/platform/uwp/UwpLevelDatSmoke.h"
+#include "../../../../src/platform/uwp/UwpLiveTile.h"
 #include "../../../../src/platform/uwp/UwpOriginalClientHost.h"
 #include "../../../../src/platform/uwp/UwpSettingsModel.h"
 #include "../../../../src/platform/input/Keyboard.h"
@@ -15,6 +16,8 @@
 #include "../../../../src/client/gui/screens/ProgressScreen.h"
 #include "../../../../src/client/Options.h"
 #include "../../../../src/client/gui/Font.h"
+#include <windows.graphics.display.h>
+#include <windows.system.profile.h>
 #include "../../../../src/client/renderer/Tesselator.h"
 #include "../../../../src/client/renderer/Textures.h"
 #include "../../../../src/client/renderer/gles.h"
@@ -34,6 +37,7 @@
 #include <iomanip>
 #include <limits>
 #include <sstream>
+#include <cwchar>
 
 using namespace MCPEUWP;
 
@@ -142,9 +146,10 @@ namespace
 MainPage::MainPage()
 {
 	InitializeComponent();
+	ConfigureDeviceMode();
 	// This probe is intentionally independent of ANGLE and the Minecraft
 	// client.  It verifies that MainPage XAML was constructed on ARM32.
-#if defined(_M_ARM)
+#if defined(_M_ARM) && defined(MCPE_ANGLE_BUILD_ID_DIAGNOSTIC)
 	if (Arm32XamlProbe != nullptr)
 		Arm32XamlProbe->Visibility = Windows::UI::Xaml::Visibility::Visible;
 	if (Arm32StartupStage != nullptr)
@@ -176,6 +181,20 @@ MainPage::MainPage()
 	AnglePanel->PointerCanceled += ref new PointerEventHandler(this, &MainPage::OnPointerCanceled);
 	AnglePanel->PointerCaptureLost += ref new PointerEventHandler(this, &MainPage::OnPointerCaptureLost);
 	AnglePanel->PointerWheelChanged += ref new PointerEventHandler(this, &MainPage::OnPointerWheelChanged);
+}
+
+void MainPage::ConfigureDeviceMode()
+{
+	using namespace Windows::System::Profile;
+	String^ family = AnalyticsInfo::VersionInfo->DeviceFamily;
+	m_isMobile = family != nullptr &&
+		std::wcscmp(family->Data(), L"Windows.Mobile") == 0;
+	if (m_isMobile)
+	{
+		using namespace Windows::Graphics::Display;
+		DisplayInformation::AutoRotationPreferences =
+			DisplayOrientations::Landscape | DisplayOrientations::LandscapeFlipped;
+	}
 }
 
 int MainPage::TouchSlotForPointer(std::uint32_t pointerId)
@@ -507,6 +526,34 @@ void MainPage::OnNavigatedTo(NavigationEventArgs^ e)
 	}
 }
 
+void MainPage::HandleLaunchArguments(String^ arguments)
+{
+	if (arguments == nullptr || arguments->Length() == 0)
+		return;
+
+	// This is the SecondaryTile argument contract.  It is deliberately an
+	// internal, non-URI format so the world ID can be validated before use:
+	//     open-world:<minecraftWorlds folder name>
+	const std::wstring value(arguments->Data());
+	const std::wstring prefix = L"open-world:";
+	if (value.size() <= prefix.size() ||
+		value.compare(0, prefix.size(), prefix) != 0)
+		return;
+
+	const std::wstring worldId = value.substr(prefix.size());
+	if (worldId.empty() || worldId == L"." || worldId == L"..")
+		return;
+	for (const wchar_t character : worldId)
+	{
+		if (character < 0x20 || character == L'\\' || character == L'/' ||
+			character == L':')
+			return;
+	}
+
+	m_pendingLaunchWorldId = worldId;
+	m_pendingLaunchWorldRequested = true;
+}
+
 void MainPage::OnNavigatedFrom(NavigationEventArgs^ e)
 {
 	(void)e;
@@ -789,7 +836,17 @@ void MainPage::BeginWorldLoad(const std::wstring& worldId,
 			result.get();
 			if (!m_core.isActive() || !m_core.nativeWorldGenerated())
 			{
-				if (m_core.legacyStorageRejected())
+				const bool launchWorldFailed = m_exitAfterWorldSave;
+				const std::wstring loadError = m_core.errorText();
+				m_exitAfterWorldSave = false;
+				if (launchWorldFailed)
+				{
+					m_core.stop();
+					ShowLaunchWorldError(loadError.empty()
+						? L"This shortcut points to a world that is no longer available."
+						: loadError);
+				}
+				else if (m_core.legacyStorageRejected())
 				{
 					m_ui.setRealWorldRendering(false);
 					m_ui.setScreen(UwpUiRenderer::Screen::Game);
@@ -809,25 +866,57 @@ void MainPage::BeginWorldLoad(const std::wstring& worldId,
 			}
 			else if (!AttachOriginalWorldForTick())
 			{
+				const bool launchWorldFailed = m_exitAfterWorldSave;
+				m_exitAfterWorldSave = false;
 				m_worldRenderer.setLevel(nullptr);
 				m_core.stop();
-				ShowOriginalWorldSelection();
-				m_ui.setStatusText(L"Original Minecraft world attach failed");
+				if (launchWorldFailed)
+					ShowLaunchWorldError(L"The saved world could not be attached to the game.");
+				else
+				{
+					ShowOriginalWorldSelection();
+					m_ui.setStatusText(L"Original Minecraft world attach failed");
+				}
 			}
 			else
 			{
 				m_ui.setGameTelemetry(m_core.worldName(), m_core.tickCount(),
 					m_core.playerX(), m_core.playerZ(), m_core.dayTime());
 				m_ui.setStatusText(L"MCPE saved world loaded | original tick active");
+				UwpLiveTileWorldsChanged();
 			}
 		}
 		catch (...)
 		{
-			ShowOriginalWorldSelection();
+			const bool launchWorldFailed = m_exitAfterWorldSave;
+			m_exitAfterWorldSave = false;
+			if (launchWorldFailed)
+				ShowLaunchWorldError(L"This shortcut points to a world that is no longer available.");
+			else
+			{
+				ShowOriginalWorldSelection();
 				m_ui.setStatusText(L"MCPE world load failed");
+			}
 		}
 		m_worldCreationPending = false;
 	}, task_continuation_context::use_current());
+}
+
+void MainPage::TryOpenLaunchWorld()
+{
+	if (!m_pendingLaunchWorldRequested ||
+		!m_originalClientHost.isOriginalClientInitialized() ||
+		!m_originalClientHost.isOriginalClientLoopEnabled() ||
+		m_worldCreationPending || m_core.isActive())
+		return;
+
+	const std::wstring worldId = m_pendingLaunchWorldId;
+	m_pendingLaunchWorldId.clear();
+	m_pendingLaunchWorldRequested = false;
+	m_exitAfterWorldSave = true;
+	m_originalMenuActive = false;
+	BeginWorldLoad(worldId, worldId, false, -1,
+		GameType::Undefined, WorldType::Old);
 }
 
 void MainPage::ShowOriginalWorldSelection()
@@ -902,6 +991,41 @@ void MainPage::ShowKeyMappingPage()
 	RebuildSkinDirtBackground();
 	AnimateOverlay(KeyMappingOverlay, true);
 	Keyboard::reset();
+}
+
+void MainPage::ShowSettingsPage()
+{
+	if (!m_isMobile)
+	{
+		m_originalClientHost.showOptions();
+		return;
+	}
+	if (SettingsOverlay == nullptr || SettingsFrame == nullptr)
+		return;
+	if (m_settingsPage == nullptr)
+	{
+		m_settingsPage = ref new SettingsPage();
+		m_settingsPage->BackRequested +=
+			ref new EventHandler<Object^>([this](Object^, Object^)
+			{
+				HideSettingsPage();
+			});
+	}
+	m_settingsPage->SetClientHandle(
+		reinterpret_cast<unsigned long long>(m_originalClientHost.handle()));
+	SettingsFrame->Content = m_settingsPage;
+	SettingsOverlay->Visibility = Windows::UI::Xaml::Visibility::Visible;
+	m_settingsPageVisible = true;
+	RebuildSkinDirtBackground();
+	AnimateOverlay(SettingsOverlay, true);
+	SettingsFrame->Focus(Windows::UI::Xaml::FocusState::Programmatic);
+}
+
+void MainPage::HideSettingsPage()
+{
+	m_settingsPageVisible = false;
+	if (SettingsOverlay != nullptr)
+		AnimateOverlay(SettingsOverlay, false);
 }
 
 void MainPage::HideKeyMappingPage()
@@ -1075,6 +1199,59 @@ void MainPage::HideWorldImportPage()
 	}
 }
 
+void MainPage::ShowLaunchWorldError(const std::wstring& details)
+{
+	m_worldCreationPending = false;
+	if (m_core.isActive())
+		m_core.stop();
+	m_ui.setRealWorldRendering(false);
+	m_ui.setScreen(UwpUiRenderer::Screen::Game);
+	m_originalClientHost.setWorldTickEnabled(false);
+	m_originalClientHost.detachWorld();
+	m_worldRenderer.setLevel(nullptr);
+	m_originalClientHost.setLoopEnabled(true);
+	m_originalMenuActive = m_originalClientHost.showStartMenu();
+
+	if (LaunchWorldErrorMessage != nullptr)
+	{
+		const std::wstring message =
+			L"This shortcut could not open the saved world.\n\n" +
+			(details.empty()
+				? std::wstring(L"The world may have been renamed or deleted.")
+				: details);
+		LaunchWorldErrorMessage->Text = ref new String(message.c_str());
+	}
+
+	m_launchWorldErrorVisible = true;
+	if (LaunchWorldErrorOverlay != nullptr)
+	{
+		LaunchWorldErrorOverlay->Visibility =
+			Windows::UI::Xaml::Visibility::Visible;
+		RebuildSkinDirtBackground();
+		AnimateOverlay(LaunchWorldErrorOverlay, true);
+	}
+	Keyboard::reset();
+}
+
+void MainPage::HideLaunchWorldError()
+{
+	if (!m_launchWorldErrorVisible)
+		return;
+
+	m_launchWorldErrorVisible = false;
+	if (LaunchWorldErrorOverlay != nullptr)
+		AnimateOverlay(LaunchWorldErrorOverlay, false);
+	Keyboard::reset();
+	m_originalClientHost.setLoopEnabled(true);
+	m_originalMenuActive = m_originalClientHost.showStartMenu();
+}
+
+void MainPage::OnLaunchWorldErrorBackClick(
+	Platform::Object^, Windows::UI::Xaml::RoutedEventArgs^)
+{
+	HideLaunchWorldError();
+}
+
 void MainPage::ScheduleWorldEditDirtBackgroundRebuild()
 {
 	if (m_worldEditDirtRebuildPending || Dispatcher == nullptr)
@@ -1178,7 +1355,8 @@ void MainPage::OnSkinBackgroundSizeChanged(Object^, SizeChangedEventArgs^)
 void MainPage::RebuildSkinDirtBackground()
 {
 	if (SkinDirtBackground == nullptr && KeyMappingDirtBackground == nullptr &&
-		WorldEditDirtBackground == nullptr && WorldImportDirtBackground == nullptr)
+		WorldEditDirtBackground == nullptr && WorldImportDirtBackground == nullptr &&
+		SettingsDirtBackground == nullptr && LaunchWorldErrorDirtBackground == nullptr)
 		return;
 	if (m_rebuildingSkinDirtBackground)
 		return;
@@ -1219,6 +1397,8 @@ void MainPage::RebuildSkinDirtBackground()
 	rebuild(KeyMappingDirtBackground);
 	rebuild(WorldEditDirtBackground);
 	rebuild(WorldImportDirtBackground);
+	rebuild(SettingsDirtBackground);
+	rebuild(LaunchWorldErrorDirtBackground);
 	if (SkinDirtBackground != nullptr)
 	{
 		m_skinDirtColumns = static_cast<int>(SkinDirtBackground->ActualWidth / tileSize) + 1;
@@ -1479,6 +1659,12 @@ void MainPage::OnGameTick(std::uint64_t tick)
 	if (m_originalClientHost.isOriginalClientLoopEnabled() &&
 		!m_core.isActive())
 	{
+		const bool launchWorldPending = m_pendingLaunchWorldRequested;
+		TryOpenLaunchWorld();
+		if (launchWorldPending && !m_pendingLaunchWorldRequested &&
+			m_worldCreationPending)
+			return;
+
 		// The original client owns only menu/client state here.  World loading
 		// disables this branch before UwpCoreSession becomes active.  Menus keep
 		// the normal Timer-driven update path.
@@ -1522,6 +1708,11 @@ void MainPage::OnGameTick(std::uint64_t tick)
 			ShowKeyMappingPage();
 			return;
 		}
+		if (menuAction == UwpOriginalMenuAction::OpenSettings)
+		{
+			ShowSettingsPage();
+			return;
+		}
 		if (menuAction == UwpOriginalMenuAction::OpenWorldEdit)
 		{
 			std::string worldId;
@@ -1551,6 +1742,12 @@ void MainPage::OnGameTick(std::uint64_t tick)
 			{
 				RenderSavingWorldFrame(true);
 				m_core.stop();
+			}
+			if (m_exitAfterWorldSave)
+			{
+				m_exitAfterWorldSave = false;
+				Windows::ApplicationModel::Core::CoreApplication::Exit();
+				return;
 			}
 			m_worldCreationPending = false;
 			m_originalClientHost.setLoopEnabled(true);
@@ -1617,6 +1814,12 @@ void MainPage::OnGameTick(std::uint64_t tick)
 			{
 				RenderSavingWorldFrame(true);
 				m_core.stop();
+			}
+			if (m_exitAfterWorldSave)
+			{
+				m_exitAfterWorldSave = false;
+				Windows::ApplicationModel::Core::CoreApplication::Exit();
+				return;
 			}
 			m_worldCreationPending = false;
 			m_originalClientHost.setLoopEnabled(true);
@@ -1844,6 +2047,19 @@ void MainPage::OnKeyDown(Windows::UI::Core::CoreWindow^,
 	Windows::UI::Core::KeyEventArgs^ e)
 {
 	using Windows::System::VirtualKey;
+	if (m_launchWorldErrorVisible)
+	{
+		if (e->VirtualKey == VirtualKey::Escape)
+			HideLaunchWorldError();
+		e->Handled = true;
+		return;
+	}
+	if (m_settingsPageVisible && e->VirtualKey == VirtualKey::Escape)
+	{
+		HideSettingsPage();
+		e->Handled = true;
+		return;
+	}
 	if (m_keyMappingPageVisible)
 	{
 		const int keyCode = ToOriginalKeyboardKey(e->VirtualKey);
@@ -1930,6 +2146,20 @@ void MainPage::OnKeyUp(Windows::UI::Core::CoreWindow^,
 	Windows::UI::Core::KeyEventArgs^ e)
 {
 	using Windows::System::VirtualKey;
+	if (m_launchWorldErrorVisible)
+	{
+		e->Handled = true;
+		return;
+	}
+	if (m_settingsPageVisible)
+	{
+		// The XAML controls, especially TextBox, own the key-up event while
+		// the settings overlay is active.  Do not close the page here: a
+		// Backspace/Delete key-up used to be interpreted as a global Back
+		// action after the TextBox had already removed the character.
+		e->Handled = true;
+		return;
+	}
 	if (m_keyMappingPageVisible)
 	{
 		e->Handled = true;
@@ -1991,6 +2221,12 @@ void MainPage::OnSystemBackRequested(
 {
 	if (e == nullptr)
 		return;
+	if (m_launchWorldErrorVisible)
+	{
+		HideLaunchWorldError();
+		e->Handled = true;
+		return;
+	}
 
 	// Keep the system Back button identical to the existing Escape routing.
 	// XAML overlays own the input while visible, so the native client must not
@@ -2006,6 +2242,12 @@ void MainPage::OnSystemBackRequested(
 	}
 	if (m_worldEditPageVisible)
 	{
+		if (m_worldEditShellPage != nullptr &&
+			m_worldEditShellPage->HandleEscapeKey())
+		{
+			e->Handled = true;
+			return;
+		}
 		HideWorldEditPage();
 		e->Handled = true;
 		return;
@@ -2024,12 +2266,26 @@ void MainPage::OnSystemBackRequested(
 		e->Handled = true;
 		return;
 	}
+	if (m_settingsPageVisible)
+	{
+		HideSettingsPage();
+		e->Handled = true;
+		return;
+	}
 
-	// Feed exactly the same native Escape event used by the keyboard path.
-	// This preserves Minecraft::tickInput()'s existing key.pause mapping,
-	// including opening and closing PauseScreen with the normal pause behavior.
-	if (m_originalClientHost.isOriginalClientLoopEnabled() ||
-		m_originalClientHost.isOriginalWorldTickEnabled())
+	// In the world, use the original back-state machine directly.  Feeding
+	// Escape into Keyboard is not sufficient on touch devices because
+	// Minecraft::tickInput() intentionally skips keyboard events in touch mode.
+	if (m_originalClientHost.isOriginalWorldTickEnabled())
+	{
+		m_originalClientHost.handleBack(false);
+		e->Handled = true;
+		return;
+	}
+
+	// Preserve the existing Escape routing for original menu screens.  The
+	// settings overlay is handled above so it cannot receive a second event.
+	if (m_originalClientHost.isOriginalClientLoopEnabled())
 	{
 		Keyboard::feed(static_cast<unsigned char>(Keyboard::KEY_ESCAPE),
 			KeyboardAction::KEYDOWN);

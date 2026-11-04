@@ -92,7 +92,7 @@ KeyMappingPage::KeyMappingPage()
 	for (const BindingRow& row : kKeyboardRows)
 	{
 		Grid^ line = ref new Grid();
-		line->Height = 48;
+		line->MinHeight = 48;
 		line->Margin = Thickness(0, 0, 0, 5);
 		line->Background = ref new Windows::UI::Xaml::Media::SolidColorBrush(
 			Windows::UI::ColorHelper::FromArgb(150, 35, 35, 35));
@@ -101,7 +101,7 @@ KeyMappingPage::KeyMappingPage()
 		labelColumn->Width = Windows::UI::Xaml::GridLength(1.0, Windows::UI::Xaml::GridUnitType::Star);
 		ColumnDefinition^ keyColumn = ref new ColumnDefinition();
 		keyColumn->Width = Windows::UI::Xaml::GridLength(
-			220.0, Windows::UI::Xaml::GridUnitType::Pixel);
+			176.0, Windows::UI::Xaml::GridUnitType::Pixel);
 		line->ColumnDefinitions->Append(labelColumn);
 		line->ColumnDefinitions->Append(keyColumn);
 
@@ -113,13 +113,14 @@ KeyMappingPage::KeyMappingPage()
 			Windows::UI::Colors::White);
 		label->FontSize = 17;
 		label->VerticalAlignment = Windows::UI::Xaml::VerticalAlignment::Center;
+		label->TextWrapping = Windows::UI::Xaml::TextWrapping::Wrap;
 		label->Margin = Thickness(16, 0, 8, 0);
 		Grid::SetColumn(label, 0);
 		line->Children->Append(label);
 
 		Button^ button = ref new Button();
 		button->Tag = ref new String(std::to_wstring(row.id).c_str());
-		button->Width = 190;
+		button->Width = 154;
 		button->Height = 38;
 		button->Margin = Thickness(0, 5, 14, 5);
 		button->FontSize = 16;
@@ -136,7 +137,7 @@ KeyMappingPage::KeyMappingPage()
 	for (const wchar_t* labelText : kMouseRows)
 	{
 		Grid^ line = ref new Grid();
-		line->Height = 48;
+		line->MinHeight = 48;
 		line->Margin = Thickness(0, 0, 0, 5);
 		line->Background = ref new Windows::UI::Xaml::Media::SolidColorBrush(
 			Windows::UI::ColorHelper::FromArgb(100, 35, 35, 35));
@@ -145,7 +146,7 @@ KeyMappingPage::KeyMappingPage()
 		labelColumn->Width = Windows::UI::Xaml::GridLength(1.0, Windows::UI::Xaml::GridUnitType::Star);
 		ColumnDefinition^ keyColumn = ref new ColumnDefinition();
 		keyColumn->Width = Windows::UI::Xaml::GridLength(
-			220.0, Windows::UI::Xaml::GridUnitType::Pixel);
+			176.0, Windows::UI::Xaml::GridUnitType::Pixel);
 		line->ColumnDefinitions->Append(labelColumn);
 		line->ColumnDefinitions->Append(keyColumn);
 
@@ -157,6 +158,7 @@ KeyMappingPage::KeyMappingPage()
 			Windows::UI::Colors::White);
 		label->FontSize = 17;
 		label->VerticalAlignment = Windows::UI::Xaml::VerticalAlignment::Center;
+		label->TextWrapping = Windows::UI::Xaml::TextWrapping::Wrap;
 		label->Margin = Thickness(16, 0, 8, 0);
 		Grid::SetColumn(label, 0);
 		line->Children->Append(label);
@@ -172,6 +174,7 @@ KeyMappingPage::KeyMappingPage()
 		mouse->FontSize = 16;
 		mouse->HorizontalAlignment = Windows::UI::Xaml::HorizontalAlignment::Center;
 		mouse->VerticalAlignment = Windows::UI::Xaml::VerticalAlignment::Center;
+		mouse->TextWrapping = Windows::UI::Xaml::TextWrapping::Wrap;
 		Grid::SetColumn(mouse, 1);
 		line->Children->Append(mouse);
 		BindingList->Children->Append(line);

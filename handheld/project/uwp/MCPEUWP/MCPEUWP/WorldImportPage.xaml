@@ -6,27 +6,30 @@
     Background="Transparent">
 
     <Grid Background="Transparent">
-        <Grid Margin="34,22,34,22">
+        <Grid Margin="24,18,24,18">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <TextBlock Grid.Row="0"
-                       Text="Import World"
-                       FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
-                       Foreground="White"
-                       FontSize="30"
-                       HorizontalAlignment="Left" />
-
-            <TextBlock Grid.Row="0"
-                       Text="Select a .zip world archive to extract into minecraftWorlds."
-                       FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
-                       Foreground="#FFD0D0D0"
-                       FontSize="14"
-                       HorizontalAlignment="Right"
-                       VerticalAlignment="Center" />
+            <StackPanel Grid.Row="0"
+                        HorizontalAlignment="Stretch"
+                        Margin="0,0,0,14">
+                <TextBlock Text="Import World"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           Foreground="White"
+                           FontSize="30"
+                           HorizontalAlignment="Center" />
+                <TextBlock Text="Select a .zip world archive to extract into minecraftWorlds."
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           Foreground="#FFD0D0D0"
+                           FontSize="14"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           Margin="0,8,0,0" />
+            </StackPanel>
 
             <StackPanel Grid.Row="1"
                         HorizontalAlignment="Center"
@@ -37,7 +40,9 @@
                            Foreground="#FFD0D0D0"
                            FontSize="16"
                            HorizontalAlignment="Center"
-                           TextAlignment="Center" />
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxWidth="620" />
                 <Border x:Name="ImportSuccessPanel"
                         Visibility="Collapsed"
                         Background="#CC203820"
@@ -67,29 +72,34 @@
                 </Border>
             </StackPanel>
 
-            <StackPanel Grid.Row="2"
-                        Orientation="Horizontal"
-                        HorizontalAlignment="Right"
-                        Margin="0,18,0,0">
+            <Grid Grid.Row="2"
+                  HorizontalAlignment="Stretch"
+                  MaxWidth="520"
+                  Margin="0,14,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
                 <Button x:Name="SelectZipButton"
                         Content="Select ZIP"
+                        Grid.Column="0"
                         FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                         Click="OnSelectZipClick"
-                        Width="170"
                         Height="54"
-                        FontSize="17"
+                        FontSize="16"
                         Foreground="White"
-                        Margin="0,0,12,0" />
+                        HorizontalAlignment="Stretch"
+                        Margin="0,0,6,0" />
                 <Button Content="Back"
+                    Grid.Column="1"
                     FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                     Click="OnBackClick"
-                    Width="150"
                     Height="54"
-                    FontSize="17"
+                    FontSize="16"
                     Foreground="White"
-                    HorizontalAlignment="Right"
-                    />
-            </StackPanel>
+                    HorizontalAlignment="Stretch"
+                    Margin="6,0,0,0" />
+            </Grid>
         </Grid>
 
         <Grid x:Name="ImportRejectDialogOverlay"
@@ -98,7 +108,8 @@
               Background="#99000000"
               HorizontalAlignment="Stretch"
               VerticalAlignment="Stretch">
-            <Border Width="520"
+            <Border MaxWidth="520"
+                    Margin="16"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Background="#FFE0E0E0"

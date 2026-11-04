@@ -31,18 +31,28 @@
                 Margin="16"
                 Padding="8"
                 Background="#DD000000"
-                IsHitTestVisible="False">
-            <StackPanel>
-                <TextBlock x:Name="StartupStage"
-                           Foreground="White"
-                           FontSize="16"
-                           Text="Starting Minecraft PE 0.6.1..." />
-                <TextBlock x:Name="StartupDetails"
-                           Foreground="#FFFFD080"
-                           FontSize="12"
-                           TextWrapping="Wrap"
-                           Text="DIAG 2026-10-02 | waiting for MainPage.OnLoaded" />
-            </StackPanel>
+                IsHitTestVisible="True">
+            <ScrollViewer Height="600"
+                          Width="700"
+                          VerticalScrollMode="Enabled"
+                          HorizontalScrollMode="Disabled"
+                          IsScrollInertiaEnabled="True"
+                          ManipulationMode="TranslateY"
+                          MaxWidth="1100"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
+                    <TextBlock x:Name="StartupStage"
+                               Foreground="White"
+                               FontSize="16"
+                               Text="Starting Minecraft PE 0.6.1..." />
+                    <TextBlock x:Name="StartupDetails"
+                               Foreground="#FFFFD080"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Text="DIAG 2026-10-02 | waiting for MainPage.OnLoaded" />
+                </StackPanel>
+            </ScrollViewer>
         </Border>
 
         <!-- ARM32-only XAML reachability probe.  It is independent of the
@@ -57,6 +67,11 @@
                 Visibility="Collapsed"
                 IsHitTestVisible="False">
             <StackPanel>
+                <TextBlock Text="XAML_RUNTIME_MARKER_1934"
+                           Foreground="#FFFF0000"
+                           FontSize="20"
+                           FontWeight="Bold"
+                           HorizontalAlignment="Center" />
                 <TextBlock Text="XAML MAIN PAGE LOADED"
                            Foreground="#FFFFFF00"
                            FontSize="24"
@@ -85,7 +100,7 @@
             <Rectangle Style="{StaticResource DirtOverlayRectangle}" />
             <Border HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
-                    Padding="48"
+                    Padding="24,18,24,16"
                     Background="Transparent"
                     BorderThickness="0">
                 <Grid>
@@ -102,83 +117,103 @@
                                FontSize="28"
                                FontWeight="SemiBold"
                                HorizontalAlignment="Center"
-                               Margin="0,0,0,20" />
+                               Margin="0,0,0,12" />
 
-                    <StackPanel Grid.Row="1"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal"
-                                HorizontalAlignment="Center"
-                                Margin="0,0,0,20">
-                            <Border Width="160"
-                                    Height="160"
+                    <ScrollViewer Grid.Row="1"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalContentAlignment="Stretch">
+                        <StackPanel HorizontalAlignment="Center"
+                                    MaxWidth="620">
+                            <Grid HorizontalAlignment="Stretch"
+                                  Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0"
+                                        Width="140"
+                                        Height="140"
                                     Background="#FF101010"
                                     BorderBrush="#FF606060"
                                     BorderThickness="1"
                                     Padding="8">
-                                <Image x:Name="SkinPreview"
-                                       Stretch="Uniform" />
-                            </Border>
-                            <StackPanel Width="300"
-                                        Margin="24,0,0,0"
-                                        VerticalAlignment="Center">
-                                <TextBlock Text="Arm Type"
-                                           Foreground="White"
-                                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
-                                           FontSize="16"
-                                           Margin="0,0,0,8" />
-                                <ComboBox x:Name="SkinArmTypeComboBox"
-                                          FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
-                                          SelectedIndex="0"
-                                          SelectionChanged="OnSkinArmTypeChanged">
-                                    <ComboBoxItem Content="Classic"
-                                                  FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft" />
-                                    <ComboBoxItem Content="Slim"
-                                                  FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft" />
-                                </ComboBox>
-                                <TextBlock Text="Use a 64x64 PNG skin."
-                                           Foreground="#FFB0B0B0"
-                                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
-                                           TextWrapping="Wrap"
-                                           Margin="0,14,0,0" />
-                            </StackPanel>
+                                    <Image x:Name="SkinPreview"
+                                           Stretch="Uniform" />
+                                </Border>
+                                <StackPanel Grid.Column="1"
+                                            Margin="16,0,0,0"
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Stretch">
+                                    <TextBlock Text="Arm Type"
+                                               Foreground="White"
+                                               FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                               FontSize="16"
+                                               Margin="0,0,0,8" />
+                                    <ComboBox x:Name="SkinArmTypeComboBox"
+                                              FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                              SelectedIndex="0"
+                                              HorizontalAlignment="Stretch"
+                                              SelectionChanged="OnSkinArmTypeChanged">
+                                        <ComboBoxItem Content="Classic"
+                                                      FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft" />
+                                        <ComboBoxItem Content="Slim"
+                                                      FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft" />
+                                    </ComboBox>
+                                    <TextBlock Text="Use a 64x64 PNG skin."
+                                               Foreground="#FFB0B0B0"
+                                               FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                               TextWrapping="Wrap"
+                                               Margin="0,14,0,0" />
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock x:Name="SkinStatusText"
+                                       Foreground="#FFFFD080"
+                                       FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center"
+                                       HorizontalAlignment="Stretch"
+                                       Margin="0,0,0,12" />
                         </StackPanel>
-                        <TextBlock x:Name="SkinStatusText"
-                                   Foreground="#FFFFD080"
-                                   FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
-                                   TextWrapping="Wrap"
-                                   HorizontalAlignment="Center"
-                                   Margin="0,0,0,18" />
-                    </StackPanel>
+                    </ScrollViewer>
 
-                    <StackPanel Grid.Row="2"
-                                Orientation="Horizontal"
-                                HorizontalAlignment="Center"
-                                Margin="0,24,0,24">
+                    <Grid Grid.Row="2"
+                          HorizontalAlignment="Stretch"
+                          MaxWidth="720"
+                          Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
                         <Button Content="Import Skin"
+                                Grid.Column="0"
                                 Click="OnSkinImportClick"
                                 FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
-                                Width="210"
                                 Height="64"
-                                FontSize="20"
+                                FontSize="16"
                                 Foreground="White"
-                                Margin="0,0,12,0" />
+                                HorizontalAlignment="Stretch"
+                                Margin="0,0,6,0" />
                         <Button Content="Clear Skin"
+                                Grid.Column="1"
                                 Click="OnSkinClearClick"
                                 FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
-                                Width="210"
                                 Height="64"
-                                FontSize="20"
+                                FontSize="16"
                                 Foreground="White"
-                                Margin="0,0,12,0" />
+                                HorizontalAlignment="Stretch"
+                                Margin="6,0,6,0" />
                         <Button Content="Back"
+                                Grid.Column="2"
                                 Click="OnSkinBackClick"
                                 FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
-                                Width="180"
                                 Height="64"
-                                FontSize="20"
-                                Foreground="White" />
-                    </StackPanel>
+                                FontSize="16"
+                                Foreground="White"
+                                HorizontalAlignment="Stretch"
+                                Margin="6,0,0,0" />
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>
@@ -194,6 +229,13 @@
             <Rectangle Style="{StaticResource DirtOverlayRectangle}" />
             <Frame x:Name="KeyMappingFrame"
                    Background="Transparent" />
+        </Grid>
+
+        <Grid x:Name="SettingsOverlay" Canvas.ZIndex="215" Visibility="Collapsed" Background="Transparent">
+            <Canvas x:Name="SettingsDirtBackground" SizeChanged="OnSkinBackgroundSizeChanged" IsHitTestVisible="False" />
+            <Rectangle Style="{StaticResource DirtShadeRectangle}" />
+            <Rectangle Style="{StaticResource DirtOverlayRectangle}" />
+            <Frame x:Name="SettingsFrame" Background="Transparent" />
         </Grid>
 
         <Grid x:Name="WorldEditOverlay"
@@ -219,6 +261,51 @@
             <Rectangle Style="{StaticResource DirtOverlayRectangle}" />
             <Frame x:Name="WorldImportFrame"
                    Background="Transparent" />
+        </Grid>
+
+        <Grid x:Name="LaunchWorldErrorOverlay"
+              Canvas.ZIndex="240"
+              Visibility="Collapsed"
+              Background="Transparent">
+            <Canvas x:Name="LaunchWorldErrorDirtBackground"
+                    SizeChanged="OnSkinBackgroundSizeChanged"
+                    IsHitTestVisible="False" />
+            <Rectangle Style="{StaticResource DirtShadeRectangle}" />
+            <Rectangle Style="{StaticResource DirtOverlayRectangle}" />
+            <Border HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    MaxWidth="760"
+                    Margin="24"
+                    Padding="28"
+                    Background="#EE241A16"
+                    BorderBrush="#FF8A6A4A"
+                    BorderThickness="2">
+                <StackPanel>
+                    <TextBlock Text="Unable to open world"
+                               Foreground="White"
+                               FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                               FontSize="30"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap" />
+                    <TextBlock x:Name="LaunchWorldErrorMessage"
+                               Foreground="#FFFFD080"
+                               FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                               FontSize="18"
+                               Margin="0,22,0,22"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap" />
+                    <Button Content="Back to Main Menu"
+                            Click="OnLaunchWorldErrorBackClick"
+                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                            FontSize="18"
+                            Foreground="White"
+                            Height="60"
+                            MaxWidth="420"
+                            HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
         </Grid>
     </Grid>
 </Page>

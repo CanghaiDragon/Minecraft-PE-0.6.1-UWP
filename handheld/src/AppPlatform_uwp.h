@@ -20,6 +20,7 @@ public:
 	int getScreenHeight() override;
 	float getPixelsPerMillimeter() override;
 	bool supportsTouchscreen() override;
+	bool isMobileDevice() override;
 	std::string getPlatformStringVar(int stringId) override;
 	std::string getDateString(int seconds) override;
 	void openUrl(const std::string& url) override;

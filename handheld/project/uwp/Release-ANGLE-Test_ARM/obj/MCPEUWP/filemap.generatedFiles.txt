@@ -1,0 +1,2 @@
+D:\MCPE_0.6.1\MCPE0.6.1UWP\handheld\project\uwp\Release-ANGLE-Test_ARM\obj\MCPEUWP\filemap.pri
+D:\MCPE_0.6.1\MCPE0.6.1UWP\handheld\project\uwp\Release-ANGLE-Test_ARM\obj\MCPEUWP\filemap.map.txt

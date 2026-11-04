@@ -15,6 +15,10 @@ Global
 		Release|ARM64 = Release|ARM64
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
+		Release-ANGLE-Test|ARM = Release-ANGLE-Test|ARM
+		Release-ANGLE-Test|ARM64 = Release-ANGLE-Test|ARM64
+		Release-ANGLE-Test|x64 = Release-ANGLE-Test|x64
+		Release-ANGLE-Test|x86 = Release-ANGLE-Test|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{3E3A1C1D-4C6D-4C5C-9F5A-47E5DCC7A31A}.Debug|ARM.ActiveCfg = Debug|ARM
@@ -41,6 +45,18 @@ Global
 		{3E3A1C1D-4C6D-4C5C-9F5A-47E5DCC7A31A}.Release|x86.ActiveCfg = Release|Win32
 		{3E3A1C1D-4C6D-4C5C-9F5A-47E5DCC7A31A}.Release|x86.Build.0 = Release|Win32
 		{3E3A1C1D-4C6D-4C5C-9F5A-47E5DCC7A31A}.Release|x86.Deploy.0 = Release|Win32
+		{3E3A1C1D-4C6D-4C5C-9F5A-47E5DCC7A31A}.Release-ANGLE-Test|ARM.ActiveCfg = Release-ANGLE-Test|ARM
+		{3E3A1C1D-4C6D-4C5C-9F5A-47E5DCC7A31A}.Release-ANGLE-Test|ARM.Build.0 = Release-ANGLE-Test|ARM
+		{3E3A1C1D-4C6D-4C5C-9F5A-47E5DCC7A31A}.Release-ANGLE-Test|ARM.Deploy.0 = Release-ANGLE-Test|ARM
+		{3E3A1C1D-4C6D-4C5C-9F5A-47E5DCC7A31A}.Release-ANGLE-Test|ARM64.ActiveCfg = Release-ANGLE-Test|ARM
+		{3E3A1C1D-4C6D-4C5C-9F5A-47E5DCC7A31A}.Release-ANGLE-Test|ARM64.Build.0 = Release-ANGLE-Test|ARM
+		{3E3A1C1D-4C6D-4C5C-9F5A-47E5DCC7A31A}.Release-ANGLE-Test|ARM64.Deploy.0 = Release-ANGLE-Test|ARM
+		{3E3A1C1D-4C6D-4C5C-9F5A-47E5DCC7A31A}.Release-ANGLE-Test|x64.ActiveCfg = Release-ANGLE-Test|ARM
+		{3E3A1C1D-4C6D-4C5C-9F5A-47E5DCC7A31A}.Release-ANGLE-Test|x64.Build.0 = Release-ANGLE-Test|ARM
+		{3E3A1C1D-4C6D-4C5C-9F5A-47E5DCC7A31A}.Release-ANGLE-Test|x64.Deploy.0 = Release-ANGLE-Test|ARM
+		{3E3A1C1D-4C6D-4C5C-9F5A-47E5DCC7A31A}.Release-ANGLE-Test|x86.ActiveCfg = Release-ANGLE-Test|ARM
+		{3E3A1C1D-4C6D-4C5C-9F5A-47E5DCC7A31A}.Release-ANGLE-Test|x86.Build.0 = Release-ANGLE-Test|ARM
+		{3E3A1C1D-4C6D-4C5C-9F5A-47E5DCC7A31A}.Release-ANGLE-Test|x86.Deploy.0 = Release-ANGLE-Test|ARM
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

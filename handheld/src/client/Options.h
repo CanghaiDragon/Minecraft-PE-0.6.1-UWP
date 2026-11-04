@@ -18,6 +18,22 @@ typedef std::vector<std::string> StringVector;
 class Options
 {
 public:
+	// Built-in first-run/reset configurations.  The active configuration is
+	// selected by initDefaultValues(); the other two are kept here for the
+	// later device/profile selection work.
+	enum class DefaultProfile {
+		DesktopDefault,
+		DesktopLowPerformance,
+		Mobile
+	};
+
+	enum DynamicTileMode
+	{
+		DYNAMIC_TILE_OFF = 0,
+		DYNAMIC_TILE_SIMPLE = 1,
+		DYNAMIC_TILE_FULL = 2
+	};
+
 	enum ThirdPersonViewMode {
 		THIRD_PERSON_FIRST = 0,
 		THIRD_PERSON_BACK = 1,
@@ -48,6 +64,7 @@ public:
 		static const Option THIRD_PERSON;
 		static const Option HIDE_GUI;
 		static const Option SERVER_VISIBLE;
+		static const Option DYNAMIC_TILE;
 		static const Option LEFT_HANDED;
 		static const Option USE_TOUCHSCREEN;
 		static const Option USE_TOUCH_JOYPAD;
@@ -193,6 +210,7 @@ public:
 	std::string username;
 
 	bool serverVisible;
+	int dynamicTileMode;
 	bool isJoyTouchArea;
 	bool useTouchScreen;
 	bool infiniteWorlds;
@@ -222,9 +240,11 @@ public:
 	{
 		thirdPersonView = false;
 		thirdPersonViewMode = THIRD_PERSON_FIRST;
+		dynamicTileMode = DYNAMIC_TILE_OFF;
 	}
 
-	void initDefaultValues();
+	void initDefaultValues(DefaultProfile profile = DefaultProfile::DesktopDefault);
+	void applyDefaultProfile(DefaultProfile profile);
 	void resetKeyMappings();
 	void cycleThirdPersonView();
 	void setThirdPersonViewMode(int mode);
@@ -280,6 +300,10 @@ public:
 			dpadSize = value;
 			if (dpadSize < 0) dpadSize = 0;
 			if (dpadSize > 2) dpadSize = 2;
+		} else if (item == &Option::DYNAMIC_TILE) {
+			dynamicTileMode = value;
+			if (dynamicTileMode < DYNAMIC_TILE_OFF) dynamicTileMode = DYNAMIC_TILE_OFF;
+			if (dynamicTileMode > DYNAMIC_TILE_FULL) dynamicTileMode = DYNAMIC_TILE_FULL;
 		} else if (item == &Option::THIRD_PERSON) {
 			setThirdPersonViewMode(value);
 		} else if (item == &Option::INPUT_MODE) {
@@ -305,6 +329,10 @@ public:
 		if (option == &Option::DPAD_SIZE) {
 			dpadSize = (dpadSize + dir) % 3;
 			if (dpadSize < 0) dpadSize += 3;
+		}
+		if (option == &Option::DYNAMIC_TILE) {
+			dynamicTileMode = (dynamicTileMode + dir) % 3;
+			if (dynamicTileMode < 0) dynamicTileMode += 3;
 		}
 		if (option == &Option::INPUT_MODE)
 			useTouchScreen = !useTouchScreen;
@@ -365,6 +393,7 @@ public:
 		if(item == &Option::RENDER_DISTANCE) return viewDistance;
 		if(item == &Option::GUI_SCALE) return guiScale;
 		if(item == &Option::DPAD_SIZE) return dpadSize;
+		if(item == &Option::DYNAMIC_TILE) return dynamicTileMode;
 		if(item == &Option::THIRD_PERSON) return thirdPersonViewMode;
 		if(item == &Option::INPUT_MODE) return useTouchScreen ? 1 : 0;
 		if(item == &Option::SKIN_ARM_TYPE) return slimSkin ? 1 : 0;
@@ -398,6 +427,8 @@ public:
             return hideGui;
 		if (item == &Option::SERVER_VISIBLE)
 			return serverVisible;
+		if (item == &Option::DYNAMIC_TILE)
+			return dynamicTileMode != DYNAMIC_TILE_OFF;
 		if (item == &Option::LEFT_HANDED)
 			return isLeftHanded;
 		if (item == &Option::USE_TOUCHSCREEN)

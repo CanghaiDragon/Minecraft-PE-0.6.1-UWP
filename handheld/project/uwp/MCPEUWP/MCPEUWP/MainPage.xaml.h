@@ -7,6 +7,7 @@
 
 #include "MainPage.g.h"
 #include "KeyMappingPage.xaml.h"
+#include "SettingsPage.xaml.h"
 #include "WorldEditShellPage.xaml.h"
 #include "WorldImportPage.xaml.h"
 #include "../../../../src/AppPlatform_uwp.h"
@@ -37,6 +38,9 @@ namespace MCPEUWP
 		MainPage();
 		void OnNavigatedTo(Windows::UI::Xaml::Navigation::NavigationEventArgs^ e) override;
 		void OnNavigatedFrom(Windows::UI::Xaml::Navigation::NavigationEventArgs^ e) override;
+		// Accepts the internal launch format used by world Start-menu
+		// shortcuts.
+		void HandleLaunchArguments(Platform::String^ arguments);
 		// Called by the UWP suspension handler while the page still owns the
 		// active session.  It flushes the original Level before suspension;
 		// it does not leave the world or replace the current screen.
@@ -86,16 +90,24 @@ namespace MCPEUWP
 		void BeginWorldLoad(const std::wstring& worldId,
 			const std::wstring& worldName, bool createNew, long seed,
 			int gameType, int worldType);
+		void TryOpenLaunchWorld();
 		void ShowOriginalWorldSelection();
 		bool AttachOriginalWorldForTick();
 		void ShowSkinPage();
 		void HideSkinPage();
 		void ShowKeyMappingPage();
 		void HideKeyMappingPage();
+		void ShowSettingsPage();
+		void HideSettingsPage();
+		void ConfigureDeviceMode();
 		void ShowWorldEditPage(const std::string& worldId);
 		void HideWorldEditPage();
 		void ShowWorldImportPage();
 		void HideWorldImportPage();
+		void OnLaunchWorldErrorBackClick(Platform::Object^ sender,
+			Windows::UI::Xaml::RoutedEventArgs^ e);
+		void ShowLaunchWorldError(const std::wstring& details);
+		void HideLaunchWorldError();
 		void ScheduleWorldEditDirtBackgroundRebuild();
 		void AnimateSkinPage(bool entering);
 		void AnimateOverlay(Windows::UI::Xaml::Controls::Grid^ overlay, bool entering);
@@ -124,11 +136,18 @@ namespace MCPEUWP
 		std::chrono::steady_clock::time_point m_lastFrameTime{};
 		bool m_frameClockStarted = false;
 		bool m_worldCreationPending = false;
+		bool m_pendingLaunchWorldRequested = false;
+		bool m_exitAfterWorldSave = false;
+		std::wstring m_pendingLaunchWorldId;
 		bool m_originalMenuActive = false;
 		bool m_skinPageVisible = false;
 		bool m_keyMappingPageVisible = false;
+		bool m_settingsPageVisible = false;
+		SettingsPage^ m_settingsPage;
+		bool m_isMobile = false;
 		bool m_worldEditPageVisible = false;
 		bool m_worldImportPageVisible = false;
+		bool m_launchWorldErrorVisible = false;
 		bool m_worldImportSuspendedOriginalLoop = false;
 		bool m_worldEditDirtRebuildPending = false;
 		int m_worldEditDirtRebuildAttempts = 0;

@@ -55,6 +55,9 @@ extern void setWin32GuiInputEnabled(bool enabled);
 #if defined(MCPE_UWP) && defined(MCPE_UWP_ORIGINAL_CLIENT_LOOP)
 #include "../platform/uwp/UwpOriginalClientBridge.h"
 #endif
+#if defined(MCPE_UWP)
+#include "../platform/uwp/UwpLiveTile.h"
+#endif
 
 #include "../world/Facing.h"
 
@@ -1500,12 +1503,19 @@ void Minecraft::init()
 	#else
 	MCPE_EXIT_TRACE("Minecraft::init begin");
 	options.minecraft = this;
+	const bool isMobileDevice = platform()->isMobileDevice();
 	_supportsNonTouchscreen = !platform()->supportsTouchscreen();
 #ifdef WIN32
-	// A Windows machine can have a touch panel and a full keyboard/mouse.
-	_supportsNonTouchscreen = true;
+	// Desktop UWP supports keyboard/mouse even when a touch panel is present;
+	// Windows 10 Mobile remains touch-only.
+	_supportsNonTouchscreen = !isMobileDevice;
 #endif
-	options.initDefaultValues();
+	Options::DefaultProfile defaultProfile = Options::DefaultProfile::DesktopDefault;
+#if defined(MCPE_UWP)
+	if (isMobileDevice)
+		defaultProfile = Options::DefaultProfile::Mobile;
+#endif
+	options.initDefaultValues(defaultProfile);
 	MCPE_EXIT_TRACE("Minecraft::init after options");
 #if defined(MCPE_UWP_ORIGINAL_CLIENT_LOOP) && !defined(STANDALONE_SERVER)
 	// The normal desktop constructor creates this before Options has defaults.
@@ -1582,7 +1592,7 @@ void Minecraft::init()
 	const bool firstRun = !options.hasSavedOptions();
 	reloadOptions();
 	MCPE_EXIT_TRACE("Minecraft::init after reloadOptions");
-	if (firstRun) {
+	if (firstRun && !isMobileDevice) {
 		setScreen(new WelcomeScreen());
 	}
 
@@ -2060,6 +2070,10 @@ ICreator* Minecraft::getCreator()
 }
 
 void Minecraft::optionUpdated( const Options::Option* option, bool value ) {
+#if defined(MCPE_UWP)
+	if (option == &Options::Option::DYNAMIC_TILE)
+		UwpLiveTileSetEnabled(value);
+#endif
 #if defined(MCPE_UWP_CLIENT_LIFECYCLE_ONLY)
 	(void)option;
 	(void)value;
@@ -2087,6 +2101,10 @@ void Minecraft::optionUpdated( const Options::Option* option, float value ) {
 }
 
 void Minecraft::optionUpdated( const Options::Option* option, int value ) {
+#if defined(MCPE_UWP)
+	if (option == &Options::Option::DYNAMIC_TILE)
+		UwpLiveTileSetMode(value);
+#endif
 #if defined(MCPE_UWP_CLIENT_LIFECYCLE_ONLY)
 	(void)option;
 	(void)value;

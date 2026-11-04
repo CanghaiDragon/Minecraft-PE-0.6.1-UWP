@@ -4,7 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <Grid Background="Transparent"
-          Padding="48">
+          Padding="24,18,24,18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -16,22 +16,27 @@
                    Foreground="White"
                    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                    FontSize="32"
-                   HorizontalAlignment="Center" />
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,12" />
 
         <ScrollViewer Grid.Row="1"
                       HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Auto"
-                      HorizontalContentAlignment="Center">
-            <StackPanel HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Width="760">
-            <Grid>
+                      HorizontalContentAlignment="Stretch">
+            <Grid HorizontalAlignment="Stretch">
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            MaxWidth="820">
+            <Grid HorizontalAlignment="Stretch">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="240" />
-                    <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="160" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="130" />
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="64" />
+                    <RowDefinition Height="64" />
+                    <RowDefinition Height="64" />
                     <RowDefinition Height="64" />
                     <RowDefinition Height="64" />
                     <RowDefinition Height="64" />
@@ -47,7 +52,8 @@
                            Foreground="White"
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                            FontSize="18"
-                           VerticalAlignment="Center" />
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0" />
                 <TextBlock x:Name="FolderNameValueText"
                            Grid.Row="0"
                            Grid.Column="1"
@@ -56,7 +62,8 @@
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                            FontSize="18"
                            VerticalAlignment="Center"
-                           TextTrimming="CharacterEllipsis" />
+                           TextTrimming="CharacterEllipsis"
+                           Margin="0,0,10,0" />
                 <Button Grid.Row="0"
                         Grid.Column="2"
                         Content="Rename"
@@ -64,9 +71,9 @@
                         FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                         FontSize="18"
                         Foreground="White"
-                        Width="160"
                         Height="52"
-                        VerticalAlignment="Center" />
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Stretch" />
 
                 <TextBlock Grid.Row="1"
                            Grid.Column="0"
@@ -74,7 +81,8 @@
                            Foreground="White"
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                            FontSize="18"
-                           VerticalAlignment="Center" />
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0" />
                 <TextBlock x:Name="WorldNameValueText"
                            Grid.Row="1"
                            Grid.Column="1"
@@ -83,7 +91,8 @@
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                            FontSize="18"
                            VerticalAlignment="Center"
-                           TextTrimming="CharacterEllipsis" />
+                           TextTrimming="CharacterEllipsis"
+                           Margin="0,0,10,0" />
                 <Button Grid.Row="1"
                         Grid.Column="2"
                         Content="Rename"
@@ -91,9 +100,9 @@
                         FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                         FontSize="18"
                         Foreground="White"
-                        Width="160"
                         Height="52"
-                        VerticalAlignment="Center" />
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Stretch" />
 
                 <TextBlock Grid.Row="2"
                            Grid.Column="0"
@@ -101,7 +110,8 @@
                            Foreground="White"
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                            FontSize="18"
-                           VerticalAlignment="Center" />
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0" />
                 <TextBlock x:Name="LastOpenedValueText"
                            Grid.Row="2"
                            Grid.Column="1"
@@ -109,7 +119,8 @@
                            Foreground="#FFB0E0FF"
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                            FontSize="18"
-                           VerticalAlignment="Center" />
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
 
                 <TextBlock Grid.Row="3"
                            Grid.Column="0"
@@ -117,7 +128,8 @@
                            Foreground="White"
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                            FontSize="18"
-                           VerticalAlignment="Center" />
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0" />
                 <TextBlock x:Name="PlayTimeValueText"
                            Grid.Row="3"
                            Grid.Column="1"
@@ -125,7 +137,8 @@
                            Foreground="#FFB0E0FF"
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                            FontSize="18"
-                           VerticalAlignment="Center" />
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
 
                 <TextBlock Grid.Row="4"
                            Grid.Column="0"
@@ -133,7 +146,8 @@
                            Foreground="White"
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                            FontSize="18"
-                           VerticalAlignment="Center" />
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0" />
                 <TextBlock x:Name="SeedValueText"
                            Grid.Row="4"
                            Grid.Column="1"
@@ -141,7 +155,8 @@
                            Foreground="#FFB0E0FF"
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                            FontSize="18"
-                           VerticalAlignment="Center" />
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
 
                 <TextBlock Grid.Row="5"
                            Grid.Column="0"
@@ -149,7 +164,8 @@
                            Foreground="White"
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                            FontSize="18"
-                           VerticalAlignment="Center" />
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0" />
                 <TextBlock x:Name="GameModeValueText"
                            Grid.Row="5"
                            Grid.Column="1"
@@ -157,7 +173,8 @@
                            Foreground="#FFB0E0FF"
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                            FontSize="18"
-                           VerticalAlignment="Center" />
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
 
                 <TextBlock Grid.Row="6"
                            Grid.Column="0"
@@ -173,7 +190,74 @@
                            Foreground="#FFB0E0FF"
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                            FontSize="18"
-                           VerticalAlignment="Center" />
+                       VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis" />
+
+                <TextBlock Grid.Row="7"
+                           Grid.Column="0"
+                           Text="Size on disk"
+                           Foreground="White"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontSize="18"
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0" />
+                <TextBlock x:Name="SizeOnDiskValueText"
+                           Grid.Row="7"
+                           Grid.Column="1"
+                           Text="Unavailable"
+                           Foreground="#FFB0E0FF"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontSize="18"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+
+                <TextBlock Grid.Row="8"
+                           Grid.Column="0"
+                           Text="StorageVersion"
+                           Foreground="White"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontSize="14"
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0" />
+                <TextBlock x:Name="StorageVersionValueText"
+                           Grid.Row="8"
+                           Grid.Column="1"
+                           Text="Unavailable"
+                           Foreground="#FFB0E0FF"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontSize="14"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+
+                <TextBlock Grid.Row="9"
+                           Grid.Column="0"
+                           Text="PIN to start menu"
+                           Foreground="White"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontSize="16"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"
+                           Margin="0,0,10,0" />
+                <TextBlock x:Name="StartMenuIconValueText"
+                           Grid.Row="9"
+                           Grid.Column="1"
+                           Text="Not configured"
+                           Foreground="#FFB0E0FF"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontSize="16"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"
+                           Margin="0,0,10,0" />
+                <Button Grid.Row="9"
+                        Grid.Column="2"
+                        Content="PIN"
+                        Click="OnChooseStartIconClick"
+                        FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                        FontSize="16"
+                        Foreground="White"
+                        Height="52"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Stretch" />
 
             </Grid>
 
@@ -183,60 +267,77 @@
                        FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                        FontSize="18"
                        HorizontalAlignment="Center"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center"
                        Visibility="Collapsed" />
             <TextBlock x:Name="StatusText"
                        Text="Editor shell loaded."
                        Foreground="#FFFFD080"
                        FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                        FontSize="18"
-                       HorizontalAlignment="Center" />
+                       HorizontalAlignment="Center"
+                       MaxWidth="820"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center" />
             <ProgressBar x:Name="ExportProgressBar"
                          Visibility="Collapsed"
                          IsIndeterminate="True"
                          Width="320"
                          Height="10"
                          Margin="0,8,0,0" />
-            </StackPanel>
+                </StackPanel>
+            </Grid>
         </ScrollViewer>
 
-        <StackPanel Grid.Row="2"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Center">
+        <Grid Grid.Row="2"
+              HorizontalAlignment="Stretch"
+              MaxWidth="760"
+              Margin="0,14,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
             <Button Content="Delete"
+                    Grid.Column="0"
                     Click="OnDeleteWorldClick"
                     FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
-                    FontSize="20"
+                    FontSize="18"
                     Foreground="White"
-                    Width="180"
                     Height="60"
-                    Margin="0,0,16,0" />
+                    HorizontalAlignment="Stretch"
+                    Margin="0,0,6,0" />
             <Button Content="Export"
+                    Grid.Column="1"
                     Click="OnExportWorldClick"
                     FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
-                    FontSize="20"
+                    FontSize="18"
                     Foreground="White"
-                    Width="180"
                     Height="60"
-                    Margin="0,0,16,0" />
+                    HorizontalAlignment="Stretch"
+                    Margin="6,0,6,0" />
             <Button Content="Back"
+                    Grid.Column="2"
                     Click="OnBackClick"
                     FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
-                    FontSize="20"
+                    FontSize="18"
                     Foreground="White"
-                    Width="180"
-                    Height="60" />
-        </StackPanel>
+                    Height="60"
+                    HorizontalAlignment="Stretch"
+                    Margin="6,0,0,0" />
+        </Grid>
 
         <Grid x:Name="SecondaryDialogOverlay"
               Grid.Row="0"
               Grid.RowSpan="3"
-              Margin="-48"
+              Margin="-24,-18,-24,-18"
               Visibility="Collapsed"
               Opacity="0"
               Background="#99000000"
               HorizontalAlignment="Stretch"
               VerticalAlignment="Stretch">
-            <Border Width="520"
+            <Border MaxWidth="520"
+                    Margin="16"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Background="#FFE0E0E0"
@@ -260,9 +361,9 @@
                                TextWrapping="Wrap"
                                HorizontalAlignment="Center"
                                TextAlignment="Center" />
-                    <TextBox x:Name="SecondaryDialogTextBox"
+                     <TextBox x:Name="SecondaryDialogTextBox"
                              Visibility="Collapsed"
-                             Width="320"
+                              MaxWidth="320"
                              Height="32"
                              MinHeight="0"
                              HorizontalAlignment="Center"
@@ -271,28 +372,56 @@
                              FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                              FontSize="18"
                              Margin="0,18,0,0" />
-                    <StackPanel Orientation="Horizontal"
-                                HorizontalAlignment="Center"
-                                Margin="0,24,0,0">
+                     <Grid HorizontalAlignment="Stretch"
+                           Margin="0,24,0,0">
+                         <Grid.ColumnDefinitions>
+                             <ColumnDefinition Width="*" />
+                             <ColumnDefinition Width="*" />
+                         </Grid.ColumnDefinitions>
                         <Button x:Name="SecondaryDialogPrimaryButton"
                                 Content="Save"
+                                 Grid.Column="0"
                                 Click="OnSecondaryDialogPrimaryClick"
                                 FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                                 FontSize="18"
                                 Foreground="#FF101010"
-                                Width="180"
                                 Height="56"
-                                Margin="0,0,12,0" />
+                                 HorizontalAlignment="Stretch"
+                                 Margin="0,0,6,0" />
                         <Button x:Name="SecondaryDialogCancelButton"
                                 Content="Cancel"
+                                 Grid.Column="1"
                                 Click="OnSecondaryDialogCancelClick"
                                 FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                                 FontSize="18"
                                 Foreground="#FF101010"
-                                Width="180"
-                                Height="56" />
-                    </StackPanel>
+                                 Height="56"
+                                 HorizontalAlignment="Stretch"
+                                 Margin="6,0,0,0" />
+                     </Grid>
                 </StackPanel>
+            </Border>
+        </Grid>
+
+        <Grid x:Name="WorldTileIconOverlay"
+              Grid.Row="0"
+              Grid.RowSpan="3"
+              Margin="-24,-18,-24,-18"
+              Visibility="Collapsed"
+              Background="#EE2B1B10"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch">
+            <Border MaxWidth="760"
+                    Margin="10"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="#FF3A281D"
+                    BorderBrush="#FF8A6A4A"
+                    BorderThickness="2"
+                    Padding="8">
+                <Frame x:Name="WorldTileIconFrame"
+                       HorizontalAlignment="Stretch"
+                       VerticalAlignment="Stretch" />
             </Border>
         </Grid>
     </Grid>

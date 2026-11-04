@@ -16,6 +16,15 @@ struct AppContext;
 // private class layout or duplicate a Minecraft implementation.
 using UwpOriginalClientHandle = void*;
 
+enum class UwpOptionId
+{
+	Difficulty, ThirdPerson, ServerVisible, DynamicTile, InputMode, Sensitivity, DpadSize,
+	LeftHanded, SplitTouch, InvertMouse, DestroyVibration, FancyGraphics,
+	AmbientOcclusion, RenderDistance, GuiScale, ViewBobbing, FieldOfView,
+	HideGui, Music, Sound, InfiniteWorlds, JavaUi, SkinArmType, SkinMenu, TouchSneak,
+	BetaVisuals, DebugScreen
+};
+
 enum class UwpOriginalMenuAction
 {
 	None,
@@ -24,6 +33,7 @@ enum class UwpOriginalMenuAction
 	LeaveWorld,
 	OpenSkin,
 	OpenKeyMapping,
+	OpenSettings,
 	OpenWorldEdit,
 	OpenWorldImport,
 	CloseWorldImport
@@ -53,6 +63,8 @@ void UwpOriginalClientRender(UwpOriginalClientHandle handle, float alpha);
 // resolution/configuration; it does not create a second surface or present.
 void UwpOriginalClientSetSize(UwpOriginalClientHandle handle, int width, int height);
 bool UwpOriginalClientShowStartMenu(UwpOriginalClientHandle handle);
+bool UwpOriginalClientShowOptions(UwpOriginalClientHandle handle);
+bool UwpOriginalClientRestoreDefaultOptions(UwpOriginalClientHandle handle);
 bool UwpOriginalClientShowSelectWorld(UwpOriginalClientHandle handle);
 // Shows the original MC error screen for a rejected legacy Infinite/Sky save.
 // The screen deliberately stays inside the original client so it uses the
@@ -80,6 +92,15 @@ void UwpOriginalClientRequestLevelSelection(const std::string& levelId,
 // the original update returns.
 void UwpOriginalClientRequestLeaveWorld();
 void UwpOriginalClientRequestKeyMapping();
+bool UwpOriginalClientGetOptionBool(UwpOriginalClientHandle handle, UwpOptionId id);
+int UwpOriginalClientGetOptionInt(UwpOriginalClientHandle handle, UwpOptionId id);
+float UwpOriginalClientGetOptionFloat(UwpOriginalClientHandle handle, UwpOptionId id);
+std::string UwpOriginalClientGetUsername(UwpOriginalClientHandle handle);
+void UwpOriginalClientSetUsername(UwpOriginalClientHandle handle,
+	const std::string& username);
+void UwpOriginalClientSetOptionBool(UwpOriginalClientHandle handle, UwpOptionId id, bool value);
+void UwpOriginalClientSetOptionInt(UwpOriginalClientHandle handle, UwpOptionId id, int value);
+void UwpOriginalClientSetOptionFloat(UwpOriginalClientHandle handle, UwpOptionId id, float value);
 void UwpOriginalClientRequestWorldEdit(const std::string& worldId);
 bool UwpOriginalClientConsumeLevelSelection(UwpOriginalClientHandle handle,
 	std::string& levelId, std::string& levelName, long& seed,
@@ -88,6 +109,9 @@ bool UwpOriginalClientConsumeWorldEdit(UwpOriginalClientHandle handle,
 	std::string& worldId);
 Minecraft* UwpOriginalClientGetMinecraft(UwpOriginalClientHandle handle);
 LevelRenderer* UwpOriginalClientGetLevelRenderer(UwpOriginalClientHandle handle);
+// Route a platform Back request through the original NinecraftApp state
+// machine instead of injecting a keyboard event that touch mode may ignore.
+bool UwpOriginalClientHandleBack(UwpOriginalClientHandle handle, bool isDown);
 bool UwpOriginalClientAttachWorld(UwpOriginalClientHandle handle,
 	Level* world, LocalPlayer* localPlayer);
 // Start the original RakNet server on the already-attached UWP world.  This

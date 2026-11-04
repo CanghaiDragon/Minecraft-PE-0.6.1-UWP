@@ -28,4 +28,8 @@ namespace UwpStoragePaths
 	// than blocking on a WinRT task.  Original code remains responsible for
 	// opening each level.dat and producing summaries.
 	std::vector<std::string> enumerateWorldFolderNamesBlocking();
+	// Counts persistent world folders that contain a level.dat.  This uses the
+	// same LocalFolder minecraftWorlds root as the original world list and does
+	// not include LocalCache temporary worlds.
+	unsigned int countValidWorldsBlocking();
 }

@@ -10,6 +10,30 @@
 #include <sstream>
 #include <vector>
 
+extern "C" const char* ANGLEGetDebugLogGLESv2(void);
+extern "C" const char* ANGLEGetDebugLog(void);
+#if defined(MCPE_ANGLE_BUILD_ID_DIAGNOSTIC)
+extern "C" int ANGLEEGLGetInitializeStage(void);
+#endif
+#if defined(MCPE_ANGLE_BUILD_ID_DIAGNOSTIC)
+extern "C" const char* ANGLEEGLBuildId(void);
+extern "C" const char* ANGLEGLESBuildId(void);
+extern "C" int ANGLEGLESGetInitializeStage(void);
+extern "C" const char* ANGLEGLESGetRendererError(void);
+extern "C" const char* ANGLEGLESGetD3D11DeviceDiagnostic(void);
+#endif
+
+static std::wstring AngleDebugLogText(const char* text)
+{
+	if (text == nullptr || *text == '\0')
+		return std::wstring();
+	std::wstring result;
+	for (; *text != '\0'; ++text)
+		result.push_back(static_cast<unsigned char>(*text) < 0x80
+			? static_cast<wchar_t>(*text) : L'?');
+	return result;
+}
+
 // The legacy MCPE EGL headers bundled in handheld/lib/include predate the
 // ANGLE Windows Store extension.  Keep the extension value local to this
 // bridge so the UWP project can include the original core headers without
@@ -365,7 +389,19 @@ bool UwpAngleContext::initialize(SwapChainPanel^ panel)
 		}
 
 		m_lastStage = std::wstring(L"eglInitialize(") + label + L")";
-		if (!eglInitialize(m_display, &major, &minor))
+		#if defined(MCPE_ANGLE_BUILD_ID_DIAGNOSTIC)
+		const int stageBefore = ANGLEEGLGetInitializeStage();
+		backendAttempts << label << L".stageBefore=" << stageBefore << L"; ";
+		#endif
+		const EGLBoolean initializeResult = eglInitialize(m_display, &major, &minor);
+		#if defined(MCPE_ANGLE_BUILD_ID_DIAGNOSTIC)
+		const int stageAfter = ANGLEEGLGetInitializeStage();
+		backendAttempts << label << L".stageAfter=" << stageAfter << L"; ";
+		backendAttempts << label << L".glesStage=" << ANGLEGLESGetInitializeStage() << L"; ";
+		backendAttempts << label << L".glesError=" << AngleDebugLogText(ANGLEGLESGetRendererError()) << L"; ";
+		backendAttempts << label << L".d3d11Diag=" << AngleDebugLogText(ANGLEGLESGetD3D11DeviceDiagnostic()) << L"; ";
+		#endif
+		if (!initializeResult)
 		{
 			m_lastError = eglGetError();
 			recordBackendFailure(label, L"eglInitialize", m_lastError);
@@ -387,7 +423,17 @@ bool UwpAngleContext::initialize(SwapChainPanel^ panel)
 	if (m_display != EGL_NO_DISPLAY)
 	{
 		m_lastStage = L"eglInitialize(default)";
-		if (!eglInitialize(m_display, &major, &minor))
+		#if defined(MCPE_ANGLE_BUILD_ID_DIAGNOSTIC)
+		backendAttempts << L"default.stageBefore=" << ANGLEEGLGetInitializeStage() << L"; ";
+		#endif
+		const EGLBoolean defaultInitializeResult = eglInitialize(m_display, &major, &minor);
+		#if defined(MCPE_ANGLE_BUILD_ID_DIAGNOSTIC)
+		backendAttempts << L"default.stageAfter=" << ANGLEEGLGetInitializeStage() << L"; ";
+		backendAttempts << L"default.glesStage=" << ANGLEGLESGetInitializeStage() << L"; ";
+		backendAttempts << L"default.glesError=" << AngleDebugLogText(ANGLEGLESGetRendererError()) << L"; ";
+		backendAttempts << L"default.d3d11Diag=" << AngleDebugLogText(ANGLEGLESGetD3D11DeviceDiagnostic()) << L"; ";
+		#endif
+		if (!defaultInitializeResult)
 		{
 			m_lastError = eglGetError();
 			recordBackendFailure(L"default", L"eglInitialize", m_lastError);
@@ -415,7 +461,17 @@ bool UwpAngleContext::initialize(SwapChainPanel^ panel)
 		if (m_display != EGL_NO_DISPLAY)
 		{
 			m_lastStage = L"eglInitialize(D3D11_ONLY_DISPLAY_ANGLE)";
-			if (!eglInitialize(m_display, &major, &minor))
+			#if defined(MCPE_ANGLE_BUILD_ID_DIAGNOSTIC)
+			backendAttempts << L"D3D11_ONLY_DISPLAY_ANGLE.stageBefore=" << ANGLEEGLGetInitializeStage() << L"; ";
+			#endif
+			const EGLBoolean d3d11OnlyInitializeResult = eglInitialize(m_display, &major, &minor);
+			#if defined(MCPE_ANGLE_BUILD_ID_DIAGNOSTIC)
+			backendAttempts << L"D3D11_ONLY_DISPLAY_ANGLE.stageAfter=" << ANGLEEGLGetInitializeStage() << L"; ";
+			backendAttempts << L"D3D11_ONLY_DISPLAY_ANGLE.glesStage=" << ANGLEGLESGetInitializeStage() << L"; ";
+			backendAttempts << L"D3D11_ONLY_DISPLAY_ANGLE.glesError=" << AngleDebugLogText(ANGLEGLESGetRendererError()) << L"; ";
+			backendAttempts << L"D3D11_ONLY_DISPLAY_ANGLE.d3d11Diag=" << AngleDebugLogText(ANGLEGLESGetD3D11DeviceDiagnostic()) << L"; ";
+			#endif
+			if (!d3d11OnlyInitializeResult)
 			{
 				m_lastError = eglGetError();
 				recordBackendFailure(L"D3D11_ONLY_DISPLAY_ANGLE", L"eglInitialize", m_lastError);
@@ -451,11 +507,19 @@ bool UwpAngleContext::initialize(SwapChainPanel^ panel)
 	{
 		if (m_lastError == EGL_SUCCESS)
 			m_lastError = eglGetError();
-		m_lastDetails = L"Backend attempts: " + backendAttempts.str();
-	#if defined(_M_ARM)
-		m_lastDetails += L" ANGLE debug: " +
-			(gEglDebugMessages.empty() ? L"<none>" : gEglDebugMessages);
-	#endif
+		std::wostringstream conciseDetails;
+		conciseDetails << L"last stage: " << m_lastStage
+			<< L" | EGL error: 0x" << std::hex << std::uppercase
+			<< static_cast<unsigned int>(m_lastError) << std::dec;
+		conciseDetails << L" | attempts: " << backendAttempts.str();
+		#if defined(MCPE_ANGLE_BUILD_ID_DIAGNOSTIC)
+		conciseDetails << L" | libEGL stage=" << ANGLEEGLGetInitializeStage()
+			<< L" | libGLESv2 stage=" << ANGLEGLESGetInitializeStage()
+			<< L" | EGL=" << AngleDebugLogText(ANGLEEGLBuildId())
+			<< L" | GLES=" << AngleDebugLogText(ANGLEGLESBuildId())
+			<< L" | D3D11=" << AngleDebugLogText(ANGLEGLESGetD3D11DeviceDiagnostic());
+		#endif
+		m_lastDetails = conciseDetails.str();
 		return false;
 	}
 

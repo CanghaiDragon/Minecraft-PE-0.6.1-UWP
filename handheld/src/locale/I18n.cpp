@@ -39,6 +39,10 @@ std::string I18n::get( const std::string& id )
 	static const FallbackText fallbackTexts[] = {
 		{ "options.category.additional", "Additional" },
 		{ "options.extraWorldType", "Extra World Type" },
+		{ "options.dynamicTile", "Dynamic Tile (Win10 only)" },
+		{ "options.dynamicTile.off", "Off" },
+		{ "options.dynamicTile.simple", "Simple" },
+		{ "options.dynamicTile.full", "Full" },
 		{ "options.inputMode", "Input Mode" },
 		{ "options.inputMode.keyboardMouse", "Keyboard & Mouse" },
 		{ "options.inputMode.touch", "Touch" },

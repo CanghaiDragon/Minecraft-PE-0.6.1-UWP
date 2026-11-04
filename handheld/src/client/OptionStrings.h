@@ -30,6 +30,8 @@ public:
     static const char* Game_ThirdPerson;
 	static const char* Game_ThirdPersonMode;
 	static const char* Game_HideGui;
+	static const char* Game_DynamicTile;
+	static const char* Game_DynamicTileMode;
 	static const char* Extra_InfiniteWorlds;
 	static const char* Skin_ArmType;
 	static const char* Skin_Menu;

@@ -5,10 +5,22 @@
 #include <windows.foundation.metadata.h>
 #include <windows.graphics.display.h>
 #include <windows.system.h>
+#include <windows.system.profile.h>
 #include <windows.ui.viewmanagement.h>
+
+// Windows.Phone.Devices.Notification belongs to the optional Windows Mobile
+// Extension SDK.  Keep the phone-specific path when that SDK is installed,
+// but do not make the desktop/UWP build depend on its header.
+#if defined(__has_include)
+#if __has_include(<windows.phone.devices.notification.h>)
+#include <windows.phone.devices.notification.h>
+#define MCPE_HAS_PHONE_VIBRATION_API 1
+#endif
+#endif
 
 #include <cstdio>
 #include <ctime>
+#include <cwchar>
 #include <ppltasks.h>
 #include <string>
 #include <utility>
@@ -167,6 +179,21 @@ bool AppPlatform_uwp::supportsTouchscreen()
 	return true;
 }
 
+bool AppPlatform_uwp::isMobileDevice()
+{
+	try
+	{
+		::Platform::String^ family =
+			Windows::System::Profile::AnalyticsInfo::VersionInfo->DeviceFamily;
+		return family != nullptr &&
+			std::wcscmp(family->Data(), L"Windows.Mobile") == 0;
+	}
+	catch (...)
+	{
+		return false;
+	}
+}
+
 std::string AppPlatform_uwp::getPlatformStringVar(int stringId)
 {
 	if (stringId == PlatformStringVars::DEVICE_BUILD_MODEL)
@@ -216,6 +243,26 @@ void AppPlatform_uwp::vibrate(int milliSeconds)
 	// vibration motor simply take the no-op path below.
 	try
 	{
+#if defined(MCPE_HAS_PHONE_VIBRATION_API)
+		// Windows 10 Mobile exposes the phone motor through the phone-specific
+		// notification API.  The generic Windows.Devices.Haptics path below is
+		// useful for desktop haptic devices, but it does not drive the phone
+		// motor on the WP target.
+		if (ApiInformation::IsTypePresent(
+			L"Windows.Phone.Devices.Notification.VibrationDevice"))
+		{
+			Windows::Phone::Devices::Notification::VibrationDevice^ phoneDevice =
+				Windows::Phone::Devices::Notification::VibrationDevice::GetDefault();
+			if (phoneDevice != nullptr)
+			{
+				TimeSpan duration;
+				duration.Duration = static_cast<long long>(milliSeconds) * 10000;
+				phoneDevice->Vibrate(duration);
+				return;
+			}
+		}
+#endif
+
 		if (!ApiInformation::IsTypePresent(
 			L"Windows.Devices.Haptics.VibrationDevice"))
 			return;

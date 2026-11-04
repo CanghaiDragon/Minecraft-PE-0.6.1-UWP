@@ -241,6 +241,10 @@ void OptionsGroup::createStepSlider( const Options::Option* option, Minecraft* m
 	} else if (option == &Options::Option::GRAPHICS) {
 		steps.push_back(0);
 		steps.push_back(1);
+	} else if (option == &Options::Option::DYNAMIC_TILE) {
+		steps.push_back(Options::DYNAMIC_TILE_OFF);
+		steps.push_back(Options::DYNAMIC_TILE_SIMPLE);
+		steps.push_back(Options::DYNAMIC_TILE_FULL);
 	}
 
 	if (steps.size() < 2) {

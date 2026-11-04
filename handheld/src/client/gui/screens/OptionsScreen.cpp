@@ -1,6 +1,7 @@
 #include "OptionsScreen.h"
 
 #include "StartMenuScreen.h"
+#include "touch/TouchStartMenuScreen.h"
 #include "DialogDefinitions.h"
 #include "WelcomeScreen.h"
 #include "../../Minecraft.h"
@@ -238,6 +239,7 @@ void OptionsScreen::generateOptionScreens() {
 	gameGroup.addOptionItem(&Options::Option::DIFFICULTY, minecraft)
 		.addOptionItem(&Options::Option::THIRD_PERSON, minecraft)
 		.addOptionItem(&Options::Option::SERVER_VISIBLE, minecraft)
+		.addOptionItem(&Options::Option::DYNAMIC_TILE, minecraft)
 		.addRestoreDefaultsItem(minecraft);
 
 	// Controls
@@ -249,8 +251,7 @@ void OptionsScreen::generateOptionScreens() {
 		.addKeyMappingItem(minecraft)
 		.addOptionItem(&Options::Option::LEFT_HANDED, minecraft)
 		.addOptionItem(&Options::Option::USE_TOUCH_JOYPAD, minecraft)
-		.addOptionItem(&Options::Option::INVERT_MOUSE, minecraft)
-		.addOptionItem(&Options::Option::DESTROY_VIBRATION, minecraft);
+		.addOptionItem(&Options::Option::INVERT_MOUSE, minecraft);
 
 	// Graphics
 	optionPanes[2]->createOptionsGroup("options.group.graphics")
@@ -402,10 +403,26 @@ void OptionsScreen::tick() {
 		// saves the text box value, so suppress that cleanup for this path; this
 		// ensures the old username cannot be written back over the defaults.
 		_resettingOptions = true;
-		minecraft->options.initDefaultValues();
+		const bool isMobileDevice = minecraft->platform()->isMobileDevice();
+		minecraft->options.initDefaultValues(isMobileDevice
+			? Options::DefaultProfile::Mobile
+			: Options::DefaultProfile::DesktopDefault);
 		minecraft->options.deleteSavedOptions();
 		minecraft->setSize(minecraft->width, minecraft->height);
-		minecraft->setScreen(new WelcomeScreen());
+		if (isMobileDevice)
+		{
+			// Mobile resets return directly to the main menu.  The UWP bridge
+			// wraps this native menu on the next tick so its XAML handoffs remain
+			// available.
+			if (minecraft->options.javaUi)
+				minecraft->setScreen(new StartMenuScreen());
+			else
+				minecraft->setScreen(new Touch::StartMenuScreen());
+		}
+		else
+		{
+			minecraft->setScreen(new WelcomeScreen());
+		}
 		return;
 	}
 

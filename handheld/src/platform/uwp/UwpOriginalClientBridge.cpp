@@ -3,6 +3,7 @@
 #include "../../AppPlatform.h"
 #include "../../NinecraftApp.h"
 #include "../../client/Minecraft.h"
+#include "../../client/Options.h"
 #include "../../client/player/LocalPlayer.h"
 #include "../../client/renderer/Textures.h"
 #include "../../client/renderer/LevelRenderer.h"
@@ -100,6 +101,11 @@ namespace
 				g_pendingMenuAction = UwpOriginalMenuAction::Singleplayer;
 				return;
 			}
+			if (button != nullptr && button->id == 4)
+			{
+				g_pendingMenuAction = UwpOriginalMenuAction::OpenSettings;
+				return;
+			}
 			StartMenuScreen::buttonClicked(button);
 		}
 
@@ -161,6 +167,11 @@ namespace
 			if (button != nullptr && button->id == 2)
 			{
 				g_pendingMenuAction = UwpOriginalMenuAction::Singleplayer;
+				return;
+			}
+			if (button != nullptr && button->id == 4)
+			{
+				g_pendingMenuAction = UwpOriginalMenuAction::OpenSettings;
 				return;
 			}
 			Touch::StartMenuScreen::buttonClicked(button);
@@ -253,6 +264,101 @@ namespace
 	private:
 		Button* backButton;
 	};
+}
+
+namespace
+{
+	Minecraft* BridgeMinecraft(UwpOriginalClientHandle handle)
+	{
+		return UwpOriginalClientGetMinecraft(handle);
+	}
+	const Options::Option* BridgeOption(UwpOptionId id)
+	{
+		switch (id)
+		{
+		case UwpOptionId::Difficulty: return &Options::Option::DIFFICULTY;
+		case UwpOptionId::ThirdPerson: return &Options::Option::THIRD_PERSON;
+		case UwpOptionId::ServerVisible: return &Options::Option::SERVER_VISIBLE;
+		case UwpOptionId::DynamicTile: return &Options::Option::DYNAMIC_TILE;
+		case UwpOptionId::InputMode: return &Options::Option::INPUT_MODE;
+		case UwpOptionId::Sensitivity: return &Options::Option::SENSITIVITY;
+		case UwpOptionId::DpadSize: return &Options::Option::DPAD_SIZE;
+		case UwpOptionId::LeftHanded: return &Options::Option::LEFT_HANDED;
+		case UwpOptionId::SplitTouch: return &Options::Option::USE_TOUCH_JOYPAD;
+		case UwpOptionId::InvertMouse: return &Options::Option::INVERT_MOUSE;
+		case UwpOptionId::DestroyVibration: return &Options::Option::DESTROY_VIBRATION;
+		case UwpOptionId::FancyGraphics: return &Options::Option::GRAPHICS;
+		case UwpOptionId::AmbientOcclusion: return &Options::Option::AMBIENT_OCCLUSION;
+		case UwpOptionId::RenderDistance: return &Options::Option::RENDER_DISTANCE;
+		case UwpOptionId::GuiScale: return &Options::Option::GUI_SCALE;
+		case UwpOptionId::ViewBobbing: return &Options::Option::VIEW_BOBBING;
+		case UwpOptionId::FieldOfView: return &Options::Option::FOV;
+		case UwpOptionId::HideGui: return &Options::Option::HIDE_GUI;
+		case UwpOptionId::Music: return &Options::Option::MUSIC;
+		case UwpOptionId::Sound: return &Options::Option::SOUND;
+		case UwpOptionId::InfiniteWorlds: return &Options::Option::INFINITE_WORLDS;
+		case UwpOptionId::JavaUi: return &Options::Option::JAVA_UI;
+		case UwpOptionId::SkinArmType: return &Options::Option::SKIN_ARM_TYPE;
+		case UwpOptionId::SkinMenu: return &Options::Option::SKIN_MENU;
+		case UwpOptionId::TouchSneak: return &Options::Option::TOUCH_SNEAK;
+		case UwpOptionId::BetaVisuals: return &Options::Option::BETA_VISUALS;
+		case UwpOptionId::DebugScreen: return &Options::Option::DEBUG_SCREEN;
+		default: return nullptr;
+		}
+	}
+}
+
+bool UwpOriginalClientGetOptionBool(UwpOriginalClientHandle h, UwpOptionId id)
+{
+	Minecraft* m = BridgeMinecraft(h); const Options::Option* o = BridgeOption(id);
+	return m != nullptr && o != nullptr && m->options.getBooleanValue(o);
+}
+int UwpOriginalClientGetOptionInt(UwpOriginalClientHandle h, UwpOptionId id)
+{
+	Minecraft* m = BridgeMinecraft(h); const Options::Option* o = BridgeOption(id);
+	return m != nullptr && o != nullptr ? m->options.getIntValue(o) : 0;
+}
+float UwpOriginalClientGetOptionFloat(UwpOriginalClientHandle h, UwpOptionId id)
+{
+	Minecraft* m = BridgeMinecraft(h); const Options::Option* o = BridgeOption(id);
+	return m != nullptr && o != nullptr ? m->options.getProgressValue(o) : 0.0f;
+}
+std::string UwpOriginalClientGetUsername(UwpOriginalClientHandle h)
+{
+	Minecraft* m = BridgeMinecraft(h);
+	return m != nullptr ? m->options.username : std::string();
+}
+void UwpOriginalClientSetUsername(UwpOriginalClientHandle h, const std::string& username)
+{
+	Minecraft* m = BridgeMinecraft(h);
+	if (m != nullptr && m->options.username != username)
+	{
+		m->options.username = username;
+		m->options.save();
+	}
+}
+void UwpOriginalClientSetOptionBool(UwpOriginalClientHandle h, UwpOptionId id, bool v)
+{
+	Minecraft* m = BridgeMinecraft(h); const Options::Option* o = BridgeOption(id);
+	if (m == nullptr || o == nullptr)
+		return;
+	if (id == UwpOptionId::DynamicTile)
+	{
+		m->options.set(o, v ? Options::DYNAMIC_TILE_FULL : Options::DYNAMIC_TILE_OFF);
+		return;
+	}
+	if (m->options.getBooleanValue(o) != v)
+		m->options.toggle(o, 1);
+}
+void UwpOriginalClientSetOptionInt(UwpOriginalClientHandle h, UwpOptionId id, int v)
+{
+	Minecraft* m = BridgeMinecraft(h); const Options::Option* o = BridgeOption(id);
+	if (m != nullptr && o != nullptr) m->options.set(o, v);
+}
+void UwpOriginalClientSetOptionFloat(UwpOriginalClientHandle h, UwpOptionId id, float v)
+{
+	Minecraft* m = BridgeMinecraft(h); const Options::Option* o = BridgeOption(id);
+	if (m != nullptr && o != nullptr) m->options.set(o, v);
 }
 
 UwpOriginalClientHandle UwpOriginalClientCreate()
@@ -367,6 +473,39 @@ bool UwpOriginalClientShowStartMenu(UwpOriginalClientHandle handle)
 	else
 		minecraft->setScreen(new UwpTouchStartMenuScreen());
 	return true;
+}
+
+bool UwpOriginalClientShowOptions(UwpOriginalClientHandle handle)
+{
+	Minecraft* minecraft = UwpOriginalClientGetMinecraft(handle);
+	if (minecraft == nullptr)
+		return false;
+
+	g_pendingMenuAction = UwpOriginalMenuAction::None;
+	Keyboard::reset();
+	minecraft->setScreen(new OptionsScreen());
+	return minecraft->screen != nullptr;
+}
+
+bool UwpOriginalClientRestoreDefaultOptions(UwpOriginalClientHandle handle)
+{
+	Minecraft* minecraft = UwpOriginalClientGetMinecraft(handle);
+	if (minecraft == nullptr)
+		return false;
+
+	const bool isMobileDevice = minecraft->platform()->isMobileDevice();
+	minecraft->options.initDefaultValues(isMobileDevice
+		? Options::DefaultProfile::Mobile
+		: Options::DefaultProfile::DesktopDefault);
+	minecraft->options.deleteSavedOptions();
+	minecraft->reloadOptions();
+	Keyboard::reset();
+
+	if (isMobileDevice)
+		return UwpOriginalClientShowStartMenu(handle);
+
+	minecraft->setScreen(new WelcomeScreen());
+	return minecraft->screen != nullptr;
 }
 
 bool UwpOriginalClientShowSelectWorld(UwpOriginalClientHandle handle)
@@ -587,6 +726,13 @@ LevelRenderer* UwpOriginalClientGetLevelRenderer(UwpOriginalClientHandle handle)
 {
 	Minecraft* minecraft = UwpOriginalClientGetMinecraft(handle);
 	return minecraft != nullptr ? minecraft->levelRenderer : nullptr;
+}
+
+bool UwpOriginalClientHandleBack(UwpOriginalClientHandle handle, bool isDown)
+{
+	NinecraftApp* app = handle != nullptr
+		? static_cast<NinecraftApp*>(handle) : nullptr;
+	return app != nullptr && app->handleBack(isDown);
 }
 
 bool UwpOriginalClientAttachWorld(UwpOriginalClientHandle handle,

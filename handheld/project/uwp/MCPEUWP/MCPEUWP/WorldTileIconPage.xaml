@@ -1,0 +1,166 @@
+<Page
+    x:Class="MCPEUWP.WorldTileIconPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid Background="Transparent"
+          Padding="16,12,16,12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0"
+                    HorizontalAlignment="Center"
+                    Margin="0,0,0,12">
+            <TextBlock Text="Choose Start Icon"
+                       Foreground="White"
+                       FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                       FontSize="28"
+                       HorizontalAlignment="Center" />
+            <TextBlock Text="Icon is only available on Win10"
+                       Foreground="#FFFFD080"
+                       FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                       FontSize="12"
+                       HorizontalAlignment="Center"
+                       Margin="0,4,0,0" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalContentAlignment="Stretch">
+            <Grid MaxWidth="620"
+                  HorizontalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="116" />
+                    <RowDefinition Height="116" />
+                </Grid.RowDefinitions>
+
+                <Button Grid.Row="0" Grid.Column="0"
+                        Tag="WorldIcon_Crafting_Table.png"
+                        Click="OnIconClick"
+                        Background="#994B3626"
+                        BorderBrush="Transparent"
+                        Foreground="White"
+                        Margin="4"
+                        Padding="4"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center">
+                    <Image Source="ms-appx:///Assets/WorldIcon_Crafting_Table.png"
+                           Width="88" Height="88" Stretch="Uniform" />
+                </Button>
+                <Button Grid.Row="0" Grid.Column="1"
+                        Tag="WorldIcon_Furnace.png"
+                        Click="OnIconClick"
+                        Background="#994B3626"
+                        BorderBrush="Transparent"
+                        Foreground="White"
+                        Margin="4"
+                        Padding="4"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center">
+                    <Image Source="ms-appx:///Assets/WorldIcon_Furnace.png"
+                           Width="88" Height="88" Stretch="Uniform" />
+                </Button>
+                <Button Grid.Row="0" Grid.Column="2"
+                        Tag="WorldIcon_Grass_JE2.png"
+                        Click="OnIconClick"
+                        Background="#994B3626"
+                        BorderBrush="Transparent"
+                        Foreground="White"
+                        Margin="4"
+                        Padding="4"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center">
+                    <Image Source="ms-appx:///Assets/WorldIcon_Grass_JE2.png"
+                           Width="88" Height="88" Stretch="Uniform" />
+                </Button>
+                <Button Grid.Row="0" Grid.Column="3"
+                        Tag="WorldIcon_Grass_JE3.png"
+                        Click="OnIconClick"
+                        Background="#994B3626"
+                        BorderBrush="Transparent"
+                        Foreground="White"
+                        Margin="4"
+                        Padding="4"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center">
+                    <Image Source="ms-appx:///Assets/WorldIcon_Grass_JE3.png"
+                           Width="88" Height="88" Stretch="Uniform" />
+                </Button>
+
+                <Button Grid.Row="1" Grid.Column="0"
+                        Tag="WorldIcon_Grass_JE4.png"
+                        Click="OnIconClick"
+                        Background="#994B3626"
+                        BorderBrush="Transparent"
+                        Foreground="White"
+                        Margin="4"
+                        Padding="4"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center">
+                    <Image Source="ms-appx:///Assets/WorldIcon_Grass_JE4.png"
+                           Width="88" Height="88" Stretch="Uniform" />
+                </Button>
+                <Button Grid.Row="1" Grid.Column="1"
+                        Tag="WorldIcon_Lit_Furnace.png"
+                        Click="OnIconClick"
+                        Background="#994B3626"
+                        BorderBrush="Transparent"
+                        Foreground="White"
+                        Margin="4"
+                        Padding="4"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center">
+                    <Image Source="ms-appx:///Assets/WorldIcon_Lit_Furnace.png"
+                           Width="88" Height="88" Stretch="Uniform" />
+                </Button>
+                <Button Grid.Row="1" Grid.Column="2"
+                        Tag="WorldIcon_Metro_Crafting_Table.png"
+                        Click="OnIconClick"
+                        Background="#994B3626"
+                        BorderBrush="Transparent"
+                        Foreground="White"
+                        Margin="4"
+                        Padding="4"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center">
+                    <Image Source="ms-appx:///Assets/WorldIcon_Metro_Crafting_Table.png"
+                           Width="88" Height="88" Stretch="Uniform" />
+                </Button>
+                <Button Grid.Row="1" Grid.Column="3"
+                        Tag="WorldIcon_Metro_Grass.png"
+                        Click="OnIconClick"
+                        Background="#994B3626"
+                        BorderBrush="Transparent"
+                        Foreground="White"
+                        Margin="4"
+                        Padding="4"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center">
+                    <Image Source="ms-appx:///Assets/WorldIcon_Metro_Grass.png"
+                           Width="88" Height="88" Stretch="Uniform" />
+                </Button>
+            </Grid>
+        </ScrollViewer>
+
+        <Button Grid.Row="2"
+                Content="Back"
+                Click="OnBackClick"
+                FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                FontSize="18"
+                Foreground="White"
+                Height="56"
+                MaxWidth="320"
+                HorizontalAlignment="Center"
+                Margin="0,12,0,0" />
+    </Grid>
+</Page>

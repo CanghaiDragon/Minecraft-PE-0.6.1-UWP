@@ -190,4 +190,42 @@ namespace UwpStoragePaths
 		LOGI("UWP world enumeration found=%u\n", (unsigned)names.size());
 		return names;
 	}
+
+	unsigned int countValidWorldsBlocking()
+	{
+		const std::wstring root = worldsFolderPath()->Data();
+		const std::wstring pattern = root + L"\\*";
+		WIN32_FIND_DATAW data{};
+		HANDLE search = FindFirstFileW(pattern.c_str(), &data);
+		if (search == INVALID_HANDLE_VALUE)
+		{
+			const DWORD error = GetLastError();
+			if (error != ERROR_FILE_NOT_FOUND && error != ERROR_PATH_NOT_FOUND)
+				LOGW("UWP valid-world count failed, Win32 error=%lu\n",
+					(unsigned long)error);
+			return 0;
+		}
+
+		unsigned int count = 0;
+		do
+		{
+			if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
+				continue;
+			if (wcscmp(data.cFileName, L".") == 0 ||
+				wcscmp(data.cFileName, L"..") == 0)
+				continue;
+
+			const std::wstring levelDat = root + L"\\" + data.cFileName +
+				L"\\level.dat";
+			const DWORD attributes = GetFileAttributesW(levelDat.c_str());
+			if (attributes != INVALID_FILE_ATTRIBUTES &&
+				(attributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
+				++count;
+		}
+		while (FindNextFileW(search, &data) != 0);
+
+		FindClose(search);
+		LOGI("UWP valid-world count=%u\n", (unsigned)count);
+		return count;
+	}
 }

@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "WorldEditShellPage.xaml.h"
 
+#include "../../../../src/platform/uwp/UwpLiveTile.h"
 #include "../../../../src/platform/uwp/UwpStoragePaths.h"
 #include "../../../../src/world/level/LevelSettings.h"
 #include "../../../../src/world/level/storage/ExternalFileLevelStorage.h"
@@ -11,6 +12,7 @@
 #include <windows.storage.pickers.h>
 #include <windows.storage.streams.h>
 #include <windows.ui.core.h>
+#include <windows.ui.startscreen.h>
 #include <windows.ui.xaml.controls.h>
 #include <windows.ui.xaml.media.h>
 #include <windows.ui.xaml.media.animation.h>
@@ -18,6 +20,8 @@
 #include <cstdio>
 #include <cstdint>
 #include <ctime>
+#include <cwchar>
+#include <iomanip>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
@@ -28,6 +32,7 @@ using namespace MCPEUWP;
 using namespace concurrency;
 using namespace Windows::Storage;
 using namespace Windows::Storage::Pickers;
+using namespace Windows::UI::StartScreen;
 using namespace Windows::UI::Xaml;
 using namespace Windows::UI::Xaml::Controls;
 using namespace Windows::UI::Xaml::Media::Animation;
@@ -73,6 +78,19 @@ namespace
 		return result;
 	}
 
+	std::wstring WorldShortcutTileId(const std::wstring& worldId)
+	{
+		// Keep the tile ID short and stable even when a world folder contains
+		// spaces or punctuation.  The world ID itself remains in Arguments.
+		std::uint32_t hash = 2166136261u;
+		for (const wchar_t character : worldId)
+		{
+			hash ^= static_cast<std::uint32_t>(character);
+			hash *= 16777619u;
+		}
+		return std::wstring(L"MCPEWorld_") + std::to_wstring(hash);
+	}
+
 	std::wstring Utf8ToWide(const std::string& value)
 	{
 		if (value.empty())
@@ -87,6 +105,46 @@ namespace
 			CP_UTF8, MB_ERR_INVALID_CHARS, value.data(),
 			static_cast<int>(value.size()), &result[0], required);
 		return result;
+	}
+
+	std::uint64_t DirectorySizeBytes(const std::wstring& directory)
+	{
+		if (directory.empty())
+			return 0;
+
+		std::uint64_t total = 0;
+		const std::wstring pattern = directory + L"\\*";
+		WIN32_FIND_DATAW data{};
+		HANDLE search = FindFirstFileW(pattern.c_str(), &data);
+		if (search == INVALID_HANDLE_VALUE)
+			return 0;
+
+		do
+		{
+			if (wcscmp(data.cFileName, L".") == 0 ||
+				wcscmp(data.cFileName, L"..") == 0)
+				continue;
+
+			const std::wstring child = directory + L"\\" + data.cFileName;
+			if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
+			{
+				// Do not follow reparse points. This prevents junctions or symbolic
+				// links from making the size scan leave the world directory.
+				if ((data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) == 0)
+					total += DirectorySizeBytes(child);
+			}
+			else
+			{
+				ULARGE_INTEGER fileSize{};
+				fileSize.HighPart = data.nFileSizeHigh;
+				fileSize.LowPart = data.nFileSizeLow;
+				total += fileSize.QuadPart;
+			}
+		}
+		while (FindNextFileW(search, &data) != 0);
+
+		FindClose(search);
+		return total;
 	}
 
 	std::wstring GameModeName(int gameType)
@@ -405,17 +463,270 @@ WorldEditShellPage::WorldEditShellPage()
 	WorldEditShellDiagnostic(L"constructor end");
 }
 
+bool WorldEditShellPage::HandleEscapeKey()
+{
+	if (WorldTileIconOverlay != nullptr &&
+		WorldTileIconOverlay->Visibility == Windows::UI::Xaml::Visibility::Visible)
+	{
+		HideWorldTileIconPage();
+		return true;
+	}
+	return false;
+}
+
 void WorldEditShellPage::SetWorldId(Platform::String^ worldId)
 {
 	WorldEditShellDiagnostic(L"SetWorldId");
 	m_worldId = worldId == nullptr ? ref new Platform::String(L"") : worldId;
+	m_selectedTileIcon = nullptr;
+	m_pinOperationPending = false;
 	if (FolderNameValueText != nullptr)
 		FolderNameValueText->Text = m_worldId;
+	if (StartMenuIconValueText != nullptr)
+		StartMenuIconValueText->Text = ref new Platform::String(L"Not configured");
+	if (SizeOnDiskValueText != nullptr)
+		SizeOnDiskValueText->Text = ref new Platform::String(L"Unavailable");
+	if (StorageVersionValueText != nullptr)
+		StorageVersionValueText->Text = ref new Platform::String(L"Unavailable");
 	if (WorldIdValueText != nullptr)
 		WorldIdValueText->Text = m_worldId->Length() == 0
 			? ref new Platform::String(L"Unavailable")
 			: m_worldId;
 	ScheduleLoadWorldData();
+}
+
+void WorldEditShellPage::ShowWorldTileIconPage()
+{
+	if (WorldTileIconOverlay == nullptr || WorldTileIconFrame == nullptr)
+		return;
+
+	if (m_worldTileIconPage == nullptr)
+	{
+		m_worldTileIconPage = ref new WorldTileIconPage();
+		m_worldTileIconPage->BackRequested +=
+			ref new Windows::Foundation::EventHandler<Platform::Object^>(
+				[this](Platform::Object^, Platform::Object^)
+			{
+				HideWorldTileIconPage();
+			});
+		m_worldTileIconPage->IconSelected +=
+			ref new Windows::Foundation::EventHandler<Platform::String^>(
+				[this](Platform::Object^, Platform::String^ iconName)
+			{
+				if (m_pinOperationPending)
+					return;
+				m_selectedTileIcon = iconName;
+				if (StartMenuIconValueText != nullptr)
+					StartMenuIconValueText->Text = iconName;
+				HideWorldTileIconPage();
+				PinWorldShortcut(iconName);
+			});
+	}
+
+	WorldTileIconFrame->Content = m_worldTileIconPage;
+	WorldTileIconOverlay->Visibility = Windows::UI::Xaml::Visibility::Visible;
+	AnimateWorldTileIconPage(true);
+}
+
+void WorldEditShellPage::HideWorldTileIconPage()
+{
+	AnimateWorldTileIconPage(false);
+}
+
+void WorldEditShellPage::AnimateWorldTileIconPage(bool entering)
+{
+	if (WorldTileIconOverlay == nullptr)
+		return;
+
+	if (m_worldTileIconTransition != nullptr)
+	{
+		m_worldTileIconTransition->Stop();
+		if (m_worldTileIconTransitionCompletedToken.Value != 0)
+		{
+			m_worldTileIconTransition->Completed -=
+				m_worldTileIconTransitionCompletedToken;
+			m_worldTileIconTransitionCompletedToken.Value = 0;
+		}
+		m_worldTileIconTransition = nullptr;
+	}
+
+	if (entering)
+	{
+		WorldTileIconOverlay->Visibility =
+			Windows::UI::Xaml::Visibility::Visible;
+		WorldTileIconOverlay->Opacity = 0.0;
+	}
+
+	auto transition = ref new Storyboard();
+	auto fade = ref new DoubleAnimation();
+	fade->From = entering ? 0.0 : WorldTileIconOverlay->Opacity;
+	fade->To = entering ? 1.0 : 0.0;
+	Windows::Foundation::TimeSpan duration;
+	duration.Duration = entering ? 2200000 : 1800000;
+	fade->Duration = duration;
+	Storyboard::SetTarget(fade, WorldTileIconOverlay);
+	Storyboard::SetTargetProperty(
+		fade, ref new Platform::String(L"Opacity"));
+	transition->Children->Append(fade);
+
+	m_worldTileIconTransition = transition;
+	m_worldTileIconTransitionCompletedToken = transition->Completed +=
+		ref new Windows::Foundation::EventHandler<Platform::Object^>(
+			[this, transition, entering](Platform::Object^, Platform::Object^)
+		{
+				if (m_worldTileIconTransition != transition)
+					return;
+
+				if (!entering && WorldTileIconOverlay != nullptr)
+				{
+					WorldTileIconOverlay->Visibility =
+						Windows::UI::Xaml::Visibility::Collapsed;
+					WorldTileIconOverlay->Opacity = 0.0;
+				}
+				else if (entering && WorldTileIconOverlay != nullptr)
+				{
+					WorldTileIconOverlay->Opacity = 1.0;
+				}
+
+				if (m_worldTileIconTransitionCompletedToken.Value != 0)
+				{
+					transition->Completed -=
+						m_worldTileIconTransitionCompletedToken;
+					m_worldTileIconTransitionCompletedToken.Value = 0;
+				}
+				m_worldTileIconTransition = nullptr;
+			});
+	transition->Begin();
+}
+
+void WorldEditShellPage::PinWorldShortcut(Platform::String^ iconName)
+{
+	if (m_pinOperationPending || m_worldId == nullptr ||
+		m_worldId->Length() == 0 || iconName == nullptr ||
+		iconName->Length() == 0)
+		return;
+
+	const std::wstring worldId(m_worldId->Data());
+	const std::wstring tileIdValue = WorldShortcutTileId(worldId);
+	const std::wstring assetPath =
+		L"ms-appx:///Assets/" + std::wstring(iconName->Data());
+	const std::wstring argumentValue = L"open-world:" + worldId;
+
+	Platform::String^ tileId =
+		ref new Platform::String(tileIdValue.c_str());
+	Platform::String^ arguments =
+		ref new Platform::String(argumentValue.c_str());
+	Platform::String^ displayName = m_worldId;
+	if (WorldNameValueText != nullptr && WorldNameValueText->Text != nullptr &&
+		WorldNameValueText->Text->Length() > 0 &&
+		std::wcscmp(WorldNameValueText->Text->Data(), L"Unavailable") != 0)
+	{
+		displayName = WorldNameValueText->Text;
+	}
+	if (displayName == nullptr || displayName->Length() == 0)
+		displayName = ref new Platform::String(L"Minecraft World");
+
+	try
+	{
+		auto logo = ref new Windows::Foundation::Uri(
+			ref new Platform::String(assetPath.c_str()));
+		const bool alreadyPinned = SecondaryTile::Exists(tileId);
+		auto tile = alreadyPinned
+			? ref new SecondaryTile(tileId)
+			: ref new SecondaryTile(tileId, displayName, arguments, logo,
+				TileSize::Default);
+		tile->DisplayName = displayName;
+		tile->Arguments = arguments;
+		tile->VisualElements->Square150x150Logo = logo;
+		tile->VisualElements->Wide310x150Logo = logo;
+		tile->VisualElements->Square310x310Logo = logo;
+		tile->VisualElements->ShowNameOnSquare150x150Logo = true;
+		tile->VisualElements->ShowNameOnWide310x150Logo = true;
+		tile->VisualElements->ShowNameOnSquare310x310Logo = true;
+
+		m_pinOperationPending = true;
+		SetStatus(alreadyPinned
+			? L"Updating world shortcut..."
+			: L"Pinning world shortcut...");
+
+		// Updating an existing tile does not show a confirmation flyout.  A new
+		// tile uses RequestCreateAsync(), which asks the user to confirm the pin.
+		// Use the WinRT Completed callbacks here instead of PPL .then().  This
+		// project uses an older PPL projection whose continuation constraints are
+		// not reliable for these C++/CX async result types.
+		Windows::UI::Core::CoreDispatcher^ dispatcher = Dispatcher;
+		auto reportResult = [this, dispatcher](int result)
+		{
+			if (dispatcher == nullptr)
+			{
+				m_pinOperationPending = false;
+				return;
+			}
+			dispatcher->RunAsync(
+				Windows::UI::Core::CoreDispatcherPriority::Normal,
+				ref new Windows::UI::Core::DispatchedHandler(
+					[this, result]()
+				{
+						m_pinOperationPending = false;
+						SetStatus(result == 0
+							? L"World shortcut pinned."
+							: result == 1
+								? L"Pin request cancelled."
+								: L"Could not pin world shortcut.");
+					}));
+		};
+		if (alreadyPinned)
+		{
+			auto operation = tile->UpdateAsync();
+			operation->Completed =
+				ref new Windows::Foundation::AsyncOperationCompletedHandler<bool>(
+					[reportResult](Windows::Foundation::IAsyncOperation<bool>^ completed,
+						Windows::Foundation::AsyncStatus status)
+					{
+						if (status != Windows::Foundation::AsyncStatus::Completed)
+						{
+							reportResult(2);
+							return;
+						}
+						try
+						{
+							reportResult(completed->GetResults() ? 0 : 2);
+						}
+						catch (...)
+						{
+							reportResult(2);
+						}
+					});
+		}
+		else
+		{
+			auto operation = tile->RequestCreateAsync();
+			operation->Completed =
+				ref new Windows::Foundation::AsyncOperationCompletedHandler<bool>(
+					[reportResult](Windows::Foundation::IAsyncOperation<bool>^ completed,
+						Windows::Foundation::AsyncStatus status)
+					{
+						if (status != Windows::Foundation::AsyncStatus::Completed)
+						{
+							reportResult(2);
+							return;
+						}
+						try
+						{
+							reportResult(completed->GetResults() ? 0 : 1);
+						}
+						catch (...)
+						{
+							reportResult(2);
+						}
+					});
+		}
+	}
+	catch (Platform::Exception^)
+	{
+		m_pinOperationPending = false;
+		SetStatus(L"Could not prepare world shortcut.");
+	}
 }
 
 void WorldEditShellPage::ScheduleLoadWorldData()
@@ -619,12 +930,44 @@ void WorldEditShellPage::LoadWorldData()
 		if (WorldTypeValueText != nullptr)
 			WorldTypeValueText->Text = ref new Platform::String(
 				WorldTypeDisplayName(data.getWorldType(), marker).c_str());
+
+		if (SizeOnDiskValueText != nullptr)
+		{
+			std::wstringstream sizeOnDisk;
+			const std::uint64_t bytes = DirectorySizeBytes(
+				Utf8ToWide(WorldDirectory()));
+			const double megabytes = static_cast<double>(bytes) /
+				(1024.0 * 1024.0);
+			if (bytes > 0 && megabytes < 0.01)
+				sizeOnDisk << L"<0.01 MB";
+			else
+				sizeOnDisk << std::fixed << std::setprecision(2)
+					<< megabytes << L" MB";
+			SizeOnDiskValueText->Text = ref new Platform::String(
+				sizeOnDisk.str().c_str());
+		}
+
+		if (StorageVersionValueText != nullptr)
+		{
+			std::wstringstream storageVersion;
+			storageVersion << data.getStorageVersion();
+			StorageVersionValueText->Text = ref new Platform::String(
+				storageVersion.str().c_str());
+		}
 		SetStatus(L"World information loaded.");
 	}
 	catch (...)
 	{
 		SetStatus(L"Could not read level.dat.");
 	}
+}
+
+void WorldEditShellPage::OnChooseStartIconClick(
+	Platform::Object^, Windows::UI::Xaml::RoutedEventArgs^)
+{
+	if (m_operationPending || m_pinOperationPending)
+		return;
+	ShowWorldTileIconPage();
 }
 
 void WorldEditShellPage::OnChangeFolderNameClick(
@@ -697,6 +1040,7 @@ void WorldEditShellPage::OnSecondaryDialogPrimaryClick(
 					result.get();
 					m_operationPending = false;
 					SetStatus(L"World deleted.");
+					UwpLiveTileWorldsChanged();
 					ClosePage();
 				}
 				catch (Platform::Exception^)
@@ -748,6 +1092,7 @@ void WorldEditShellPage::OnSecondaryDialogPrimaryClick(
 					m_operationPending = false;
 					LoadWorldData();
 					SetStatus(L"Folder name changed.");
+					UwpLiveTileWorldsChanged();
 				}
 				catch (Platform::Exception^)
 				{
@@ -773,6 +1118,7 @@ void WorldEditShellPage::OnSecondaryDialogPrimaryClick(
 			WorldNameValueText->Text = requested;
 		m_operationPending = false;
 		SetStatus(L"World name changed.");
+		UwpLiveTileWorldsChanged();
 	}
 	catch (...)
 	{

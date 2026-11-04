@@ -121,6 +121,7 @@ public:
 	virtual void finish() {}
 	
 	virtual bool supportsTouchscreen() { return true; }
+	virtual bool isMobileDevice() { return false; }
 	
 	virtual void vibrate(int milliSeconds) {}
 

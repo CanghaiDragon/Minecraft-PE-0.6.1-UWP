@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "WorldImportPage.xaml.h"
 #include "../../../../src/platform/uwp/UwpOriginalClientBridge.h"
+#include "../../../../src/platform/uwp/UwpLiveTile.h"
 #include "../../../../src/platform/uwp/UwpStoragePaths.h"
 
 #include <windows.storage.pickers.h>
@@ -735,6 +736,7 @@ void WorldImportPage::OnSelectZipClick(Object^, RoutedEventArgs^)
 						}
 						ShowImportSuccess(formatVersion,
 							ref new String(worldRoot.c_str()));
+						UwpLiveTileWorldsChanged();
 						return task_from_result();
 					});
 			});

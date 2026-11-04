@@ -7,6 +7,9 @@
 #include "../platform/log.h"
 #include "../world/Difficulty.h"
 #include <sstream>
+#if defined(MCPE_UWP)
+#include "../platform/uwp/UwpLiveTile.h"
+#endif
 #if defined(WIN32) && !defined(MCPE_UWP)
 #include <windows.h>
 #include <commdlg.h>
@@ -14,7 +17,7 @@
 /*static*/
 bool Options::debugGl = false;
 
-void Options::initDefaultValues() {
+void Options::initDefaultValues(DefaultProfile profile) {
 	difficulty = Difficulty::NORMAL;
 	hideGui = false;
 	thirdPersonView = false;
@@ -30,7 +33,7 @@ void Options::initDefaultValues() {
 	dpadSize = 1;
 
 	useMouseForDigging = false;
-	destroyVibration = true;
+	destroyVibration = false;
 	isLeftHanded = false;
 
 	isJoyTouchArea = false;
@@ -51,22 +54,15 @@ void Options::initDefaultValues() {
 	anaglyph3d = false;
 	limitFramerate = false;
 	fancyGraphics = true;//false;
-	ambientOcclusion = false;
-	if(minecraft->supportNonTouchScreen())
-		useTouchScreen = false;
-	else
-		useTouchScreen = true;
-#ifdef WIN32
-	// Windows supports both systems.  Keep touch as the first-run default so
-	// existing touch-first installations retain their current behaviour.
-	useTouchScreen = true;
-#endif
+	ambientOcclusion = true;
+	useTouchScreen = false;
 	pixelsPerMillimeter = minecraft->platform()->getPixelsPerMillimeter();
 	//useMouseForDigging = true;
 
 	//skin     = "Default";
 	username = "Steve";
 	serverVisible = false;
+	dynamicTileMode = DYNAMIC_TILE_OFF;
 
 	resetKeyMappings();
 
@@ -116,6 +112,45 @@ void Options::initDefaultValues() {
 	keyJump.key  = Keyboard::KEY_SPACE;
 	keySneak.key = Keyboard::KEY_LSHIFT;
 #endif
+
+	// The caller chooses Mobile on Windows 10 Mobile.  All other callers use
+	// Desktop Default unless they explicitly select another built-in profile.
+	applyDefaultProfile(profile);
+#if defined(MCPE_UWP)
+	UwpLiveTileSetMode(dynamicTileMode);
+#endif
+}
+
+void Options::applyDefaultProfile(DefaultProfile profile)
+{
+	switch (profile)
+	{
+	case DefaultProfile::DesktopDefault:
+		// Desktop Default:
+		// Input Mode = Keyboard, Smooth Lighting = On,
+		// Vibrate on Destroy = Off.
+		useTouchScreen = false;
+		ambientOcclusion = true;
+		destroyVibration = false;
+		break;
+
+	case DefaultProfile::DesktopLowPerformance:
+		// Desktop Low Performance is based on Desktop Default:
+		// Render Distance = Short, Smooth Lighting = Off, Visual = Fast.
+		applyDefaultProfile(DefaultProfile::DesktopDefault);
+		viewDistance = 2; // Short
+		ambientOcclusion = false;
+		fancyGraphics = false; // Fast
+		break;
+
+	case DefaultProfile::Mobile:
+		// Mobile is based on Desktop Low Performance:
+		// Input Mode = Touch, Vibrate on Destroy = On.
+		applyDefaultProfile(DefaultProfile::DesktopLowPerformance);
+		useTouchScreen = true;
+		destroyVibration = true;
+		break;
+	}
 }
 
 void Options::resetKeyMappings()
@@ -212,6 +247,9 @@ const Options::Option
 	Options::Option::PIXELS_PER_MILLIMETER(19, "options.pixelspermilimeter", true, false),
 	Options::Option::FOV                  (20, "options.fov",               true, false);
 
+const Options::Option Options::Option::DYNAMIC_TILE
+	(30, "options.dynamicTile", false, false);
+
 /* private */
 const float Options::SOUND_MIN_VALUE = 0.0f;
 const float Options::SOUND_MAX_VALUE = 1.0f;
@@ -271,6 +309,7 @@ void Options::update()
 {
 	StringVector optionStrings = optionsFile.getOptionStrings();
 	bool hasThirdPersonMode = false;
+	bool hasDynamicTileMode = false;
 	for (unsigned int i = 0; i < optionStrings.size();) {
 		std::string key;
 		std::string value;
@@ -392,6 +431,21 @@ void Options::update()
 		if (key == OptionStrings::Game_HideGui) {
 			readBool(value, hideGui);
 		}
+		if (key == OptionStrings::Game_DynamicTileMode) {
+			hasDynamicTileMode = readInt(value, dynamicTileMode);
+			if (hasDynamicTileMode)
+			{
+				if (dynamicTileMode < DYNAMIC_TILE_OFF) dynamicTileMode = DYNAMIC_TILE_OFF;
+				if (dynamicTileMode > DYNAMIC_TILE_FULL) dynamicTileMode = DYNAMIC_TILE_FULL;
+			}
+		}
+		if (key == OptionStrings::Game_DynamicTile && !hasDynamicTileMode) {
+			// Older options files stored this as a boolean. An enabled legacy
+			// value maps to the old full tile mode.
+			bool legacyEnabled = false;
+			if (readBool(value, legacyEnabled))
+				dynamicTileMode = legacyEnabled ? DYNAMIC_TILE_FULL : DYNAMIC_TILE_OFF;
+		}
 		if (key == OptionStrings::Graphics_BetaVisuals) {
 			readBool(value, betaVisuals);
 		}
@@ -451,6 +505,9 @@ void Options::update()
     
     //LOGI("Lefty is: %d\n", isLeftHanded);
     Minecraft::useAmbientOcclusion = ambientOcclusion;
+#if defined(MCPE_UWP)
+	UwpLiveTileSetMode(dynamicTileMode);
+#endif
 }
 
 void Options::syncAmbientOcclusion()
@@ -533,6 +590,7 @@ void Options::save()
 	addOptionToSaveOutput(stringVec, OptionStrings::Game_ThirdPerson, thirdPersonView);
 	addOptionToSaveOutput(stringVec, OptionStrings::Game_ThirdPersonMode, thirdPersonViewMode);
 	addOptionToSaveOutput(stringVec, OptionStrings::Game_HideGui, hideGui);
+	addOptionToSaveOutput(stringVec, OptionStrings::Game_DynamicTileMode, dynamicTileMode);
 	addOptionToSaveOutput(stringVec, OptionStrings::Extra_InfiniteWorlds, infiniteWorlds);
 	addOptionToSaveOutput(stringVec, OptionStrings::Skin_ArmType, slimSkin);
 	addOptionToSaveOutput(stringVec, OptionStrings::Skin_Menu, skinMenu);

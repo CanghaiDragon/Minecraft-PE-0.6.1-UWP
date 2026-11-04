@@ -6,58 +6,79 @@
     Background="Transparent">
 
     <Grid Background="Transparent">
-        <Grid Margin="34,22,34,22">
+        <Grid Margin="24,18,24,18">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Grid Grid.Row="0" Margin="0,0,0,16">
+            <StackPanel Grid.Row="0" Margin="0,0,0,14">
                 <TextBlock Text="Key Mapping"
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                            Foreground="White"
                            FontSize="30"
-                           HorizontalAlignment="Left" />
+                           HorizontalAlignment="Center" />
                 <TextBlock Text="Select a button, then press a keyboard key"
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                            Foreground="#FFD0D0D0"
                            FontSize="14"
-                           HorizontalAlignment="Right"
-                           VerticalAlignment="Center" />
-            </Grid>
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           Margin="0,8,0,0" />
+            </StackPanel>
 
             <ScrollViewer Grid.Row="1"
                           HorizontalScrollBarVisibility="Disabled"
-                          VerticalScrollBarVisibility="Auto">
-                <StackPanel x:Name="BindingList" />
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalContentAlignment="Stretch">
+                <StackPanel x:Name="BindingList"
+                            HorizontalAlignment="Stretch" />
             </ScrollViewer>
 
-            <Grid Grid.Row="2" Margin="0,18,0,0">
-                <TextBlock x:Name="MappingStatus"
+            <Grid Grid.Row="2" Margin="0,14,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0"
+                           x:Name="MappingStatus"
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                            Foreground="#FFFFD080"
                            FontSize="15"
                            VerticalAlignment="Center"
-                           Text="Keyboard bindings are saved automatically." />
-                <StackPanel Orientation="Horizontal"
-                            HorizontalAlignment="Right">
+                           HorizontalAlignment="Stretch"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           Text="Keyboard bindings are saved automatically."
+                           Margin="0,0,0,10" />
+                <Grid Grid.Row="1"
+                      HorizontalAlignment="Stretch"
+                      MaxWidth="460">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
                     <Button Content="Reset Defaults"
+                            Grid.Column="0"
                             FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                             Click="OnResetClick"
-                            Width="190"
                             Height="54"
-                            FontSize="17"
+                            FontSize="16"
                             Foreground="White"
-                            Margin="0,0,12,0" />
+                            HorizontalAlignment="Stretch"
+                            Margin="0,0,6,0" />
                     <Button Content="Back"
+                            Grid.Column="1"
                             FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                             Click="OnBackClick"
-                            Width="150"
                             Height="54"
-                            FontSize="17"
-                            Foreground="White" />
-                </StackPanel>
+                            FontSize="16"
+                            Foreground="White"
+                            HorizontalAlignment="Stretch"
+                            Margin="6,0,0,0" />
+                </Grid>
             </Grid>
         </Grid>
     </Grid>

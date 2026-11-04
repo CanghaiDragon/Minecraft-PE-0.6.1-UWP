@@ -6,9 +6,11 @@
 #include "../../world/item/Item.h"
 #include "../../world/level/biome/Biome.h"
 #include "../../world/level/material/Material.h"
+#include "../../world/level/storage/ExternalFileLevelStorage.h"
 #include "../../world/level/storage/ExternalFileLevelStorageSource.h"
 #include "../../world/level/chunk/ChunkSource.h"
 #include "../../world/level/LevelSettings.h"
+#include "../../world/level/storage/LevelData.h"
 #include "../../world/level/tile/Tile.h"
 #include "../../world/level/tile/entity/TileEntity.h"
 #include "../../world/entity/player/Player.h"
@@ -16,12 +18,14 @@
 #include "../../client/Minecraft.h"
 #include "../../util/Mth.h"
 #include "../../platform/log.h"
+#include "UwpLiveTile.h"
 #include "UwpStoragePaths.h"
 
 #include <algorithm>
 #include <exception>
 #include <chrono>
 #include <stdexcept>
+#include <windows.h>
 
 namespace
 {
@@ -40,6 +44,87 @@ namespace
 			destination.push_back(static_cast<char>(character));
 		}
 		return true;
+	}
+
+	std::wstring Utf8ToWide(const std::string& source)
+	{
+		if (source.empty())
+			return std::wstring();
+		const int required = MultiByteToWideChar(
+			CP_UTF8, MB_ERR_INVALID_CHARS, source.data(),
+			static_cast<int>(source.size()), nullptr, 0);
+		if (required <= 0)
+			return std::wstring(source.begin(), source.end());
+		std::wstring result(static_cast<size_t>(required), L'\0');
+		MultiByteToWideChar(
+			CP_UTF8, MB_ERR_INVALID_CHARS, source.data(),
+			static_cast<int>(source.size()), &result[0], required);
+		return result;
+	}
+
+	bool savedWorldFilesExist(const std::wstring& worldId)
+	{
+		if (worldId.empty())
+			return false;
+		for (const wchar_t character : worldId)
+		{
+			if (character < 0x20 || character == L'\\' ||
+				character == L'/' || character == L':')
+				return false;
+		}
+
+		Platform::String^ worldsPath = UwpStoragePaths::worldsFolderPath();
+		if (worldsPath == nullptr || worldsPath->Length() == 0)
+			return false;
+
+		const std::wstring worldPath =
+			std::wstring(worldsPath->Data()) + L"\\" + worldId;
+		const DWORD folderAttributes = GetFileAttributesW(worldPath.c_str());
+		if (folderAttributes == INVALID_FILE_ATTRIBUTES ||
+			(folderAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
+			return false;
+
+		// ExternalFileLevelStorage::readLevelData() accepts the normal save,
+		// the previous backup, or the temporary replacement file.  Check the
+		// same three names before constructing a CreatorLevel so a stale tile
+		// cannot create an empty directory and turn it into a new world.
+		const wchar_t* levelFiles[] =
+		{
+			L"level.dat",
+			L"level.dat_old",
+			L"level.dat_new"
+		};
+		for (const wchar_t* levelFile : levelFiles)
+		{
+			const std::wstring path = worldPath + L"\\" + levelFile;
+			const DWORD attributes = GetFileAttributesW(path.c_str());
+			if (attributes != INVALID_FILE_ATTRIBUTES &&
+				(attributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
+				return true;
+		}
+		return false;
+	}
+
+	bool readSavedWorldName(const std::wstring& worldId, std::wstring& worldName)
+	{
+		worldName.clear();
+		Platform::String^ worldsPath = UwpStoragePaths::worldsFolderPath();
+		if (worldsPath == nullptr || worldsPath->Length() == 0)
+			return false;
+
+		std::string rootPath;
+		std::string narrowWorldId;
+		if (!narrowPath(std::wstring(worldsPath->Data()), rootPath) ||
+			!narrowPath(worldId, narrowWorldId))
+			return false;
+
+		LevelData data;
+		if (!ExternalFileLevelStorage::readLevelData(
+			rootPath + "\\" + narrowWorldId, data))
+			return false;
+
+		worldName = Utf8ToWide(data.getLevelName());
+		return !worldName.empty();
 	}
 
 }
@@ -479,9 +564,31 @@ void UwpCoreSession::beginWorld(const std::wstring& worldId,
 
 void UwpCoreSession::startSavedWorld(const std::wstring& worldId, const std::wstring& worldName)
 {
+	(void)worldName;
+	if (!savedWorldFilesExist(worldId))
+	{
+		m_state = State::Idle;
+		m_nativeWorldGenerated = false;
+		m_legacyStorageRejected = false;
+		m_errorText = L"Saved world folder or level.dat is missing";
+		return;
+	}
+
+	std::wstring savedWorldName;
+	if (!readSavedWorldName(worldId, savedWorldName))
+	{
+		m_state = State::Idle;
+		m_nativeWorldGenerated = false;
+		m_legacyStorageRejected = false;
+		m_errorText = L"Saved world level.dat could not be read";
+		return;
+	}
+
 	// The original external storage source selects this id; CreatorLevel then
 	// reloads the corresponding level.dat through its normal construction path.
-	beginWorld(worldId, worldName, -1, GameType::Undefined, WorldType::Old);
+	// Use the name stored in level.dat.  Passing the folder ID here would make
+	// Level::_init() overwrite a renamed world's display name on the next save.
+	beginWorld(worldId, savedWorldName, -1, GameType::Undefined, WorldType::Old);
 }
 
 void UwpCoreSession::startNewWorld(const std::wstring& worldId,
@@ -493,7 +600,10 @@ void UwpCoreSession::startNewWorld(const std::wstring& worldId,
 void UwpCoreSession::saveGame()
 {
 	if (m_nativeCore != nullptr)
+	{
 		m_nativeCore->saveGame();
+		UwpLiveTileWorldsChanged();
+	}
 }
 
 void UwpCoreSession::stop()
@@ -506,6 +616,7 @@ void UwpCoreSession::stop()
 		try
 		{
 			m_nativeCore->saveGame();
+			UwpLiveTileWorldsChanged();
 		}
 		catch (...)
 		{

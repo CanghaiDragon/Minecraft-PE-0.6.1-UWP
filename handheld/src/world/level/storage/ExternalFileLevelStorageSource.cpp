@@ -8,6 +8,7 @@
 #include "../../../platform/file.h"
 #else
 #include "../../../platform/uwp/UwpStoragePaths.h"
+#include "../../../platform/uwp/UwpLiveTile.h"
 #endif
 #include "../../../util/StringUtils.h"
 #include <cstdio>
@@ -223,6 +224,7 @@ void ExternalFileLevelStorageSource::deleteLevel( const std::string& levelId )
 	else
 	{
 		LOGI("UWP deleteLevel removed %s\n", path.c_str());
+		UwpLiveTileWorldsChanged();
 	}
 #else
 	std::string path = getFullPath(levelId);
@@ -284,6 +286,9 @@ void ExternalFileLevelStorageSource::renameLevel( const std::string& oldLevelId_
 	ExternalFileLevelStorage::readLevelData(_renFULLPATH(levelId), levelData);
 	levelData.setLevelName(newLevelName_);
 	ExternalFileLevelStorage::saveLevelData(_renFULLPATH(levelId), levelData, NULL);
+#if defined(MCPE_UWP)
+	UwpLiveTileWorldsChanged();
+#endif
 }
 
 std::string ExternalFileLevelStorageSource::getName()

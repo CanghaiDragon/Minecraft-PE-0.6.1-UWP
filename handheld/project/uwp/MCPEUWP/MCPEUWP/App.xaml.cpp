@@ -118,6 +118,13 @@ void App::OnLaunched(Windows::ApplicationModel::Activation::LaunchActivatedEvent
             Window::Current->Activate();
         }
     }
+
+    if (e->PrelaunchActivated == false)
+    {
+        auto mainPage = dynamic_cast<MainPage^>(rootFrame->Content);
+        if (mainPage != nullptr)
+            mainPage->HandleLaunchArguments(e->Arguments);
+    }
 }
 
 /// <summary>

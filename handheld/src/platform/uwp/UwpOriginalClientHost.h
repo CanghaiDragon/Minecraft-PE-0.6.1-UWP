@@ -28,6 +28,7 @@ public:
 	bool initializeClient();
 	void setSize(int width, int height);
 	bool showStartMenu();
+	bool showOptions();
 	bool showSelectWorld();
 	bool showLegacyWorldFormatError();
 	bool showProgressScreen();
@@ -57,6 +58,7 @@ public:
 	bool isOriginalWorldTickEnabled() const { return m_originalWorldTickEnabled; }
 	Minecraft* minecraft() const;
 	LevelRenderer* levelRenderer() const;
+	bool handleBack(bool isDown);
 	UwpOriginalClientHandle handle() const { return m_client; }
 	// Valid only while isBound() is true.  Keeping this as a reference avoids
 	// exposing the original AppContext definition to XAML-generated code.

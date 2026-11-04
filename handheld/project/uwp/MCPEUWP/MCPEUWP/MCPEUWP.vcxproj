@@ -38,6 +38,10 @@
       <Configuration>Release</Configuration>
       <Platform>ARM</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-ANGLE-Test|ARM">
+      <Configuration>Release-ANGLE-Test</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|Win32">
       <Configuration>Release</Configuration>
       <Platform>Win32</Platform>
@@ -97,6 +101,13 @@
     <PlatformToolset>v143</PlatformToolset>
     <UseDotNetNativeToolchain>true</UseDotNetNativeToolchain>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-ANGLE-Test|ARM'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v143</PlatformToolset>
+    <UseDotNetNativeToolchain>true</UseDotNetNativeToolchain>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup>
     <AngleRoot>$(ProjectDir)..\..\..\..\..\third_party\angle_windowsstore</AngleRoot>
@@ -104,11 +115,21 @@
          ANGLE.WindowsStore tree above unchanged for Win32/x64/ARM. -->
     <AngleArm64Root>$(ProjectDir)..\..\..\..\..\..\ANGLE_ARM64_UWP</AngleArm64Root>
     <AngleArm64LibDir>$(AngleArm64Root)\out\arm64-uwp-release</AngleArm64LibDir>
+    <!-- ARM32 Release uses the independently rebuilt ANGLE with FL9_3 support. -->
+    <AngleArm32Root>$(ProjectDir)..\..\..\..\..\..\ANGLE_ARM_UWP\ANGLE_ARM32_WP\winrt\10\src</AngleArm32Root>
+    <AngleArm32IncludeDir>$(ProjectDir)..\..\..\..\..\..\ANGLE_ARM_UWP\ANGLE_ARM32_WP\include</AngleArm32IncludeDir>
+    <AngleArm32DllDir>$(AngleArm32Root)\Release_ARM</AngleArm32DllDir>
+    <AngleArm32LibDir>$(AngleArm32DllDir)\lib</AngleArm32LibDir>
     <AnglePlatform Condition="'$(Platform)' == 'Win32'">Win32</AnglePlatform>
     <AnglePlatform Condition="'$(Platform)' == 'x64'">x64</AnglePlatform>
     <AnglePlatform Condition="'$(Platform)' == 'ARM'">ARM</AnglePlatform>
     <AnglePlatform Condition="'$(Platform)' == 'ARM64'">ARM64</AnglePlatform>
     <AngleLibDir>$(AngleRoot)\bin\UAP\$(AnglePlatform)</AngleLibDir>
+    <AngleLibDir Condition="'$(Platform)' == 'ARM'">$(AngleArm32LibDir)</AngleLibDir>
+    <AngleIncludeDir>$(AngleRoot)\Include</AngleIncludeDir>
+    <AngleIncludeDir Condition="'$(Platform)' == 'ARM'">$(AngleArm32IncludeDir)</AngleIncludeDir>
+    <AngleDllDir>$(AngleLibDir)</AngleDllDir>
+    <AngleDllDir Condition="'$(Platform)' == 'ARM'">$(AngleArm32DllDir)</AngleDllDir>
     <ZlibRoot>$(ProjectDir)..\..\..\..\lib</ZlibRoot>
     <ZlibPlatform Condition="'$(Platform)' == 'Win32'">x86</ZlibPlatform>
     <ZlibPlatform Condition="'$(Platform)' == 'x64'">x64</ZlibPlatform>
@@ -123,12 +144,28 @@
     <ZlibBinDir Condition="'$(Platform)' == 'ARM'">$(ZlibRoot)\bin\arm</ZlibBinDir>
     <ZlibLinkName Condition="'$(Platform)' == 'ARM'">zlib.lib</ZlibLinkName>
   </PropertyGroup>
-  <ItemDefinitionGroup Condition="('$(Platform)' == 'x64' Or '$(Platform)' == 'Win32') Or ('$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true')">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-ANGLE-Test|ARM'">
+    <AngleTestRoot>$(AngleArm32Root)</AngleTestRoot>
+    <AngleTestLibDir>$(AngleTestRoot)\Release_ARM</AngleTestLibDir>
+    <OutDir>$(SolutionDir)Release-ANGLE-Test_ARM\</OutDir>
+    <IntDir>$(OutDir)obj\$(ProjectName)\</IntDir>
+    <AppxPackageDir>D:\MCPE_0.6.1\MCPEUWP_Pack\Release-ANGLE-Test_ARM\</AppxPackageDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="(('$(Platform)' == 'x64' Or '$(Platform)' == 'Win32') Or ('$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true')) And '$(Configuration)' != 'Release-ANGLE-Test'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(AngleRoot)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AngleIncludeDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(AngleLibDir);$(ZlibLibDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libEGL.lib;libGLESv2.lib;$(ZlibLinkName);%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-ANGLE-Test|ARM'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(AngleTestRoot)\include;$(AngleRoot)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(AngleTestLibDir)\lib;$(ZlibLibDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>libEGL.lib;libGLESv2.lib;$(ZlibLinkName);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -254,6 +291,19 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-ANGLE-Test|ARM'">
+    <ClCompile>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <PreprocessorDefinitions>NDEBUG;MCPE_UWP_RELEASE;MCPE_ANGLE_BUILD_ID_DIAGNOSTIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
@@ -316,6 +366,7 @@
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpLevelDatSmoke.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpOriginalClientHost.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpOriginalClientBridge.h" />
+    <ClInclude Include="..\..\..\..\src\platform\uwp\UwpLiveTile.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpStoragePaths.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpUiRenderer.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpWorldRenderer.h" />
@@ -342,8 +393,14 @@
     <ClInclude Include="KeyMappingPage.xaml.h" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
       <DependentUpon>KeyMappingPage.xaml</DependentUpon>
     </ClInclude>
+    <ClInclude Include="SettingsPage.xaml.h" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
+      <DependentUpon>SettingsPage.xaml</DependentUpon>
+    </ClInclude>
     <ClInclude Include="WorldEditShellPage.xaml.h" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
       <DependentUpon>WorldEditShellPage.xaml</DependentUpon>
+    </ClInclude>
+    <ClInclude Include="WorldTileIconPage.xaml.h" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
+      <DependentUpon>WorldTileIconPage.xaml</DependentUpon>
     </ClInclude>
     <ClInclude Include="WorldImportPage.xaml.h" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
       <DependentUpon>WorldImportPage.xaml</DependentUpon>
@@ -364,7 +421,15 @@
       <SubType>Designer</SubType>
       <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
     </Page>
+    <Page Include="SettingsPage.xaml" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
+      <SubType>Designer</SubType>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
+    </Page>
     <Page Include="WorldEditShellPage.xaml" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
+      <SubType>Designer</SubType>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
+    </Page>
+    <Page Include="WorldTileIconPage.xaml" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
       <SubType>Designer</SubType>
       <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
     </Page>
@@ -378,12 +443,22 @@
       <SubType>Designer</SubType>
     </AppxManifest>
   </ItemGroup>
-  <ItemGroup Condition="'$(Platform)' == 'x64' Or '$(Platform)' == 'Win32' Or ('$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true')">
-    <Content Include="$(AngleLibDir)\libEGL.dll">
+  <ItemGroup Condition="(('$(Platform)' == 'x64' Or '$(Platform)' == 'Win32') Or ('$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true')) And '$(Configuration)' != 'Release-ANGLE-Test'">
+    <Content Include="$(AngleDllDir)\libEGL.dll">
       <Link>libEGL.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(AngleLibDir)\libGLESv2.dll">
+    <Content Include="$(AngleDllDir)\libGLESv2.dll">
+      <Link>libGLESv2.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)|$(Platform)'=='Release-ANGLE-Test|ARM'">
+    <Content Include="$(AngleTestLibDir)\libEGL.dll">
+      <Link>libEGL.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(AngleTestLibDir)\libGLESv2.dll">
       <Link>libGLESv2.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -431,6 +506,20 @@
     <Image Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
     <Image Include="Assets\Square71x71Logo.scale-200.png" />
     <Image Include="Assets\StoreLogo.png" />
+    <Image Include="Assets\Metro_Crafting_Table.png" />
+    <Image Include="Assets\Metro_Crafting_Table_Square.png" />
+    <Image Include="Assets\Metro_Crafting_Table_Wide.png" />
+    <Image Include="Assets\Metro_Grass.png" />
+    <Image Include="Assets\Metro_Grass_Square.png" />
+    <Image Include="Assets\Metro_Grass_Wide.png" />
+    <Image Include="Assets\WorldIcon_Crafting_Table.png" />
+    <Image Include="Assets\WorldIcon_Furnace.png" />
+    <Image Include="Assets\WorldIcon_Grass_JE2.png" />
+    <Image Include="Assets\WorldIcon_Grass_JE3.png" />
+    <Image Include="Assets\WorldIcon_Grass_JE4.png" />
+    <Image Include="Assets\WorldIcon_Lit_Furnace.png" />
+    <Image Include="Assets\WorldIcon_Metro_Crafting_Table.png" />
+    <Image Include="Assets\WorldIcon_Metro_Grass.png" />
     <Image Include="Assets\Wide310x150Logo.scale-200.png" />
   </ItemGroup>
   <ItemGroup>
@@ -448,8 +537,16 @@
       <DependentUpon>KeyMappingPage.xaml</DependentUpon>
       <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="SettingsPage.xaml.cpp" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
+      <DependentUpon>SettingsPage.xaml</DependentUpon>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="WorldEditShellPage.xaml.cpp" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
       <DependentUpon>WorldEditShellPage.xaml</DependentUpon>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="WorldTileIconPage.xaml.cpp" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
+      <DependentUpon>WorldTileIconPage.xaml</DependentUpon>
       <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="WorldImportPage.xaml.cpp" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
@@ -496,6 +593,7 @@
     <ClCompile Include="..\..\..\..\src\platform\uwp\UwpUiRenderer.cpp" />
     <ClCompile Include="..\..\..\..\src\platform\uwp\UwpWorldRenderer.cpp" />
     <ClCompile Include="..\..\..\..\src\platform\uwp\UwpSettingsModel.cpp" />
+    <ClCompile Include="..\..\..\..\src\platform\uwp\UwpLiveTile.cpp" />
     <ClCompile Include="..\..\..\..\src\NinecraftApp.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PreprocessorDefinitions>WIN32;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;MCPE_UWP_ORIGINAL_CLIENT_LOOP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -797,6 +895,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release-ANGLE-Test|ARM'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -807,7 +906,7 @@
     <!-- Remove the game translation units from this diagnostic target.  The
          XAML-generated translation units are not project items here and are
          therefore left intact. -->
-    <ClCompile Remove="MainPage.xaml.cpp;KeyMappingPage.xaml.cpp;WorldEditShellPage.xaml.cpp;WorldImportPage.xaml.cpp;..\..\..\..\src\**\*.cpp" />
+    <ClCompile Remove="MainPage.xaml.cpp;KeyMappingPage.xaml.cpp;SettingsPage.xaml.cpp;WorldEditShellPage.xaml.cpp;WorldImportPage.xaml.cpp;..\..\..\..\src\**\*.cpp" />
     <!-- Exclude only project-listed game sources.  XAML-generated .cpp items
          are not touched and remain available for InitializeComponent. -->
     <ClCompile Update="@(ClCompile)">

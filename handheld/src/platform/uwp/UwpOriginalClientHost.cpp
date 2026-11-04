@@ -107,6 +107,12 @@ bool UwpOriginalClientHost::showStartMenu()
 		UwpOriginalClientShowStartMenu(m_client);
 }
 
+bool UwpOriginalClientHost::showOptions()
+{
+	return m_clientInitialized && m_client != nullptr &&
+		UwpOriginalClientShowOptions(m_client);
+}
+
 bool UwpOriginalClientHost::showSelectWorld()
 {
 	return m_clientInitialized && m_client != nullptr &&
@@ -188,6 +194,12 @@ Minecraft* UwpOriginalClientHost::minecraft() const
 LevelRenderer* UwpOriginalClientHost::levelRenderer() const
 {
 	return m_client != nullptr ? UwpOriginalClientGetLevelRenderer(m_client) : nullptr;
+}
+
+bool UwpOriginalClientHost::handleBack(bool isDown)
+{
+	return m_client != nullptr &&
+		UwpOriginalClientHandleBack(m_client, isDown);
 }
 
 bool UwpOriginalClientHost::attachWorld(Level* world, LocalPlayer* localPlayer)
