@@ -197,7 +197,13 @@ public:
     }
 
 	int getTexture(int face, int data) {
-		if (Tile::useBetaVisuals()) {
+		// Beta's grayscale foliage atlas uses the cutout texture intended for
+		// Fancy graphics.  Fast graphics already puts leaves in the opaque
+		// render layer, so using that texture there leaves holes through which
+		// blocks behind the leaves can be seen.  Keep the Beta texture only for
+		// Fancy + Beta; Fast + Beta uses the normal opaque Fast texture selected
+		// by setFancy(false).
+		if (Tile::useBetaVisuals() && allowSame) {
 			int type = data & LEAF_TYPE_MASK;
 			// Beta foliage uses the grayscale leaf tiles added to the two
 			// otherwise-unused terrain slots 142 and 143. PE visuals keep

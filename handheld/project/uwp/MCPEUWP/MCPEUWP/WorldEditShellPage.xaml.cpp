@@ -56,6 +56,19 @@ namespace
 		return date;
 	}
 
+	const wchar_t* StorageVersionGameVersion(int storageVersion)
+	{
+		if (storageVersion == 1)
+			return L"PE 0.1";
+		if (storageVersion == 2)
+			return L"PE 0.2";
+		if (storageVersion == 3)
+			return L"PE 0.3-0.8";
+		if (storageVersion >= 4)
+			return L"PE 0.9 / Infinite";
+		return L"Unknown";
+	}
+
 }
 
 namespace
@@ -229,6 +242,49 @@ namespace
 		std::uint32_t localHeaderOffset = 0;
 	};
 
+	bool DeflateZipData(const std::vector<unsigned char>& input,
+		std::vector<unsigned char>& output)
+	{
+		// ZIP method 8 stores a raw Deflate stream.  zlib's compress2() adds
+		// a zlib wrapper, which some external ZIP readers reject even though
+		// the game importer can recognize it.
+		if (input.size() > 0xffffffffULL)
+			return false;
+
+		z_stream stream = {};
+		if (deflateInit2(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
+			-MAX_WBITS, 8, Z_DEFAULT_STRATEGY) != Z_OK)
+			return false;
+
+		const uLong sourceSize = static_cast<uLong>(input.size());
+		const uLong bound = deflateBound(&stream, sourceSize);
+		if (bound > 0xffffffffUL)
+		{
+			deflateEnd(&stream);
+			return false;
+		}
+
+		output.resize(static_cast<size_t>(bound));
+		stream.next_in = input.empty()
+			? Z_NULL
+			: const_cast<Bytef*>(input.data());
+		stream.avail_in = static_cast<uInt>(input.size());
+		stream.next_out = output.empty() ? Z_NULL : output.data();
+		stream.avail_out = static_cast<uInt>(output.size());
+
+		const int result = deflate(&stream, Z_FINISH);
+		const uLong compressedSize = stream.total_out;
+		deflateEnd(&stream);
+		if (result != Z_STREAM_END)
+		{
+			output.clear();
+			return false;
+		}
+
+		output.resize(static_cast<size_t>(compressedSize));
+		return true;
+	}
+
 	class ZipWriter
 	{
 	public:
@@ -257,20 +313,17 @@ namespace
 			const uLong sourceSize = static_cast<uLong>(data.size());
 			const std::uint32_t crc = static_cast<std::uint32_t>(::crc32(
 				0L, data.empty() ? Z_NULL : data.data(), sourceSize));
-			std::vector<unsigned char> compressed(
-				static_cast<size_t>(::compressBound(sourceSize)));
-			uLongf compressedSize = static_cast<uLongf>(compressed.size());
-			if (::compress2(compressed.data(), &compressedSize,
-				data.empty() ? Z_NULL : data.data(), sourceSize,
-				Z_DEFAULT_COMPRESSION) != Z_OK)
+			std::vector<unsigned char> compressed;
+			if (!DeflateZipData(data, compressed))
 				return false;
+			const uLongf compressedSize = static_cast<uLongf>(compressed.size());
 			if (compressedSize > 0xffffffffUL || sourceSize > 0xffffffffUL)
 				return false;
 
 			const long offset = ftell(m_file);
 			if (offset < 0 || static_cast<unsigned long long>(offset) > 0xffffffffULL)
 				return false;
-			if (!Write32(0x04034b50) || !Write16(20) || !Write16(0) ||
+			if (!Write32(0x04034b50) || !Write16(20) || !Write16(0x0800) ||
 				!Write16(8) || !Write16(0) || !Write16(0) || !Write32(crc) ||
 				!Write32(static_cast<std::uint32_t>(compressedSize)) ||
 				!Write32(static_cast<std::uint32_t>(sourceSize)) ||
@@ -300,7 +353,7 @@ namespace
 			for (const ZipEntry& entry : m_entries)
 			{
 				if (!Write32(0x02014b50) || !Write16(20) || !Write16(20) ||
-					!Write16(0) || !Write16(8) || !Write16(0) || !Write16(0) ||
+					!Write16(0x0800) || !Write16(8) || !Write16(0) || !Write16(0) ||
 					!Write32(entry.crc) || !Write32(entry.compressedSize) ||
 					!Write32(entry.uncompressedSize) ||
 					!Write16(static_cast<std::uint16_t>(entry.name.size())) ||
@@ -950,7 +1003,9 @@ void WorldEditShellPage::LoadWorldData()
 		if (StorageVersionValueText != nullptr)
 		{
 			std::wstringstream storageVersion;
-			storageVersion << data.getStorageVersion();
+			const int version = data.getStorageVersion();
+			storageVersion << version << L" ("
+				<< StorageVersionGameVersion(version) << L")";
 			StorageVersionValueText->Text = ref new Platform::String(
 				storageVersion.str().c_str());
 		}

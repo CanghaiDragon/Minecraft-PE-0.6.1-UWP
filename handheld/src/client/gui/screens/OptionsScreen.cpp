@@ -254,7 +254,8 @@ void OptionsScreen::generateOptionScreens() {
 		.addOptionItem(&Options::Option::INVERT_MOUSE, minecraft);
 
 	// Graphics
-	optionPanes[2]->createOptionsGroup("options.group.graphics")
+	OptionsGroup& graphicsGroup = optionPanes[2]->createOptionsGroup("options.group.graphics");
+	graphicsGroup
 		.addOptionItem(&Options::Option::GRAPHICS, minecraft)
 		.addOptionItem(&Options::Option::AMBIENT_OCCLUSION, minecraft)
 		.addOptionItem(&Options::Option::RENDER_DISTANCE, minecraft)
@@ -262,6 +263,10 @@ void OptionsScreen::generateOptionScreens() {
 		.addOptionItem(&Options::Option::VIEW_BOBBING, minecraft)
 		.addOptionItem(&Options::Option::FOV, minecraft)
 		.addOptionItem(&Options::Option::HIDE_GUI, minecraft);
+	#if defined(MCPE_UWP)
+	if (minecraft->supportNonTouchScreen())
+		graphicsGroup.addOptionItem(&Options::Option::FULLSCREEN, minecraft);
+	#endif
 
 	// Audio
 	optionPanes[3]->createOptionsGroup("options.group.audio")

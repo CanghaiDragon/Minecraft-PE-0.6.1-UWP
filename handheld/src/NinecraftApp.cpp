@@ -1,5 +1,4 @@
 #include "NinecraftApp.h"
-#include "platform/ExitTrace.h"
 //#include <EGL/egl.h>
 
 #ifdef RPI
@@ -65,9 +64,7 @@ NinecraftApp::NinecraftApp()
 
 NinecraftApp::~NinecraftApp()
 {
-	MCPE_EXIT_TRACE("NinecraftApp destructor: begin");
 	teardown();
-	MCPE_EXIT_TRACE("NinecraftApp destructor: complete");
 }
 
 void NinecraftApp::init()
@@ -79,10 +76,8 @@ void NinecraftApp::init()
 	_running = false;
 	return;
 	#else
-	MCPE_EXIT_TRACE("NinecraftApp::init begin");
 	// Global initialization goes here
 	Mth::initMth();
-	MCPE_EXIT_TRACE("NinecraftApp::init after Mth");
 
 	//#ifdef DEMO_MODE
 	//writeDemoFile();
@@ -104,36 +99,25 @@ void NinecraftApp::init()
 		Item::initItems();
 		Biome::initBiomes();
 		TileEntity::initTileEntities();
-		MCPE_EXIT_TRACE("NinecraftApp::init after static registries");
 
 	#ifdef ANDROID
 	}
 	#endif
 
 #ifndef STANDALONE_SERVER
-	MCPE_EXIT_TRACE("NinecraftApp::init before initGLStates");
 	initGLStates();
-	MCPE_EXIT_TRACE("NinecraftApp::init after initGLStates");
-	MCPE_EXIT_TRACE("NinecraftApp::init before Tesselator");
 	Tesselator::instance.init();
-	MCPE_EXIT_TRACE("NinecraftApp::init after Tesselator");
-	MCPE_EXIT_TRACE("NinecraftApp::init before I18n");
 	I18n::loadLanguage(platform(), "en_US");
-	MCPE_EXIT_TRACE("NinecraftApp::init after I18n");
 #endif
 
-	MCPE_EXIT_TRACE("NinecraftApp::init before Minecraft::init");
 	Minecraft::init();
-	MCPE_EXIT_TRACE("NinecraftApp::init after Minecraft::init");
 
 #if !defined(DEMO_MODE) && !defined(APPLE_DEMO_PROMOTION) && !defined(NO_STORAGE)
 	storageSource = new ExternalFileLevelStorageSource(externalStoragePath, externalCacheStoragePath);
-	MCPE_EXIT_TRACE("NinecraftApp::init after storage source");
 #else
 	storageSource = new MemoryLevelStorageSource();
 #endif
 	_running = false;
-	MCPE_EXIT_TRACE("NinecraftApp::init complete");
 
 #ifndef STANDALONE_SERVER
 	LOGI("This: %p\n", this);
@@ -155,40 +139,29 @@ void NinecraftApp::teardown()
 	_ownsStaticRegistries = false;
 	return;
 	#else
-	MCPE_EXIT_TRACE("NinecraftApp teardown: begin");
 	if (!_ownsStaticRegistries)
 	{
-		MCPE_EXIT_TRACE("NinecraftApp teardown: no owned static registries");
 		return;
 	}
 	// Note: Don't tear down statics if we run on Android
 	// (we might change this in the future)
 #ifndef ANDROID
-	MCPE_EXIT_TRACE("NinecraftApp teardown: static biomes");
 	Biome::teardownBiomes();
-	MCPE_EXIT_TRACE("NinecraftApp teardown: static items");
 	Item ::teardownItems();
-	MCPE_EXIT_TRACE("NinecraftApp teardown: static tiles");
 	Tile ::teardownTiles();
-	MCPE_EXIT_TRACE("NinecraftApp teardown: static materials");
 	Material::teardownMaterials();
-	MCPE_EXIT_TRACE("NinecraftApp teardown: static recipes");
 	Recipes ::teardownRecipes();
-	MCPE_EXIT_TRACE("NinecraftApp teardown: static tile entities");
 	TileEntity::teardownTileEntities();
 	_ownsStaticRegistries = false;
 #endif
 #if !defined(ANDROID) && !defined(STANDALONE_SERVER)
-	MCPE_EXIT_TRACE("NinecraftApp teardown: item renderer");
 	ItemRenderer::teardown_static();
 	if (EntityTileRenderer::instance != NULL) {
-		MCPE_EXIT_TRACE("NinecraftApp teardown: entity tile renderer");
 		delete EntityTileRenderer::instance;
 		EntityTileRenderer::instance = NULL;
 	}
 	TileEntityRenderDispatcher::destroy();
 #endif
-	MCPE_EXIT_TRACE("NinecraftApp teardown: complete");
 #endif
 }
 
@@ -198,8 +171,6 @@ void NinecraftApp::update()
 	return;
 	#else
 	++_frames;
-	if (_frames <= 4)
-		MCPE_EXIT_TRACE("NinecraftApp::update frame=%d before Minecraft::update", _frames);
 
 	// Generate Multitouch active pointer list
 	Multitouch::commit();
@@ -210,15 +181,11 @@ void NinecraftApp::update()
 #endif /*ANDROID_PUBLISH*/
 
 	Minecraft::update();
-	if (_frames <= 4)
-		MCPE_EXIT_TRACE("NinecraftApp::update frame=%d after Minecraft::update", _frames);
 
 	// MainPage owns the UWP EGL present.  The original client still advances
 	// Minecraft::update/tick, but must not submit a second swap on this path.
 #if !defined(MCPE_UWP) || !defined(MCPE_UWP_ORIGINAL_CLIENT_LOOP)
 	swapBuffers();
-	if (_frames <= 4)
-		MCPE_EXIT_TRACE("NinecraftApp::update frame=%d after swapBuffers", _frames);
 #endif
 	// The UWP original client uses a fixed-step update and a separate
 	// display-rate render callback.  MainPage resets the relative accumulator

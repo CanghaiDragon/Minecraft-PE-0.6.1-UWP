@@ -8,6 +8,9 @@
 *.userosscache
 *.sln.docstates
 
+# Output
+/AppPackages
+
 # UWP build output directories
 /handheld/project/uwp/x64/Debug/
 /handheld/project/uwp/x64/Release/

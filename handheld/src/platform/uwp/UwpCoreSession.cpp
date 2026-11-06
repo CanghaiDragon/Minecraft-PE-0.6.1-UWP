@@ -212,19 +212,18 @@ public:
 		// callback, so LocalPlayer does not emit online movement packets here.
 		m_level->isClientSide = false;
 
-		// Force the first terrain chunk through the genuine MCPE generator before
-		// the UI enters the running state.  The original desktop client then
-		// performs its full prepareLevel preload before exposing the world; use
-		// that same routine for this externally-owned Level instead of letting the
-		// renderer generate the visible ring on demand.
-		m_level->getChunk(0, 0);
-		m_level->setInitialSpawn();
 		if (m_originalClient != nullptr)
 			m_originalClient->prepareLevelFor(m_level, "Generating level");
-		else if (!m_level->isInfinite())
-			// The fallback core has no Minecraft::prepareLevelFor() owner, so
-			// preserve the finite-world legacy entity load here as well.
-			m_level->loadEntities();
+		else
+		{
+			// The fallback core has no Minecraft::prepareLevelFor() owner.
+			// Preserve its legacy initialization path while keeping the original
+			// client path aligned with Universal's prepareLevel ordering.
+			m_level->getChunk(0, 0);
+			m_level->setInitialSpawn();
+			if (!m_level->isInfinite())
+				m_level->loadEntities();
+		}
 		// Use the original player-load path.  It restores an existing Player NBT
 		// tag from level.dat, or creates a spawn-position player for a new world,
 		// then registers that player in Level::players for original save logic.

@@ -225,7 +225,7 @@
                            Text="Unavailable"
                            Foreground="#FFB0E0FF"
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
-                           FontSize="14"
+                           FontSize="18"
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis" />
 

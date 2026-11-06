@@ -263,49 +263,5 @@
                    Background="Transparent" />
         </Grid>
 
-        <Grid x:Name="LaunchWorldErrorOverlay"
-              Canvas.ZIndex="240"
-              Visibility="Collapsed"
-              Background="Transparent">
-            <Canvas x:Name="LaunchWorldErrorDirtBackground"
-                    SizeChanged="OnSkinBackgroundSizeChanged"
-                    IsHitTestVisible="False" />
-            <Rectangle Style="{StaticResource DirtShadeRectangle}" />
-            <Rectangle Style="{StaticResource DirtOverlayRectangle}" />
-            <Border HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    MaxWidth="760"
-                    Margin="24"
-                    Padding="28"
-                    Background="#EE241A16"
-                    BorderBrush="#FF8A6A4A"
-                    BorderThickness="2">
-                <StackPanel>
-                    <TextBlock Text="Unable to open world"
-                               Foreground="White"
-                               FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
-                               FontSize="30"
-                               HorizontalAlignment="Center"
-                               TextAlignment="Center"
-                               TextWrapping="Wrap" />
-                    <TextBlock x:Name="LaunchWorldErrorMessage"
-                               Foreground="#FFFFD080"
-                               FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
-                               FontSize="18"
-                               Margin="0,22,0,22"
-                               HorizontalAlignment="Center"
-                               TextAlignment="Center"
-                               TextWrapping="Wrap" />
-                    <Button Content="Back to Main Menu"
-                            Click="OnLaunchWorldErrorBackClick"
-                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
-                            FontSize="18"
-                            Foreground="White"
-                            Height="60"
-                            MaxWidth="420"
-                            HorizontalAlignment="Center" />
-                </StackPanel>
-            </Border>
-        </Grid>
     </Grid>
 </Page>

@@ -6,7 +6,6 @@
 #include "../../client/sound/Sound.h"
 
 #include "../log.h"
-#include "../ExitTrace.h"
 
 static const char* errIdString = 0;
 
@@ -47,23 +46,14 @@ SoundSystemAL::SoundSystemAL()
 
 SoundSystemAL::~SoundSystemAL()
 {
-	MCPE_EXIT_TRACE("SoundSystemAL destructor: begin device=%p context=%p buffers=%u",
-		(void*)device, (void*)context, (unsigned)_buffers.size());
-	MCPE_EXIT_TRACE("SoundSystemAL destructor: before alDeleteSources count=%d", MaxNumSources);
     alDeleteSources(MaxNumSources, _sources);
-	MCPE_EXIT_TRACE("SoundSystemAL destructor: after alDeleteSources");
 
     for (int i = 0; i < (int)_buffers.size(); ++i)
         if (_buffers[i].inited) {
-			MCPE_EXIT_TRACE("SoundSystemAL destructor: before alDeleteBuffers index=%d id=%u",
-				i, (unsigned)_buffers[i].bufferID);
 			alDeleteBuffers(1, &_buffers[i].bufferID);
-			MCPE_EXIT_TRACE("SoundSystemAL destructor: after alDeleteBuffers index=%d", i);
 		}
 
-	MCPE_EXIT_TRACE("SoundSystemAL destructor: before alcMakeContextCurrent(NULL)");
     alcMakeContextCurrent(NULL);
-	MCPE_EXIT_TRACE("SoundSystemAL destructor: after alcMakeContextCurrent(NULL)");
 
 #if defined(_M_ARM64) || defined(__aarch64__)
 	// The ARM64 OpenAL runtime blocks inside alcDestroyContext during process
@@ -71,20 +61,14 @@ SoundSystemAL::~SoundSystemAL()
 	// point the process is exiting, so leaving the native context/device for
 	// Windows to reclaim is safer than hanging the entire application.  x64
 	// keeps the normal explicit teardown below.
-	MCPE_EXIT_TRACE("SoundSystemAL destructor: ARM64 skip alcDestroyContext/alcCloseDevice");
 	context = NULL;
 	device = NULL;
 #else
-	MCPE_EXIT_TRACE("SoundSystemAL destructor: before alcDestroyContext context=%p", (void*)context);
 	alcDestroyContext(context);
-	MCPE_EXIT_TRACE("SoundSystemAL destructor: after alcDestroyContext");
 	
 	// Close the device
-	MCPE_EXIT_TRACE("SoundSystemAL destructor: before alcCloseDevice device=%p", (void*)device);
 	alcCloseDevice(device);
-	MCPE_EXIT_TRACE("SoundSystemAL destructor: after alcCloseDevice");
 #endif
-	MCPE_EXIT_TRACE("SoundSystemAL destructor: complete");
 }
 
 void SoundSystemAL::init()

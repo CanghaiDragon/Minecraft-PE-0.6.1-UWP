@@ -466,12 +466,20 @@ void SelectWorldScreen::setupPositions() {
 	bImport.y = yBase;
 	bBack.y   = yBase;
 
-	bBack.width = bImport.width = bEdit.width = bCreate.width = 84;
+	const int preferredButtonWidth = 84;
+	const int buttonGap = 4;
+	const int horizontalMargin = 4;
+	const int availableButtonWidth =
+		(width - horizontalMargin * 2 - buttonGap * 3) / 4;
+	const int buttonWidth = availableButtonWidth > 0 &&
+		availableButtonWidth < preferredButtonWidth
+		? availableButtonWidth
+		: preferredButtonWidth;
+	bBack.width = bImport.width = bEdit.width = bCreate.width = buttonWidth;
 	//bEdit.h = bCreate.h = bImport.h = bBack.h = 24;
 	//#endif
 
 	// Center buttons
-	const int buttonGap = 4;
 	const int totalWidth = bEdit.width * 4 + buttonGap * 3;
 	const int firstX = (width - totalWidth) / 2;
 	bEdit.x   = firstX;

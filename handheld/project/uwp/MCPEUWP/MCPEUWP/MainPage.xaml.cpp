@@ -5,7 +5,6 @@
 
 #include "pch.h"
 #include "MainPage.xaml.h"
-#include "../../../../src/platform/uwp/UwpLevelDatSmoke.h"
 #include "../../../../src/platform/uwp/UwpLiveTile.h"
 #include "../../../../src/platform/uwp/UwpOriginalClientHost.h"
 #include "../../../../src/platform/uwp/UwpSettingsModel.h"
@@ -18,7 +17,6 @@
 #include "../../../../src/client/gui/Font.h"
 #include <windows.graphics.display.h>
 #include <windows.system.profile.h>
-#include "../../../../src/client/renderer/Tesselator.h"
 #include "../../../../src/client/renderer/Textures.h"
 #include "../../../../src/client/renderer/gles.h"
 #include "../../../../src/world/level/LevelSettings.h"
@@ -32,6 +30,7 @@
 #include <windows.h>
 #include <windows.ui.xaml.media.imaging.h>
 #include <windows.ui.core.h>
+#include <windows.ui.viewmanagement.h>
 #include <windows.ui.input.h>
 #include <algorithm>
 #include <iomanip>
@@ -70,6 +69,16 @@ namespace
 		(void)error;
 #endif
 	}
+
+	std::string NarrowNativeText(const std::wstring& text)
+	{
+		std::string result;
+		result.reserve(text.size());
+		for (const wchar_t character : text)
+			result.push_back(character >= 0 && character <= 0x7f
+				? static_cast<char>(character) : '?');
+		return result;
+	}
 }
 using namespace Windows::UI::Xaml;
 using namespace Windows::UI::Xaml::Controls;
@@ -82,6 +91,7 @@ using namespace Windows::UI::Xaml::Media::Animation;
 using namespace Windows::UI::Xaml::Media::Imaging;
 using namespace Windows::UI::Xaml::Navigation;
 using namespace Windows::UI::Core;
+using namespace Windows::UI::ViewManagement;
 using namespace Windows::Graphics::Imaging;
 using namespace Windows::Storage;
 using namespace Windows::Storage::Streams;
@@ -316,8 +326,6 @@ void MainPage::OnLoaded(Object^, RoutedEventArgs^)
 	// Use the original MCPE 0.6.1 bitmap-font metrics as the UWP baseline.
 	m_ui.setFontProfile(UwpUiRenderer::FontProfile::Mcpe061);
 	m_ui.setStatusText(L"EGL ready | NinecraftApp host + AppContext + I18n bound");
-	m_platformSmokeResult = L"AppPlatform smoke: terrain preload pending";
-	m_ui.setStatusDetailText(m_platformSmokeResult);
 	SetStartupDiagnostic(L"Waiting for first EGL frame", L"Textures load asynchronously");
 	UwpStoragePaths::ensureWorldsFolderAsync()
 		.then([](Windows::Storage::StorageFolder^)
@@ -329,14 +337,8 @@ void MainPage::OnLoaded(Object^, RoutedEventArgs^)
 		// The regular Options::save() path will create it after initialization.
 		.then([this](Windows::Storage::StorageFolder^)
 		{
-			const UwpLevelDatSmokeResult levelDatResult = UwpLevelDatSmoke::run();
 			if (!m_core.isActive())
-			{
-				m_ui.setStatusText(levelDatResult.succeeded
-					? L"EGL ready | storage + level.dat ready | AppContext + I18n bound"
-					: L"UWP level.dat smoke test failed");
-			}
-			SetStartupDiagnostic(L"Original level.dat storage smoke", levelDatResult.detail);
+				m_ui.setStatusText(L"EGL ready | storage ready | AppContext + I18n bound");
 		}, task_continuation_context::use_current())
 		.then([this](task<void> result)
 		{
@@ -351,160 +353,39 @@ void MainPage::OnLoaded(Object^, RoutedEventArgs^)
 		}, task_continuation_context::use_current());
 }
 
-void MainPage::RunPlatformSmokeTest()
+void MainPage::LoadOriginalTerrainResources()
 {
+	m_originalTerrainResourcesLoaded = true;
 	if (!m_platform)
-	{
-		m_platformSmokeResult = L"AppPlatform smoke: unavailable";
-		m_ui.setStatusDetailText(m_platformSmokeResult);
 		return;
-	}
-
-	// Exercise the two original-client resource contracts without constructing
-	// Minecraft: a byte asset relative to data/ and an RGBA texture relative to
-	// data/images/.  Both allocations use the ownership expected by the
-	// original callers, so release them here after validating their contents.
-	BinaryBlob language = m_platform->readAssetFile("lang/en_US.lang");
-	TextureData terrain = m_platform->loadTexture("terrain.png", true);
-	const bool languageLoaded = language.data != nullptr && language.size > 0;
-	const bool textureLoaded = terrain.data != nullptr
-		&& terrain.w > 0
-		&& terrain.h > 0
-		&& terrain.numBytes == terrain.w * terrain.h * 4;
-
-	std::wostringstream result;
-	result << L"AppPlatform smoke: lang=" << (languageLoaded ? L"OK" : L"FAIL")
-		<< L", terrain=" << (textureLoaded ? L"OK" : L"FAIL");
-	if (textureLoaded)
-		result << L" (" << terrain.w << L"x" << terrain.h << L")";
-	else
-	{
-		result << L" [";
-		for (unsigned char ch : m_platform->lastTextureLoadError())
-			result << static_cast<wchar_t>(ch);
-		result << L"]";
-	}
-	m_platformSmokeResult = result.str();
-
-	delete[] language.data;
-	delete[] terrain.data;
-	m_ui.setStatusDetailText(m_platformSmokeResult);
-	SetStartupDiagnostic(L"AppPlatform UWP smoke test", m_platformSmokeResult);
-}
-
-void MainPage::RunOriginalTexturesSmoke()
-{
-	m_originalTexturesSmokeDone = true;
-	if (!m_platform)
-	{
-		m_ui.setStatusDetailText(L"Original Textures: platform unavailable");
-		SetStartupDiagnostic(L"Original Textures smoke test",
-			L"AppPlatform_uwp is unavailable");
-		return;
-	}
 
 	// The EGL context is current because this is called from the frame callback
 	// after beginFrame().  The renderer now owns the original Textures object
 	// so its GL name remains valid for subsequent world draw calls.
-	const bool succeeded = m_worldRenderer.loadOriginalTerrainTexture(m_platform.get());
-
-	std::wostringstream status;
-	status << L"Original Textures: terrain "
-		<< (succeeded ? L"OK" : L"FAIL");
-	if (succeeded)
-		status << L" (" << m_worldRenderer.originalTerrainWidth()
-		<< L"x" << m_worldRenderer.originalTerrainHeight() << L")";
-	else
-	{
-		status << L" [";
-		for (const unsigned char ch : m_platform->lastTextureLoadError())
-			status << static_cast<wchar_t>(ch);
-		status << L"]";
-	}
-	m_ui.setStatusDetailText(status.str());
-	SetStartupDiagnostic(L"Original Textures smoke test", status.str());
+	m_worldRenderer.loadOriginalTerrainTexture(m_platform.get());
 }
 
-void MainPage::RunOriginalFontSmoke()
+void MainPage::LoadOriginalHudFont()
 {
-	m_originalFontSmokeDone = true;
+	m_originalHudFontLoaded = true;
 	if (!m_platform)
-	{
-		m_ui.setStatusDetailText(L"Original Font: platform unavailable");
-		SetStartupDiagnostic(L"Original Font smoke test",
-			L"AppPlatform_uwp is unavailable");
 		return;
-	}
 
 	// Construct the original bitmap Font on the renderer-owned Textures object.
 	// UwpUiRenderer will use it for one real game status-detail line; all other
 	// menu and HUD elements remain on the existing UWP path.
-	const bool loaded = m_worldRenderer.loadOriginalFont();
-	m_ui.setOriginalFont(loaded ? m_worldRenderer.originalFont() : nullptr);
-	const int width = m_worldRenderer.originalFontWidth("Singleplayer");
-	const bool succeeded = loaded && width > 0;
-
-	std::wostringstream status;
-	status << L"Original Font: " << (succeeded ? L"OK" : L"FAIL");
-	if (succeeded)
-		status << L" (width=" << width << L", HUD draw armed)";
-	else
-		status << L" [font/default8.png unavailable or glyph metrics empty]";
-	m_ui.setStatusDetailText(status.str());
-	SetStartupDiagnostic(L"Original Font smoke test", status.str());
+	m_worldRenderer.loadOriginalFont();
+	m_ui.setOriginalFont(m_worldRenderer.originalFont());
 }
 
-void MainPage::RunOriginalTesselatorSmoke()
+void MainPage::InitializeOriginalGles()
 {
-	m_originalTesselatorSmokeDone = true;
+	m_originalGlesInitialized = true;
 
-	// Use the original CPU extraction contract first.  It expands one original
-	// GL_QUADS primitive to six triangle vertices without touching the current
-	// ANGLE shader or framebuffer, making this a safe isolated seam test.
-	Tesselator& tesselator = Tesselator::instance;
-	std::vector<std::uint8_t> vertexBytes;
-	int vertexCount = 0;
-	tesselator.begin();
-	tesselator.color(255, 255, 255, 255);
-	tesselator.vertexUV(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-	tesselator.vertexUV(1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
-	tesselator.vertexUV(1.0f, 1.0f, 0.0f, 1.0f, 1.0f);
-	tesselator.vertexUV(0.0f, 1.0f, 0.0f, 0.0f, 1.0f);
-	tesselator.endToCPU(vertexBytes, vertexCount);
-
-	const bool succeeded = vertexCount == 6 &&
-		vertexBytes.size() == static_cast<std::size_t>(vertexCount) * sizeof(VERTEX);
-	std::wostringstream status;
-	status << L"Original Tesselator: "
-		<< (succeeded ? L"OK" : L"FAIL");
-	if (succeeded)
-		status << L" (vertices=" << vertexCount << L")";
-	else
-		status << L" [quad expansion or vertex buffer size mismatch]";
-	m_ui.setStatusDetailText(status.str());
-	SetStartupDiagnostic(L"Original Tesselator smoke test", status.str());
-}
-
-void MainPage::RunOriginalGlesSmoke()
-{
-	m_originalGlesSmokeDone = true;
-
-	// Initialization-only probe.  It deliberately does not bind the original
-	// shader for a draw, touch MatrixStack, allocate Tesselator buffers, or
-	// alter the current UWP terrain/UI programs.
+	// The original GLES setup is required by the renderer.  Keep the one-time
+	// initialization here, but do not expose it as a startup diagnostic probe.
 	glInit();
-	const bool succeeded = g_shader_program != 0 && g_shaderEnabled;
-	const GLuint program = g_shader_program;
 	shaderUnbind();
-
-	std::wostringstream status;
-	status << L"Original GLES2: " << (succeeded ? L"OK" : L"FAIL");
-	if (succeeded)
-		status << L" (program=" << program << L")";
-	else
-		status << L" [shader init/link failed]";
-	m_ui.setStatusDetailText(status.str());
-	SetStartupDiagnostic(L"Original GLES2 smoke test", status.str());
 }
 
 void MainPage::OnNavigatedTo(NavigationEventArgs^ e)
@@ -643,19 +524,16 @@ void MainPage::OnRendering(Object^, Object^)
 		m_firstGameRenderCall = true;
 		SetStartupDiagnostic(L"First game render call", L"MainPage::OnRendering entered; EGL context is current");
 	}
-	if (!m_originalTexturesSmokeDone &&
+	if (!m_originalTerrainResourcesLoaded &&
 		m_clientTexturePreloadExpected > 0 &&
 		m_clientTexturePreloadCompleted >= m_clientTexturePreloadExpected)
-		RunOriginalTexturesSmoke();
-	if (!m_originalFontSmokeDone && m_originalTexturesSmokeDone &&
+		LoadOriginalTerrainResources();
+	if (!m_originalHudFontLoaded && m_originalTerrainResourcesLoaded &&
 		m_clientTexturePreloadCompleted >= m_clientTexturePreloadExpected)
-		RunOriginalFontSmoke();
-	if (!m_originalTesselatorSmokeDone && m_originalFontSmokeDone &&
+		LoadOriginalHudFont();
+	if (!m_originalGlesInitialized && m_originalHudFontLoaded &&
 		m_clientTexturePreloadCompleted >= m_clientTexturePreloadExpected)
-		RunOriginalTesselatorSmoke();
-	if (!m_originalGlesSmokeDone && m_originalTesselatorSmokeDone &&
-		m_clientTexturePreloadCompleted >= m_clientTexturePreloadExpected)
-		RunOriginalGlesSmoke();
+		InitializeOriginalGles();
 	if (!m_originalClientInitAttempted &&
 		m_clientTexturePreloadExpected > 0 &&
 		m_clientTexturePreloadCompleted >= m_clientTexturePreloadExpected)
@@ -701,7 +579,10 @@ void MainPage::OnRendering(Object^, Object^)
 		// ANGLE clear color. Once showStartMenu() succeeds, the original frame
 		// path owns the surface and this branch stops drawing.
 		const Minecraft* minecraft = m_originalClientHost.minecraft();
-		if (minecraft == nullptr || minecraft->screen == nullptr)
+		const bool originalWorldActive =
+			minecraft != nullptr && minecraft->level != nullptr;
+		if (!originalWorldActive &&
+			(minecraft == nullptr || minecraft->screen == nullptr))
 		{
 			if (!m_originalClientInitAttempted)
 				m_ui.renderStartupLoading(width, height);
@@ -1210,46 +1091,13 @@ void MainPage::ShowLaunchWorldError(const std::wstring& details)
 	m_originalClientHost.detachWorld();
 	m_worldRenderer.setLevel(nullptr);
 	m_originalClientHost.setLoopEnabled(true);
-	m_originalMenuActive = m_originalClientHost.showStartMenu();
-
-	if (LaunchWorldErrorMessage != nullptr)
-	{
-		const std::wstring message =
-			L"This shortcut could not open the saved world.\n\n" +
-			(details.empty()
-				? std::wstring(L"The world may have been renamed or deleted.")
-				: details);
-		LaunchWorldErrorMessage->Text = ref new String(message.c_str());
-	}
-
-	m_launchWorldErrorVisible = true;
-	if (LaunchWorldErrorOverlay != nullptr)
-	{
-		LaunchWorldErrorOverlay->Visibility =
-			Windows::UI::Xaml::Visibility::Visible;
-		RebuildSkinDirtBackground();
-		AnimateOverlay(LaunchWorldErrorOverlay, true);
-	}
+	m_originalMenuActive = m_originalClientHost.showLaunchWorldError(
+		details.empty()
+			? std::string()
+			: NarrowNativeText(details));
+	if (!m_originalMenuActive)
+		m_originalMenuActive = m_originalClientHost.showStartMenu();
 	Keyboard::reset();
-}
-
-void MainPage::HideLaunchWorldError()
-{
-	if (!m_launchWorldErrorVisible)
-		return;
-
-	m_launchWorldErrorVisible = false;
-	if (LaunchWorldErrorOverlay != nullptr)
-		AnimateOverlay(LaunchWorldErrorOverlay, false);
-	Keyboard::reset();
-	m_originalClientHost.setLoopEnabled(true);
-	m_originalMenuActive = m_originalClientHost.showStartMenu();
-}
-
-void MainPage::OnLaunchWorldErrorBackClick(
-	Platform::Object^, Windows::UI::Xaml::RoutedEventArgs^)
-{
-	HideLaunchWorldError();
 }
 
 void MainPage::ScheduleWorldEditDirtBackgroundRebuild()
@@ -1356,7 +1204,7 @@ void MainPage::RebuildSkinDirtBackground()
 {
 	if (SkinDirtBackground == nullptr && KeyMappingDirtBackground == nullptr &&
 		WorldEditDirtBackground == nullptr && WorldImportDirtBackground == nullptr &&
-		SettingsDirtBackground == nullptr && LaunchWorldErrorDirtBackground == nullptr)
+		SettingsDirtBackground == nullptr)
 		return;
 	if (m_rebuildingSkinDirtBackground)
 		return;
@@ -1398,7 +1246,6 @@ void MainPage::RebuildSkinDirtBackground()
 	rebuild(WorldEditDirtBackground);
 	rebuild(WorldImportDirtBackground);
 	rebuild(SettingsDirtBackground);
-	rebuild(LaunchWorldErrorDirtBackground);
 	if (SkinDirtBackground != nullptr)
 	{
 		m_skinDirtColumns = static_cast<int>(SkinDirtBackground->ActualWidth / tileSize) + 1;
@@ -1633,6 +1480,7 @@ void MainPage::LoadSkinPreview()
 
 void MainPage::OnGameTick(std::uint64_t tick)
 {
+	SyncDesktopFullScreenMode();
 	// The import page pauses the original menu loop while it is visible, so
 	// its Back request must be consumed outside the normal menu-update branch.
 	if (!m_originalClientHost.isOriginalClientLoopEnabled())
@@ -1852,6 +1700,33 @@ void MainPage::OnGameTick(std::uint64_t tick)
 	}
 }
 
+void MainPage::SyncDesktopFullScreenMode()
+{
+	// Windows 10 Mobile owns its immersive presentation; do not expose or
+	// force the desktop ApplicationView fullscreen mode there.
+	if (m_isMobile || !m_originalClientHost.isOriginalClientInitialized())
+		return;
+
+	try
+	{
+		ApplicationView^ view = ApplicationView::GetForCurrentView();
+		if (view == nullptr)
+			return;
+
+		const bool requested = UwpOriginalClientGetOptionBool(
+			m_originalClientHost.handle(), UwpOptionId::Fullscreen);
+		if (requested && !view->IsFullScreenMode)
+			view->TryEnterFullScreenMode();
+		else if (!requested && view->IsFullScreenMode)
+			view->ExitFullScreenMode();
+	}
+	catch (...)
+	{
+		// Fullscreen is a presentation preference.  A platform/API failure must
+		// not interrupt the original client loop or world simulation.
+	}
+}
+
 void MainPage::OnGameRender(float alpha)
 {
 	if (m_originalClientHost.isOriginalClientLoopEnabled() &&
@@ -2047,13 +1922,6 @@ void MainPage::OnKeyDown(Windows::UI::Core::CoreWindow^,
 	Windows::UI::Core::KeyEventArgs^ e)
 {
 	using Windows::System::VirtualKey;
-	if (m_launchWorldErrorVisible)
-	{
-		if (e->VirtualKey == VirtualKey::Escape)
-			HideLaunchWorldError();
-		e->Handled = true;
-		return;
-	}
 	if (m_settingsPageVisible && e->VirtualKey == VirtualKey::Escape)
 	{
 		HideSettingsPage();
@@ -2146,11 +2014,6 @@ void MainPage::OnKeyUp(Windows::UI::Core::CoreWindow^,
 	Windows::UI::Core::KeyEventArgs^ e)
 {
 	using Windows::System::VirtualKey;
-	if (m_launchWorldErrorVisible)
-	{
-		e->Handled = true;
-		return;
-	}
 	if (m_settingsPageVisible)
 	{
 		// The XAML controls, especially TextBox, own the key-up event while
@@ -2221,12 +2084,6 @@ void MainPage::OnSystemBackRequested(
 {
 	if (e == nullptr)
 		return;
-	if (m_launchWorldErrorVisible)
-	{
-		HideLaunchWorldError();
-		e->Handled = true;
-		return;
-	}
 
 	// Keep the system Back button identical to the existing Escape routing.
 	// XAML overlays own the input while visible, so the native client must not
@@ -2687,7 +2544,6 @@ void MainPage::LoadTerrainTexture()
 					}
 					m_worldRenderer.setTerrainTexturePixels(
 						width, height, pixels->Data, pixels->Length);
-					RunPlatformSmokeTest();
 					RecordOriginalClientTexturePreload("terrain.png", true);
 				}, task_continuation_context::use_current());
 		})
@@ -2701,7 +2557,6 @@ void MainPage::LoadTerrainTexture()
 			{
 				if (m_platform)
 					m_platform->setTexturePreloadFailure("terrain.png", true, "UWP terrain preload failed");
-				RunPlatformSmokeTest();
 				RecordOriginalClientTexturePreload("terrain.png", false);
 				m_ui.setStatusText(L"Failed to load MCPE terrain texture");
 			}

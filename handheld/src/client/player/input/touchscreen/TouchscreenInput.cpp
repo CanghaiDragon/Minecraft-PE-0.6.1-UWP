@@ -421,6 +421,12 @@ void TouchscreenInput_TestFps::tick( Player* player )
 			else {
 				if (!isChangingFlightHeight) tmpForward = true;
 				ya += 1;
+				// The legacy D-pad has no separate sneak key.  Match PE's
+				// water movement behavior by making forward input also provide
+				// the upward swimming impulse while the player is submerged.
+				if (!_options->touchSneak && !player->abilities.flying &&
+					player->isInWater())
+					jumping = true;
 			}
 		}
 		else if (areaId == AREA_DPAD_S && !_forward)

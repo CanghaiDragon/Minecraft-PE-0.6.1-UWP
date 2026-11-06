@@ -17,6 +17,7 @@ public:
     static const char* Graphics_ViewBobbing;
     static const char* Graphics_FOV;
 	static const char* Graphics_BetaVisuals;
+	static const char* Graphics_Fullscreen;
     
     static const char* Controls_Sensitivity;
     static const char* Controls_InvertMouse;

@@ -5,9 +5,6 @@
 
 #include "pch.h"
 #include "MainPage.xaml.h"
-#if defined(MCPE_ARM32_STARTUP_DIAGNOSTIC)
-#include "Arm32StartupTestPage.xaml.h"
-#endif
 
 #include <windows.h>
 #include <sstream>
@@ -87,11 +84,7 @@ void App::OnLaunched(Windows::ApplicationModel::Activation::LaunchActivatedEvent
                 // 当导航堆栈尚未还原时，导航到第一页，
                 // 并通过将所需信息作为导航参数传入来配置
                 // 新页面
-#if defined(MCPE_ARM32_STARTUP_DIAGNOSTIC)
-                rootFrame->Navigate(TypeName(Arm32StartupTestPage::typeid), e->Arguments);
-#else
                 rootFrame->Navigate(TypeName(MainPage::typeid), e->Arguments);
-#endif
             }
             // 将框架放在当前窗口中
             Window::Current->Content = rootFrame;
@@ -108,11 +101,7 @@ void App::OnLaunched(Windows::ApplicationModel::Activation::LaunchActivatedEvent
                 // 当导航堆栈尚未还原时，导航到第一页，
                 // 并通过将所需信息作为导航参数传入来配置
                 // 参数
-#if defined(MCPE_ARM32_STARTUP_DIAGNOSTIC)
-                rootFrame->Navigate(TypeName(Arm32StartupTestPage::typeid), e->Arguments);
-#else
                 rootFrame->Navigate(TypeName(MainPage::typeid), e->Arguments);
-#endif
             }
             // 确保当前窗口处于活动状态
             Window::Current->Activate();

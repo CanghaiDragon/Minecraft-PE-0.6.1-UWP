@@ -245,21 +245,21 @@ void AppPlatform_uwp::vibrate(int milliSeconds)
 	{
 #if defined(MCPE_HAS_PHONE_VIBRATION_API)
 		// Windows 10 Mobile exposes the phone motor through the phone-specific
-		// notification API.  The generic Windows.Devices.Haptics path below is
-		// useful for desktop haptic devices, but it does not drive the phone
-		// motor on the WP target.
-		if (ApiInformation::IsTypePresent(
-			L"Windows.Phone.Devices.Notification.VibrationDevice"))
+		// notification API. Do not gate this path with the generic runtime type
+		// check: the Mobile Extension SDK and the Windows.Mobile device family
+		// already identify the supported target, while the generic haptics API
+		// does not reliably drive the phone motor.
+		if (isMobileDevice())
 		{
 			Windows::Phone::Devices::Notification::VibrationDevice^ phoneDevice =
 				Windows::Phone::Devices::Notification::VibrationDevice::GetDefault();
-			if (phoneDevice != nullptr)
-			{
-				TimeSpan duration;
-				duration.Duration = static_cast<long long>(milliSeconds) * 10000;
-				phoneDevice->Vibrate(duration);
+			if (phoneDevice == nullptr)
 				return;
-			}
+
+			TimeSpan duration;
+			duration.Duration = static_cast<long long>(milliSeconds) * 10000;
+			phoneDevice->Vibrate(duration);
+			return;
 		}
 #endif
 

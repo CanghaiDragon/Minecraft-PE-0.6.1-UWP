@@ -71,6 +71,18 @@ public:
         }
     }
 
+	// Requeue every resident chunk after prepareLevelFor() re-enables lighting.
+	// Existing worlds temporarily disable light updates while their chunks are
+	// loaded, so the insertion-time requests cannot be retained in that phase.
+	void queueLightUpdatesForLoadedChunks() {
+		std::vector<LevelChunk*> loadedChunks;
+		getLoadedChunks(loadedChunks);
+		for (size_t i = 0; i < loadedChunks.size(); ++i) {
+			if (loadedChunks[i] != NULL)
+				queueLightUpdatesForChunk(loadedChunks[i]->x, loadedChunks[i]->z);
+		}
+	}
+
     LevelChunk* create(int x, int z) {
         return getChunk(x, z);
     }
@@ -83,30 +95,22 @@ public:
         if (!hasChunk(x, z)) {
             // No eviction needed — hash map holds each (x,z) independently
             LevelChunk* newChunk = load(x, z);
-			bool updateLights = false;
             if (newChunk == NULL) {
                 if (source == NULL) newChunk = emptyChunk;
                 else newChunk = source->getChunk(x, z);
-            } else {
-				updateLights = true;
             }
             chunks[key] = newChunk;
             newChunk->lightLava();
 
-			if (updateLights) {
-				for (int cx = 0; cx < 16; cx++) {
-					for (int cz = 0; cz < 16; cz++) {
-						int height = level->getHeightmap(cx + x * 16, cz + z * 16);
-						for (int cy = height; cy >= 0; cy--) {
-							level->updateLight(LightLayer::Sky, cx + x * 16, cy, cz + z * 16, cx + x * 16, cy, cz + z * 16);
-							level->updateLight(LightLayer::Block, cx + x * 16 - 1, cy, cz + z * 16 - 1, cx + x * 16 + 1, cy, cz + z * 16 + 1);
-						}
-					}
-				}
-			}
-
             LevelChunk* stored = chunks[key];
             if (stored != NULL) stored->load();
+
+			// Generated chunks can run lightGaps() before their neighbours are
+			// present.  Requeue this chunk and all resident neighbours only after
+			// insertion into the cache, so later generation can repair the earlier
+			// boundary misses as well.
+			if (stored != NULL && stored != emptyChunk)
+				queueLightUpdatesAround(x, z);
 
             // Tell the renderer (via LevelListener) that this chunk's blocks exist now,
             // so it rebuilds the faces at the boundary with already-rendered neighbours.
@@ -343,6 +347,53 @@ public:
 		}
 	}
 private:
+	void queueLightUpdatesForChunk(int x, int z) {
+		if (!fits(x, z)) return;
+
+		auto it = chunks.find(chunkKey(x, z));
+		if (it == chunks.end() || it->second == NULL || it->second == emptyChunk)
+			return;
+
+		const int x0 = x * CHUNK_WIDTH;
+		const int z0 = z * CHUNK_WIDTH;
+		const int x1 = x0 + CHUNK_WIDTH - 1;
+		const int z1 = z0 + CHUNK_WIDTH - 1;
+
+		// Split the chunk vertically so one LightUpdate cannot monopolize the
+		// fixed-step thread.  The surrounding chunks are queued separately by
+		// queueLightUpdatesAround(), so propagation across a newly completed 3x3
+		// neighbourhood is still repaired.
+		const int lightSliceHeight = 8;
+		for (int y0 = 0; y0 < Level::DEPTH; y0 += lightSliceHeight) {
+			int y1 = y0 + lightSliceHeight - 1;
+			if (y1 >= Level::DEPTH)
+				y1 = Level::DEPTH - 1;
+
+			level->updateLight(
+				LightLayer::Sky,
+				x0, y0, z0,
+				x1, y1, z1);
+			level->updateLight(
+				LightLayer::Block,
+				x0, y0, z0,
+				x1, y1, z1);
+		}
+	}
+
+	public:
+	void queueLightUpdatesAround(int x, int z) {
+		queueLightUpdatesAround(x, z, 1);
+	}
+
+	void queueLightUpdatesAround(int x, int z, int radius) {
+		for (int dx = -radius; dx <= radius; ++dx) {
+			for (int dz = -radius; dz <= radius; ++dz) {
+				queueLightUpdatesForChunk(x + dx, z + dz);
+			}
+		}
+	}
+
+	private:
     LevelChunk* load(int x, int z) {
         if (storage == NULL) return NULL;
         LevelChunk* levelChunk = storage->load(level, x, z);

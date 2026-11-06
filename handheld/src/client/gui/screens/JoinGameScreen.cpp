@@ -3,6 +3,47 @@
 #include "ProgressScreen.h"
 #include "../Font.h"
 #include "../../../network/RakNetInstance.h"
+#include <vector>
+
+namespace
+{
+	void drawCenteredWrappedInfo(GuiComponent* component, Font* font, const std::string& text,
+		int centerX, int centerY, int maxWidth)
+	{
+		std::vector<std::string> lines;
+		std::string line;
+		size_t wordStart = 0;
+		while (wordStart < text.size())
+		{
+			size_t wordEnd = text.find(' ', wordStart);
+			if (wordEnd == std::string::npos)
+				wordEnd = text.size();
+
+			const std::string word = text.substr(wordStart, wordEnd - wordStart);
+			const std::string candidate = line.empty()
+				? word
+				: line + " " + word;
+			if (!line.empty() && font->width(candidate) > maxWidth)
+			{
+				lines.push_back(line);
+				line = word;
+			}
+			else
+			{
+				line = candidate;
+			}
+			wordStart = wordEnd + 1;
+		}
+		if (!line.empty())
+			lines.push_back(line);
+
+		const int lineHeight = 9;
+		const int firstY = centerY - static_cast<int>((lines.size() - 1) * lineHeight) / 2;
+		for (unsigned int i = 0; i < lines.size(); ++i)
+			component->drawCenteredString(font, lines[i], centerX,
+				firstY + static_cast<int>(i) * lineHeight, 0xffc0c0c0);
+	}
+}
 
 JoinGameScreen::JoinGameScreen()
 :	bJoin(  2, "Join Game"),
@@ -162,6 +203,10 @@ void JoinGameScreen::render( int xm, int ym, float a )
 		const int yy = height / 2 - 8;
 		drawCenteredString(minecraft->font, s, width / 2, yy, 0xffffffff);
 	}
+
+	drawCenteredWrappedInfo(this, minecraft->font,
+		"Only finite worlds are supported. Compatible with original PE.",
+		width / 2, height - 40, width > 20 ? width - 20 : width);
 }
 
 bool JoinGameScreen::isInGameScreen() { return false; }

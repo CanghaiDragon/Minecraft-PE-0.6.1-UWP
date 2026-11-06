@@ -63,6 +63,7 @@ public:
         
 		static const Option THIRD_PERSON;
 		static const Option HIDE_GUI;
+		static const Option FULLSCREEN;
 		static const Option SERVER_VISIBLE;
 		static const Option DYNAMIC_TILE;
 		static const Option LEFT_HANDED;
@@ -211,6 +212,8 @@ public:
 
 	bool serverVisible;
 	int dynamicTileMode;
+	// Desktop-only UWP presentation preference. Mobile ignores this option.
+	bool fullscreen;
 	bool isJoyTouchArea;
 	bool useTouchScreen;
 	bool infiniteWorlds;
@@ -241,6 +244,7 @@ public:
 		thirdPersonView = false;
 		thirdPersonViewMode = THIRD_PERSON_FIRST;
 		dynamicTileMode = DYNAMIC_TILE_OFF;
+		fullscreen = false;
 	}
 
 	void initDefaultValues(DefaultProfile profile = DefaultProfile::DesktopDefault);
@@ -338,6 +342,7 @@ public:
 			useTouchScreen = !useTouchScreen;
 		if (option == &Option::SKIN_ARM_TYPE) slimSkin = !slimSkin;
 		if (option == &Option::SKIN_MENU) skinMenu = !skinMenu;
+		if (option == &Option::FULLSCREEN) fullscreen = !fullscreen;
 		if (option == &Option::TOUCH_SNEAK) touchSneak = !touchSneak;
 		if (option == &Option::DEBUG_SCREEN) {
 			debugScreenEnabled = !debugScreenEnabled;
@@ -449,6 +454,8 @@ public:
 			return debugScreenEnabled;
 		if (item == &Option::JAVA_UI)
 			return javaUi;
+		if (item == &Option::FULLSCREEN)
+			return fullscreen;
 		return false;
 	}
 

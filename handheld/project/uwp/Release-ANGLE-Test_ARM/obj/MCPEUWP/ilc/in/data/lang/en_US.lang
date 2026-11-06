@@ -208,6 +208,7 @@ options.thirdperson.first=First Person
 options.thirdperson.back=Third Person Back
 options.thirdperson.front=Third Person Front
 options.hidegui=Hide HUD
+options.fullscreen=Fullscreen
 options.servervisible=Open to LAN by Default
 options.lefthanded=Left-Handed Controls
 options.usetouchscreen=Use Touchscreen

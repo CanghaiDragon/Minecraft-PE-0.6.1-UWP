@@ -77,13 +77,12 @@ namespace MCPEUWP
 		void BeginOriginalClientTexturePreload();
 		void LoadOriginalClientStartupTexture(const std::string& filename);
 		void RecordOriginalClientTexturePreload(const std::string& filename, bool succeeded);
-		void RunOriginalTexturesSmoke();
-		void RunOriginalFontSmoke();
-		void RunOriginalTesselatorSmoke();
-		void RunOriginalGlesSmoke();
+		void LoadOriginalTerrainResources();
+		void LoadOriginalHudFont();
+		void InitializeOriginalGles();
 		void LoadMenuFont();
-		void RunPlatformSmokeTest();
 		void OnGameTick(std::uint64_t tick);
+		void SyncDesktopFullScreenMode();
 		void OnGameRender(float alpha);
 		void RenderSavingWorldFrame(bool frameAlreadyBegun);
 		void SyncOriginalMouseCursor();
@@ -104,10 +103,7 @@ namespace MCPEUWP
 		void HideWorldEditPage();
 		void ShowWorldImportPage();
 		void HideWorldImportPage();
-		void OnLaunchWorldErrorBackClick(Platform::Object^ sender,
-			Windows::UI::Xaml::RoutedEventArgs^ e);
 		void ShowLaunchWorldError(const std::wstring& details);
-		void HideLaunchWorldError();
 		void ScheduleWorldEditDirtBackgroundRebuild();
 		void AnimateSkinPage(bool entering);
 		void AnimateOverlay(Windows::UI::Xaml::Controls::Grid^ overlay, bool entering);
@@ -147,7 +143,6 @@ namespace MCPEUWP
 		bool m_isMobile = false;
 		bool m_worldEditPageVisible = false;
 		bool m_worldImportPageVisible = false;
-		bool m_launchWorldErrorVisible = false;
 		bool m_worldImportSuspendedOriginalLoop = false;
 		bool m_worldEditDirtRebuildPending = false;
 		int m_worldEditDirtRebuildAttempts = 0;
@@ -189,15 +184,13 @@ namespace MCPEUWP
 		Windows::Foundation::EventRegistrationToken m_characterReceivedToken{};
 		Windows::Foundation::EventRegistrationToken m_mouseMovedToken{};
 		Windows::UI::Core::SystemNavigationManager^ m_systemNavigationManager;
-		std::wstring m_platformSmokeResult;
 		unsigned int m_clientTexturePreloadCompleted = 0;
 		unsigned int m_clientTexturePreloadSucceeded = 0;
 		unsigned int m_clientTexturePreloadExpected = 0;
 		bool m_originalClientInitAttempted = false;
 		std::vector<std::wstring> m_clientTexturePreloadFailures;
-		bool m_originalTexturesSmokeDone = false;
-		bool m_originalFontSmokeDone = false;
-		bool m_originalTesselatorSmokeDone = false;
-		bool m_originalGlesSmokeDone = false;
+		bool m_originalTerrainResourcesLoaded = false;
+		bool m_originalHudFontLoaded = false;
+		bool m_originalGlesInitialized = false;
 	};
 }

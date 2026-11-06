@@ -12,7 +12,6 @@
 #include <EGL/egl.h>
 #else
 #include "platform/WglContext_win32.h"
-#include "platform/ExitTrace.h"
 #endif
 #define WIN32_LEAN_AND_MEAN 1
 #include <windows.h>
@@ -600,11 +599,9 @@ void inputNetworkThread(void* userdata)
 }
 
 int main(void) {
-	MCPE_EXIT_TRACE("main: begin");
 #if defined(MCPE_ENABLE_CRASH_TRACE)
 	SetUnhandledExceptionFilter(mcpeWin32CrashHandler);
 #endif
-	MCPE_EXIT_TRACE("main: exception filter installed");
 	AppContext appContext;
 	MSG sMessage;
 #ifndef STANDALONE_SERVER
@@ -613,9 +610,7 @@ int main(void) {
 
 	// Window and input initialization are shared by the EGL and WGL variants.
 	appContext.platform = new AppPlatform_win32();
-	MCPE_EXIT_TRACE("main: platform created");
 	platform(&hwnd, appContext.platform->getScreenWidth(), appContext.platform->getScreenHeight());
-	MCPE_EXIT_TRACE("main: window created hwnd=%p", (void*)hwnd);
 	ShowWindow(hwnd, SW_SHOW);
 	SetForegroundWindow(hwnd);
 	SetFocus(hwnd);
@@ -631,21 +626,18 @@ int main(void) {
 
 #if defined(WIN32_WGL)
 	Win32WglContext wglContext = {};
-	MCPE_EXIT_TRACE("main: before WGL context");
 	if (!createWin32WglContext(hwnd, &wglContext)) {
 		printf("Unable to create the Win32 WGL compatibility context (error %lu)\n", GetLastError());
 		appContext.platform->finish();
 		delete appContext.platform;
 		return 1;
 	}
-	MCPE_EXIT_TRACE("main: WGL context created");
 	appContext.graphicsContext = &wglContext;
 	appContext.swapGraphicsBuffers = swapWin32WglBuffers;
 	appContext.doRender = true;
 
 	// The context must be current before GLEW loads desktop GL extensions.
 	glInit();
-	MCPE_EXIT_TRACE("main: GL initialized");
 #else
 	// Must run before the first EGL call; PVRVFrame otherwise opens its SDK
 	// control panel while it initializes the emulated GLES context.
@@ -691,18 +683,13 @@ int main(void) {
 	glInit();
 #endif // WIN32_WGL
 #endif
-	MCPE_EXIT_TRACE("main: before app allocation");
 	App* app = new MAIN_CLASS();
-	MCPE_EXIT_TRACE("main: app allocated=%p", (void*)app);
 
 	g_app = app;
 	((MAIN_CLASS*)g_app)->externalStoragePath = ".";
 	((MAIN_CLASS*)g_app)->externalCacheStoragePath = ".";
-	MCPE_EXIT_TRACE("main: before app init");
 	g_app->init(appContext);
-	MCPE_EXIT_TRACE("main: app init complete");
 	g_app->setSize(appContext.platform->getScreenWidth(), appContext.platform->getScreenHeight());
-	MCPE_EXIT_TRACE("main: app size set");
 
 	//_beginthread(inputNetworkThread, 0, 0);
 	
@@ -725,25 +712,16 @@ int main(void) {
 		//Sleep(30);
 	}
 
-	MCPE_EXIT_TRACE("main: loop ended g_running=%d wantToQuit=%d", g_running ? 1 : 0, app->wantToQuit() ? 1 : 0);
 	Sleep(50);
-	MCPE_EXIT_TRACE("main: before delete app");
 	delete app;
-	MCPE_EXIT_TRACE("main: after delete app");
 	Sleep(50);
 #if defined(WIN32_WGL)
 	// The window and HDC must still exist while the WGL context is detached.
-	MCPE_EXIT_TRACE("main: before destroy WGL");
 	destroyWin32WglContext(&wglContext);
-	MCPE_EXIT_TRACE("main: after destroy WGL");
 #endif
-	MCPE_EXIT_TRACE("main: before platform finish");
 	appContext.platform->finish();
-	MCPE_EXIT_TRACE("main: after platform finish");
 	Sleep(50);
-	MCPE_EXIT_TRACE("main: before delete platform");
 	delete appContext.platform;
-	MCPE_EXIT_TRACE("main: after delete platform");
 	Sleep(50);
 	//printf("_crtDumpMemoryLeaks: %d\n", _CrtDumpMemoryLeaks());
 	
@@ -757,7 +735,6 @@ int main(void) {
 	#endif
 #endif
 
-	MCPE_EXIT_TRACE("main: complete");
 	return 0;
 }
 

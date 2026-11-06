@@ -22,7 +22,7 @@ enum class UwpOptionId
 	LeftHanded, SplitTouch, InvertMouse, DestroyVibration, FancyGraphics,
 	AmbientOcclusion, RenderDistance, GuiScale, ViewBobbing, FieldOfView,
 	HideGui, Music, Sound, InfiniteWorlds, JavaUi, SkinArmType, SkinMenu, TouchSneak,
-	BetaVisuals, DebugScreen
+	BetaVisuals, DebugScreen, Fullscreen
 };
 
 enum class UwpOriginalMenuAction
@@ -70,6 +70,11 @@ bool UwpOriginalClientShowSelectWorld(UwpOriginalClientHandle handle);
 // The screen deliberately stays inside the original client so it uses the
 // native dirt background, MC font, and input/button rendering.
 bool UwpOriginalClientShowLegacyWorldFormatError(UwpOriginalClientHandle handle);
+// Shows the native error screen used when a Start-menu world shortcut cannot
+// find or load its saved world.  The screen selects the Java or PE button
+// style from the current UI option and returns to the matching start menu.
+bool UwpOriginalClientShowLaunchWorldError(UwpOriginalClientHandle handle,
+	const std::string& details);
 // Shows the original ProgressScreen while the UWP-owned local world is being
 // loaded. The UWP session remains the sole owner of the eventual Level and
 // LocalPlayer; this screen only fills the no-Level render interval.

@@ -1,5 +1,4 @@
 #include "Minecraft.h"
-#include "../platform/ExitTrace.h"
 #ifndef STANDALONE_SERVER
 #include "gui/screens/DisconnectionScreen.h"
 #include "gui/screens/WelcomeScreen.h"
@@ -208,6 +207,9 @@ Minecraft::Minecraft()
 	_uwpBorrowedWorld(false),
 	_uwpSavedTouchscreen(false),
 	_uwpTouchscreenSaved(false),
+	_lightPriorityChunkValid(false),
+	_lightPriorityChunkX(0),
+	_lightPriorityChunkZ(0),
 	commandPort(4711),
 	reserved_d1(0),reserved_d2(0),
 	reserved_f1(0),reserved_f2(0)
@@ -233,48 +235,32 @@ Minecraft::Minecraft()
 
 Minecraft::~Minecraft()
 {
-	MCPE_EXIT_TRACE("Minecraft destructor: begin");
-	MCPE_EXIT_TRACE("Minecraft destructor: delete netCallback");
 	delete netCallback;
-	MCPE_EXIT_TRACE("Minecraft destructor: delete raknetInstance");
 	delete raknetInstance;
 #ifndef STANDALONE_SERVER
-	MCPE_EXIT_TRACE("Minecraft destructor: delete levelRenderer");
 	delete levelRenderer;
-	MCPE_EXIT_TRACE("Minecraft destructor: delete gameRenderer");
 	delete gameRenderer;
-	MCPE_EXIT_TRACE("Minecraft destructor: delete particleEngine");
 	delete particleEngine;
 
 	#if !defined(MCPE_UWP_CLIENT_LIFECYCLE_ONLY) || defined(MCPE_UWP_ORIGINAL_CLIENT_LOOP)
-	MCPE_EXIT_TRACE("Minecraft destructor: delete soundEngine");
 	delete soundEngine;
 	#endif
 #endif
-	MCPE_EXIT_TRACE("Minecraft destructor: delete gameMode");
 	delete gameMode;
 #ifndef STANDALONE_SERVER
-	MCPE_EXIT_TRACE("Minecraft destructor: delete font");
 	delete font;
-	MCPE_EXIT_TRACE("Minecraft destructor: delete textures");
 	delete textures;
 
 	if (screen != NULL) {
-		MCPE_EXIT_TRACE("Minecraft destructor: delete screen");
 		delete screen;
 		screen = NULL;
 	}
 #endif
 	if (level != NULL && !_uwpBorrowedWorld) {
-		MCPE_EXIT_TRACE("Minecraft destructor: save level");
 		level->saveGame();
 		if (level->getChunkSource())
-			MCPE_EXIT_TRACE("Minecraft destructor: save chunks");
-		if (level->getChunkSource())
 			level->getChunkSource()->saveAll(true);
-		MCPE_EXIT_TRACE("Minecraft destructor: delete level storage");
 		delete level->getLevelStorage();
-		MCPE_EXIT_TRACE("Minecraft destructor: delete level");
 		delete level;
 		level = NULL;
 	}
@@ -290,26 +276,19 @@ Minecraft::~Minecraft()
 	}
 
 	//delete player;
-	MCPE_EXIT_TRACE("Minecraft destructor: delete user");
 	delete user;
-	MCPE_EXIT_TRACE("Minecraft destructor: delete inputHolder");
 	delete inputHolder;
 
-	MCPE_EXIT_TRACE("Minecraft destructor: delete storageSource");
 	delete storageSource;
-	MCPE_EXIT_TRACE("Minecraft destructor: delete perfRenderer");
 	delete _perfRenderer;
 	#if !defined(NO_NETWORK) && (!defined(MCPE_UWP_CLIENT_LIFECYCLE_ONLY) || defined(MCPE_UWP_ORIGINAL_CLIENT_LOOP))
-	MCPE_EXIT_TRACE("Minecraft destructor: delete commandServer");
 	delete _commandServer;
 #endif
 
-	MCPE_EXIT_TRACE("Minecraft destructor: destroy entity dispatcher");
 	MobFactory::clearStaticTestMobs();
 #ifndef STANDALONE_SERVER
 	EntityRenderDispatcher::destroy();
 #endif
-	MCPE_EXIT_TRACE("Minecraft destructor: complete");
 }
 
 // Only called by server
@@ -461,6 +440,7 @@ void Minecraft::leaveGame(bool renameLevel /*=false*/)
 	//delete player;
 	player = NULL;
 	cameraTargetPlayer = NULL;
+	_lightPriorityChunkValid = false;
 
 	_running = false;
 	LOGI("leaveGame: cleanup complete\n");
@@ -510,6 +490,8 @@ void Minecraft::prepareLevelFor(Level* targetLevel, const std::string& title) {
     }
 	A.stop();
 	level->setUpdateLights(true);
+	if (level->getChunkSource() != NULL)
+		level->getChunkSource()->queueLightUpdatesForLoadedChunks();
 
 	// All chunks have been loaded from the region file. Release the in-memory
 	// file cache that was populated by ExternalFileLevelStorage::load() on the
@@ -678,8 +660,34 @@ void Minecraft::updateUwpFixedStep()
 	timer.a = 0.0f;
 	tick(0, 0);
 
+	if (level != NULL && player != NULL && !isGeneratingLevel)
+	{
+		const int playerChunkX = Mth::floor(player->x / CHUNK_WIDTH);
+		const int playerChunkZ = Mth::floor(player->z / CHUNK_WIDTH);
+		const bool refreshPriority =
+			!_lightPriorityChunkValid ||
+			playerChunkX != _lightPriorityChunkX ||
+			playerChunkZ != _lightPriorityChunkZ;
+
+		// Keep only lighting work for the player's current 3x3 chunk area.
+		// Rebuild that area when crossing a chunk boundary so newly reached
+		// chunks are repaired immediately and distant backlog is discarded.
+		level->prioritizeLightUpdatesAround(
+			playerChunkX, playerChunkZ, refreshPriority);
+
+		_lightPriorityChunkX = playerChunkX;
+		_lightPriorityChunkZ = playerChunkZ;
+		_lightPriorityChunkValid = true;
+	}
+
 	if (level != NULL && !isGeneratingLevel)
-		level->updateLights();
+	{
+		// Keep lighting responsive without allowing a newly loaded 3x3 region
+		// to block the UWP composition/UI thread for a long frame.  The queued
+		// work remains in Level and is continued on later fixed steps.
+		const float lightBudgetSeconds = 0.004f;
+		level->updateLights(500, lightBudgetSeconds);
+	}
 	if (gameMode != NULL)
 		gameMode->render(0.0f);
 	if (soundEngine != NULL)
@@ -722,7 +730,22 @@ bool Minecraft::attachUwpWorld(Level* world, LocalPlayer* localPlayer)
 	level = world;
 	player = localPlayer;
 	cameraTargetPlayer = localPlayer;
+	_lightPriorityChunkValid = false;
 	level->raknetInstance = raknetInstance;
+
+	// Warm up the initial player area before the first world frame is shown.
+	// Cliff interiors depend on horizontal sky-light propagation, so the
+	// terrain can be visible before its lighting queue has finished.  Loading
+	// only this 5x5 area keeps the one-time cost bounded; runtime movement
+	// continues to use the lighter 3x3 priority policy below.
+	const int initialChunkX = Mth::floor(player->x / CHUNK_WIDTH);
+	const int initialChunkZ = Mth::floor(player->z / CHUNK_WIDTH);
+	for (int dx = -2; dx <= 2; ++dx)
+		for (int dz = -2; dz <= 2; ++dz)
+			level->getChunk(initialChunkX + dx, initialChunkZ + dz);
+	level->warmupLightUpdatesAround(initialChunkX, initialChunkZ, 2);
+	while (level->updateLights())
+		;
 
 	_uwpSavedTouchscreen = options.useTouchScreen;
 	_uwpTouchscreenSaved = true;
@@ -760,7 +783,6 @@ bool Minecraft::attachUwpWorld(Level* world, LocalPlayer* localPlayer)
 	_running = true;
 	timer.skipTime();
 	_uwpBorrowedWorld = true;
-	MCPE_EXIT_TRACE("Minecraft attached UWP world for original tick");
 	return true;
 #else
 	(void)world;
@@ -797,6 +819,7 @@ void Minecraft::detachUwpWorld()
 	level = NULL;
 	player = NULL;
 	cameraTargetPlayer = NULL;
+	_lightPriorityChunkValid = false;
 	_running = false;
 	isGeneratingLevel = false;
 	_hasSignaledGeneratingLevelFinished = true;
@@ -808,7 +831,6 @@ void Minecraft::detachUwpWorld()
 		_uwpTouchscreenSaved = false;
 	}
 	_uwpBorrowedWorld = false;
-	MCPE_EXIT_TRACE("Minecraft detached UWP world from original tick");
 #endif
 }
 
@@ -1501,7 +1523,6 @@ void Minecraft::init()
 	#if defined(MCPE_UWP_CLIENT_LIFECYCLE_ONLY) && !defined(MCPE_UWP_ORIGINAL_CLIENT_LOOP)
 	return;
 	#else
-	MCPE_EXIT_TRACE("Minecraft::init begin");
 	options.minecraft = this;
 	const bool isMobileDevice = platform()->isMobileDevice();
 	_supportsNonTouchscreen = !platform()->supportsTouchscreen();
@@ -1516,58 +1537,44 @@ void Minecraft::init()
 		defaultProfile = Options::DefaultProfile::Mobile;
 #endif
 	options.initDefaultValues(defaultProfile);
-	MCPE_EXIT_TRACE("Minecraft::init after options");
 #if defined(MCPE_UWP_ORIGINAL_CLIENT_LOOP) && !defined(STANDALONE_SERVER)
 	// The normal desktop constructor creates this before Options has defaults.
 	// UWP keeps construction side-effect-free until the controlled init entry,
 	// then creates the original no-op SoundSystem after defaults are ready.
 	soundEngine = new SoundEngine(20.0f);
 	soundEngine->init(this, &options);
-	MCPE_EXIT_TRACE("Minecraft::init after UWP SoundEngine");
 #endif
 #ifndef STANDALONE_SERVER
 	checkGlError("Init enter");
-	MCPE_EXIT_TRACE("Minecraft::init before Textures");
 
 	LOGI("IS TOUCHSCREEN? %d\n", options.useTouchScreen);
 
 	textures = new Textures(&options, platform());
-	MCPE_EXIT_TRACE("Minecraft::init after Textures constructor");
 	// These are Java Beta's climate lookup tables, not render textures.  Keep
 	// a CPU-side copy so chunk tinting works on every graphics backend.
 	TextureId grassColorId = textures->loadTexture("misc/grasscolor.png");
-	MCPE_EXIT_TRACE("Minecraft::init after grass color");
 	const TextureData* grassColor = textures->getTemporaryTextureData(grassColorId);
 	if (grassColor) GrassColor::init(grassColor->data, grassColor->w, grassColor->h);
 	TextureId foliageColorId = textures->loadTexture("misc/foliagecolor.png");
-	MCPE_EXIT_TRACE("Minecraft::init after foliage color");
 	const TextureData* foliageColor = textures->getTemporaryTextureData(foliageColorId);
 	if (foliageColor) FoliageColor::init(foliageColor->data, foliageColor->w, foliageColor->h);
 	textures->addDynamicTexture(new WaterTexture());
 	textures->addDynamicTexture(new WaterSideTexture());
 	gui.texturesLoaded(textures);
-	MCPE_EXIT_TRACE("Minecraft::init after gui textures");
 
 	levelRenderer = new LevelRenderer(this);
-	MCPE_EXIT_TRACE("Minecraft::init after LevelRenderer");
 	gameRenderer = new GameRenderer(this);
-	MCPE_EXIT_TRACE("Minecraft::init after GameRenderer");
 	particleEngine = new ParticleEngine(level, textures);
-	MCPE_EXIT_TRACE("Minecraft::init after ParticleEngine");
 
 	// Platform specific initialization here
 	font = new Font(&options, "font/default8.png", textures);
-	MCPE_EXIT_TRACE("Minecraft::init after Font");
 
 	_perfRenderer = new PerfRenderer(this, font);
-	MCPE_EXIT_TRACE("Minecraft::init after PerfRenderer");
 
 	checkGlError("Init complete");
-	MCPE_EXIT_TRACE("Minecraft::init after graphics objects");
 #endif
 
-	user = new User("TestUser", "");
-	MCPE_EXIT_TRACE("Minecraft::init after User");
+	user = new User("", "");
 	setIsCreativeMode(false); // false means it's Survival Mode
 
 #ifdef ANDROID
@@ -1591,7 +1598,6 @@ void Minecraft::init()
 	// installations keep their current setup and never see the welcome page.
 	const bool firstRun = !options.hasSavedOptions();
 	reloadOptions();
-	MCPE_EXIT_TRACE("Minecraft::init after reloadOptions");
 	if (firstRun && !isMobileDevice) {
 		setScreen(new WelcomeScreen());
 	}

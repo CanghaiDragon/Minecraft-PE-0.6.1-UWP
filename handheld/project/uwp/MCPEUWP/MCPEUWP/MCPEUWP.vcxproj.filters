@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="Arm32StartupTestPage.xaml.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <Filter Include="Common">
       <UniqueIdentifier>6f525695-fb15-47cc-9872-e51256c600b3</UniqueIdentifier>
     </Filter>
@@ -585,7 +582,6 @@
     <ClCompile Include="..\..\..\..\src\platform\uwp\UwpCoreSession.cpp" />
     <ClCompile Include="..\..\..\..\src\platform\uwp\UwpGameLoop.cpp" />
     <ClCompile Include="..\..\..\..\src\platform\CThread.cpp" />
-    <ClCompile Include="..\..\..\..\src\platform\uwp\UwpLevelDatSmoke.cpp" />
     <ClCompile Include="..\..\..\..\src\platform\uwp\UwpOriginalClientHost.cpp" />
     <ClCompile Include="..\..\..\..\src\platform\uwp\UwpOriginalClientBridge.cpp" />
     <ClCompile Include="..\..\..\..\src\platform\uwp\UwpStoragePaths.cpp" />
@@ -2071,7 +2067,6 @@
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpAngleContext.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpCoreSession.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpGameLoop.h" />
-    <ClInclude Include="..\..\..\..\src\platform\uwp\UwpLevelDatSmoke.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpOriginalClientHost.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpOriginalClientBridge.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpStoragePaths.h" />
@@ -2167,7 +2162,6 @@
     <Page Include="WorldImportPage.xaml" />
     <Page Include="WorldEditShellPage.xaml" />
     <Page Include="WorldTileIconPage.xaml" />
-    <Page Include="Arm32StartupTestPage.xaml" />
   </ItemGroup>
   <ItemGroup>
     <None Include="MCPEUWP_TemporaryKey.pfx" />

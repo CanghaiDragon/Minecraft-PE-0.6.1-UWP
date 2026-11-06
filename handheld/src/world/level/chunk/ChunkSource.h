@@ -34,6 +34,13 @@ public:
 
     virtual bool shouldSave() = 0;
 	virtual void saveAll(bool onlyUnsaved) {}
+	// Requeue lighting after a cache preload.  Sources that do not own a
+	// resident cache can keep the default no-op implementation.
+	virtual void queueLightUpdatesForLoadedChunks() {}
+	// Requeue only the resident chunks around the active player area.
+	virtual void queueLightUpdatesAround(int chunkX, int chunkZ) {}
+	// Requeue a larger resident area during one-time world warmup.
+	virtual void queueLightUpdatesAround(int chunkX, int chunkZ, int radius) {}
 
 	virtual Biome::MobList getMobsAt(const MobCategory& mobCategory, int x, int y, int z) = 0;
 

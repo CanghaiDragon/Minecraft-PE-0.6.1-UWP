@@ -1,5 +1,4 @@
 #include "Tesselator.h"
-#include "../../platform/ExitTrace.h"
 #include <cstdio>
 #include <cstring>
 #include <algorithm>
@@ -91,11 +90,9 @@ void Tesselator::init()
 #else
 	const int useVbo = 0;
 #endif
-	MCPE_EXIT_TRACE("Tesselator::init begin USE_VBO=%d", useVbo);
 #ifdef USE_VBO
 	glGenBuffers2(vboCounts, vboIds);
 #endif
-	MCPE_EXIT_TRACE("Tesselator::init complete");
 #endif
 }
 

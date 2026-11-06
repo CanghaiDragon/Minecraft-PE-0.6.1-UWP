@@ -125,6 +125,12 @@ bool UwpOriginalClientHost::showLegacyWorldFormatError()
 		UwpOriginalClientShowLegacyWorldFormatError(m_client);
 }
 
+bool UwpOriginalClientHost::showLaunchWorldError(const std::string& details)
+{
+	return m_clientInitialized && m_client != nullptr &&
+		UwpOriginalClientShowLaunchWorldError(m_client, details);
+}
+
 bool UwpOriginalClientHost::showProgressScreen()
 {
 	return m_clientInitialized && m_client != nullptr &&

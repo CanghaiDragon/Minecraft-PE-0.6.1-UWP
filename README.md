@@ -2,11 +2,23 @@
 
 <div align="center"><a href="README_zh-CN.md">简体中文</a></div>
 
-# THIS README IS JUST A COPY OF ANOTHER REPOSITORY AT THE MOMENT. IT IS NOT FINISHED YET.
+This project is a Windows-focused continuation of the leaked Minecraft Pocket Edition 0.6.1 source code. It modernizes and maintains the game on Windows Universal Platform (UWP), while adding input, rendering, world-generation and user-interface improvements. This project targets Windows 10 and Windows 11 devices using UWP, including desktop PCs, tablets and Windows 10 Mobile devices.
 
-This project is a Windows-focused continuation of the leaked Minecraft Pocket Edition 0.6.1 source code. It modernizes and maintains the game for Windows x86, x64 and ARM64, while adding input, rendering, world-generation and user-interface improvements.
+If you are interested in the win32 build, please visit [Minecraft PE 0.6.1 Windows Universal](https://github.com/CanghaiDragon/Minecraft-PE-0.6.1-Windows-Universal).
 
 This project is intended for educational and preservation purposes only. Feel free to fork this project, but **DO NOT** use it for commercial purposes.
+
+---
+
+<h2 align="center">Gallery</h2>
+
+![Gallery1](docs/gallery1.png)
+
+![Gallery2](docs/gallery2.png)
+
+![Gallery3](docs/gallery3.png)
+
+![Gallery4](docs/gallery4.png)
 
 ---
 
@@ -14,28 +26,32 @@ This project is intended for educational and preservation purposes only. Feel fr
 
 <div align="center">
 
-| Target        | Status                                     | Build system  |
-| ------------- | ------------------------------------------ | ------------- |
-| Windows x86   | Supported                                  | Visual Studio |
-| Windows x64   | Supported                                  | Visual Studio |
-| Windows ARM64 | Supported                                  | Visual Studio |
-| Windows ARM32 | Experimental; runs on selected WOA devices | Visual Studio |
+| Target        | Status                                               | Build system  |
+| ------------- | ---------------------------------------------------- | ------------- |
+| Windows x86   | Supported                                            | Visual Studio |
+| Windows x64   | Supported                                            | Visual Studio |
+| Windows ARM64 | Supported                                            | Visual Studio |
+| Windows ARM32 | Selected WOA and Mobile systems tested and supported | Visual Studio |
 
 </div>
 
-The project is primarily developed and tested on Windows. Other platforms from the upstream projects are not official targets of this repository.
+This project focuses on UWP. Other platforms (Android, iOS) are not intended targets.
 
 ---
 
 <h2 align="center">Upstream projects and references</h2>
 
-In March 2026, the source code of Minecraft Pocket Edition v0.6.1 was leaked on the Internet. You can find it at [Minecraft PE Source Code](https://archive.org/details/Minecraftpesorucecode). This is the reason why several revisions of MCPE0.6.1 appears on github and other sites. This project is also a revision of the origin code. All the revisions **DO NOT** have direct authorization from Mojang.
+This UWP project was transplanted from my win32 version [Minecraft-PE-0.6.1-Windows-Universal](https://github.com/CanghaiDragon/Minecraft-PE-0.6.1-Windows-Universal). The main features are the same. Below I will mention a few unique features of this UWP version.
+
+In March 2026, the source code of Minecraft Pocket Edition v0.6.1 was leaked on the Internet. You can find it at [Minecraft PE Source Code](https://archive.org/details/Minecraftpesorucecode). This is the reason why several revisions of MCPE0.6.1 appear on GitHub and other sites. This project is also a revision of the original source code. None of the revisions **is** directly authorized by Mojang.
 
 This project originated from [programmer1o1/MinecraftPE-v0.6.1](https://github.com/programmer1o1/MinecraftPE-v0.6.1), referred to below as **Project B**. Project B provides the main modernized source base and multi-platform porting work.
 
 Some Java Beta visual ideas and related implementation details were studied from [minecraft-pe-0.6.1-on-all](https://github.com/Minecraft-PE-0-6-1/minecraft-pe-0.6.1-on-all), referred to below as **Project A**.
 
 The Sky world and several visual behaviors were implemented with reference to Minecraft Java Edition Beta 1.7.3 source code using Mod Coder Pack 4.3: [mcp43](https://www.mediafire.com/file/03d94f13c9ulj5a/mcp43.zip). These references do not imply official affiliation or authorization by Mojang.
+
+A few images come from [Minecraft Wiki](https://minecraft.wiki/). Appx resources come from the official [Windows Phone 8.1 version of Minecraft PE](https://microsoft.com/p/-/9wzdncrdzsbb).
 
 The main work of this project is assisted with the help of Codex.
 
@@ -46,18 +62,18 @@ The main work of this project is assisted with the help of Codex.
 ### Original MCPE features
 
 - Old finite-world generation
-- Mobs, lighting, sky rendering and the Nether Reactor
+- Mobs, lighting, sky rendering and the Nether Reactor Tower
 - Touchscreen controls
 
 ![Nether Reactor](docs/nether_reactor.png)
 
 <div align="center">The terminated Nether Reactor Towel</div>
 
-### New gaming features
+### Additional gaming features
 
-The features below can be experienced after opening the corresponding settings in "Options", "Additional". If you wish to have an experience close to original MCPE0.6.1, you can remain those settings off.
+The additional features below can be experienced after opening the corresponding settings in Options → Additional. If you wish to have an experience close to the original MCPE 0.6.1, you can leave those settings off.
 
-- More world type (Infinite and Sky)
+- Additional world type (Infinite and Sky)
 
 - Java Edition Beta visual effects
 
@@ -67,19 +83,27 @@ The features below can be experienced after opening the corresponding settings i
 
 - F3 Debug Screen
 
+- Java Edition style UI
+
 ![loading-ag-568](docs/pe_inf.png)
 
 ![loading-ag-569](docs/beta_inf.png)
 
-<div align="center">Difference view of original PE visual and Java Beta visual</div>
+<div align="center">Comparison of original PE visual and Java Beta visual</div>
+
+![Original ui](docs/pe_main.png)
+
+![Java UI](docs/Java_main.png)
+
+<div align="center">Comparison of original UI and Java Edition style UI</div>
 
 ![Touch sneak](docs/sneak.png)
 
 <div align="center">Ability to sneak under touch input</div>
 
-![Skin settings](docs/skin.png)
+![Skin settings](docs/gallery2.png)
 
-<div align="center">Optimized skin</div>
+<div align="center">Skin customization</div>
 
 ![F3 debug screen](docs/F3.png)
 
@@ -89,24 +113,12 @@ The features below can be experienced after opening the corresponding settings i
 
 ### Improvements
 
-- Keyboard and mouse controls
-- Windows x86, x64 and ARM64 builds
+- Keyboard and mouse controls, with various improvements
 - Selectable touch or keyboard/mouse input mode
-- Mouse capture and crosshair-centered mouse look
-- Improved block breaking and placement behavior
-- Screen button hover feedback
-- Java Edition style button on keyboard mode
 - Creative-mode running
-- F1: hide or show the HUD
-- F5: switch between first-person and third-person view
-- Q: drop item
+- Multiple key mapping options
 - Render distance and smooth-lighting options
-
-![Touch main screen](docs/touch_main.png)
-
-![Keyboard and mouse main screen](docs/keyboard_main.png)
-
-<div align="center">Different main page under different input mode</div>
+- Fullscreen support
 
 ![Touch gameplay](docs/touch_game.png)
 
@@ -116,34 +128,35 @@ The features below can be experienced after opening the corresponding settings i
 
 ### Interface and customization
 
-- Welcome screen for choosing input mode and GUI scale
+- Welcome screen for choosing input mode, performance setting and GUI scale
 - Adjustable GUI and D-pad sizes
+- Adaptive layouts for various screen resolutions, from Windows Phone screen to Desktop window.
 
 ---
 
 <h2 align="center">World types</h2>
 
-**IMPORTANT**: Infinite and Sky world have a level saving format different from both the original MCPE 0.6.1 and later MCPE infinite versions like 0.9. Therefore, these two types of world **CANNOT** be converted and opened in any versions of original MCPE at the moment. Future plans include Infinite/Sky world conversion tools for later MCPE versions.
+**IMPORTANT**: Infinite and Sky world have a level saving format different from both the original MCPE 0.6.1 and later MCPE infinite versions like 0.9. Therefore, these two types of world **CANNOT** be converted and opened in any versions of original MCPE at the moment. Future plans include Infinite/Sky world conversion tools for later MCPE versions. Meanwhile, classic finite worlds retain the original MCPE 0.6.1 save format. saves from 0.1-0.8 original PE are supported.
 
 ### Old (finite) world
 
-The origin world type that uses the same generator with origin MCPE0.6.1. Players can play in a world with a boundary of 256×256, and the outer space is filled with invisible bedrock. Note that due to the random number variation, the spawn point in creative mode and survival mode is different in origion MCPE0.6.1. This project inherit this feature.
+The original world type uses the same generator as the original MCPE 0.6.1. Players can play in a world with a boundary of 256×256, and the outer space is filled with invisible bedrock. Note that due to random-number variation, the spawn point in Creative mode and Survival mode is different in the original MCPE 0.6.1. This project inherits this feature.
 
 ### Infinite world
 
-Infinite worlds use multi-region chunk storage and support exploration beyond the original 256×256 world boundary. The generator is adapted from the finite generator, which means you can find the exact same terrain of finite world in coordinate within finite world boundary in the same seed. The feature of different spawn point in survival/creative mode is also inherited.
+Infinite worlds use multi-region chunk storage and support exploration beyond the original 256×256 world boundary. The generator is adapted from the finite generator, which means you can find the exact same terrain as the finite world at coordinates within the finite-world boundary when using the same seed. The feature of different spawn points in Survival and Creative modes is also inherited.
 
 ### Sky world
 
-Sky world is a floating-island world type based on the unused Sky dimension logic in Java Edition Beta 1.6 - 1.8. It uses a fixed Sky biome and separate terrain generation rules. Clouds are below the floating island. The sky color is light pruple (only when opening Java Beta Visual). Several changes have been made to ensure the playability in survival mode:
+Sky world is a floating-island world type based on the unused Sky dimension logic in Java Edition Beta 1.6 - 1.8. It uses a fixed Sky biome and separate terrain generation rules. Clouds are below the floating island. The sky color is light purple (only when Java Beta Visual is enabled). Several changes have been made to ensure playability in Survival mode:
 
-- 4 types of animals can all spawn instead of only chicken. Chicken still has a larger spawning rate comparing to other three types of animal.
+- 4 types of animals can all spawn instead of only chickens. Chickens still have a higher spawn rate than the other three types of animals.
 
-- Day-night circle is kept in survival mode.
+- Day-night cycle is kept in survival mode.
 
-- The lowest block of floating island is around Y = 18, so in Java Edition diamond cannot spawn in Sky. In here, ores now generate in height range that blocks generate, so diamond can be found.
+- The lowest block of the floating island is around Y = 18, so in Java Edition, diamonds cannot spawn in Sky. Here, ores generate in the height range where blocks generate, so diamonds can be found.
 
-- To balance the difficulty, mob only spawns when light is low enough and there is at least one block above in Y axis, which means mobs do not spawn at night in open area.
+- To balance the difficulty, mobs only spawn when the light level is low enough and there is at least one block above along the Y axis, which means mobs do not spawn at night in open areas.
   
   
 
@@ -155,59 +168,55 @@ Sky world is a floating-island world type based on the unused Sky dimension logi
 
 ---
 
-<h2 align="center">Improvements and bug fixes</h2>
+<h2 align="center">UWP related features</h2>
 
-### Fixes inherited from Project B
+To adapt UWP app style, several functions with native XAML interfaces are added, including optimized skins, saves editing, importing and exporting, and key mapping. Players can import and export their worlds within the game, without visiting UWP data folder.
 
-- Fixed infinite-world coordinate and spawn handling inherited from the original finite-world assumptions.
-- Added multi-region storage for infinite worlds.
-- Fixed missing chunk-boundary faces after neighboring chunks are loaded.
+Dynamic Live Tiles and adaptation to UWP navigation bar are also added.
 
-### Project specific fixes
 
-* Fixed the issue of no sound.
-* Transform Graphic API from PowerVR OpenGL ES emulation to Native WGL-based desktop OpenGL rendering.
-* Original input textbox, bringing back the function of input world name, seed and player name
-* Fixed player cannot eat food in keyboard mode.
-* Fixed crashes when loading existing Infinite worlds with Java Beta visuals enabled.
-* Fixed random snow and tree features being lost after saving and reloading worlds.
-* Fixed mob and spawning issues encountered in infinite and Sky worlds.
-* Fixed spawn-position issues in Sky worlds to avoid spawn on void and tiny islands.
-* Improved keyboard/mouse interaction and block targeting.
-* Added F1/F5 shortcuts and F3 debugging support.
-* Corrected the sun's movement direction to match the F3 compass and Java Beta behavior.
-* Added biome-dependent grass and oak/birch leaf colors for Java Beta visuals.
-* Fixed Nether Reactor may crash the game when running.
-* Fixed Nether Reactor lead to no response in Infinite and Sky world.
+
+---
+
+<h2 align="center">Core technical implementation</h2>
+
+- Ported the game to Windows Universal Platform with native UWP application lifecycle and XAML integration.
+- Added x86, x64, ARM32 and ARM64 build configurations.
+- Reworked the rendering backend for platform-specific OpenGL and ANGLE paths.
+- Added keyboard, mouse and touchscreen input abstraction.
+- Added multi-region storage and new Infinite/Sky world-generation systems.
+- Reworked chunk loading, chunk-boundary rendering and lighting updates for extended worlds.
+- Preserved the original finite-world format and its interoperability with original PE multiplayer.
+- Added architecture-specific packaging and runtime dependency handling.
 
 ---
 
 <h2 align="center">Building</h2>
 
-Open the corresponding Visual Studio solution:
+This repository is built as a UWP application. Open the UWP solution below; the separate Win32, x64 and ARM solutions are the legacy win32 build, and are not the entry points for this repository’s UWP build.
 
-| Target        | Solution                                       |
-| ------------- | ---------------------------------------------- |
-| Windows x86   | `handheld/project/x86/MinecraftWin32.sln`      |
-| Windows x64   | `handheld/project/x64/MinecraftWin64.sln`      |
-| Windows ARM64 | `handheld/project/arm64/MinecraftWinARM64.sln` |
-| Windows ARM32 | `handheld/project/arm/MinecraftWinARM.sln`     |
+`handheld/project/uwp/MCPEUWP.sln`
 
-Select the desired architecture and configuration in Visual Studio. Release builds are recommended for normal performance testing. Debug builds are intended for debugging and may run substantially slower.
+The solution contains one UWP project named `MCPEUWP`. Select `Debug` or `Release`, together with one of the following solution platforms:
 
-The required native libraries and runtime files are available in the project’s platform-specific library and game directories. The exact dependency layout is kept with the Visual Studio projects. After compiling the game, you need to copy `MCPE0.6.1Universal\handheld\data` and 4 dependencies in different architecture folders inside `MCPE0.6.1Universal\handheld\lib\bin` to run the game.
+| Solution platform | Target architecture | Project platform |
+| ----------------- | ------------------- | ---------------- |
+| x86               | Windows x86         | Win32            |
+| x64               | Windows x64         | x64              |
+| ARM               | Windows ARM32       | ARM              |
+| ARM64             | Windows ARM64       | ARM64            |
 
-Currently, the ARM32 build is able to launch and run on my Windows on ARM device. As WOA do not support VBO for WGL on ARM32, the ARM32 game can only render with OpenGL 1.1, and even with the lowest graphics settings, it only achieves around 10 FPS. Due to these severe performance and rendering issues, ARM32 binaries will not be included in GitHub Releases for now, although the source code and build configuration will remain available.
+The current project uses the Visual Studio v143 toolset and Windows SDK `10.0.19041.0`. The project also references the Windows Mobile Extension SDK `10.0.19041.0`, which is required for the Windows 10 Mobile target. Release builds are recommended for normal performance testing. Debug builds are intended for debugging and may run substantially slower.
 
-I do not own a Windows RT device, so compatibility with devices such as the Surface RT remains untested. If you own a jailbroken Windows RT device and are interested in testing this project, you are welcome to compile the ARM32 version and report any compatibility issues, performance results or rendering errors through GitHub Issues.
+The ANGLE headers, import libraries and runtime DLLs required by the ARM32 and ARM64 configurations are bundled under `third_party/angle_arm32` and `third_party/angle_arm64`. Other native libraries are kept under `handheld/lib`. Game data is included from `handheld/data` by the UWP project; it does not need to be copied from the separate Universal repository.
 
-A Direct3D 9 rendering backend may be considered in the future, but further ARM32 development is not currently a priority.
+After building or packaging, the generated artifacts are placed under `AppPackages`. For sideloading, run the generated `Add-AppDevPackage.ps1` from the test-package directory and keep its architecture-specific `Dependencies` directory together with the package. The optional `Release-ANGLE-Test|ARM` configuration is only for ARM32 ANGLE diagnostics and is not required for normal builds.
 
 ---
 
 <h2 align="center">Keyboard Controls</h2>
 
-<div align="center">
+Below are the default keyboard controls for keyboard input. They can be revised in game using Options → Controls → Key Mapping.
 
 | Key / Action | Function                    |
 | ------------ | --------------------------- |
@@ -228,26 +237,27 @@ A Direct3D 9 rendering backend may be considered in the future, but further ARM3
 | F5           | Toggle third-person view    |
 | Escape       | Pause / back                |
 
-</div>
-
 ---
 
 <h2 align="center">Known limitations</h2>
 
-- Vibrate on Destroy is not implemented on Windows.
-- Skin changes may require restarting the game.
-- ARM32 remains experimental and have performance and rendering compatibility issues.
-- Some options and resource paths are specific to the Windows Universal port.
+- Block-destruction vibration is currently not working on the tested Lumia 640.
+- Multiplayer for Infinite and Sky worlds is not currently supported.
+- Lighting issues may occur under cliffs and can be solved when player moves closer.
 
 ---
 
 <h2 align="center">Future plans</h2>
 
-- UWP support
 - Chinese localization
-- Further improvements to incremental chunk saving and unloading
+
+- Better chunk rendering mechanism
+
 - Infinite/Sky world conversion tools for later MCPE versions
-- Possible D3D9 rendering backend migration for ARM32; this is not a current priority
+
+- Possible achievement system
+
+- Multiplayer for Infinite/Sky world
 
 ---
 

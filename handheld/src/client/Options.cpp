@@ -63,6 +63,7 @@ void Options::initDefaultValues(DefaultProfile profile) {
 	username = "Steve";
 	serverVisible = false;
 	dynamicTileMode = DYNAMIC_TILE_OFF;
+	fullscreen = false;
 
 	resetKeyMappings();
 
@@ -230,6 +231,7 @@ const Options::Option
 	Options::Option::GUI_SCALE			 (11, "options.guiScale",	false, false),
 	Options::Option::THIRD_PERSON		 (12, "options.thirdperson",	false, false),
     Options::Option::HIDE_GUI			 (13, "options.hidegui",     false, true),
+	Options::Option::FULLSCREEN			 (31, "options.fullscreen", false, true),
 	Options::Option::SERVER_VISIBLE		 (14, "options.servervisible", false, true),
 	Options::Option::LEFT_HANDED		 (15, "options.lefthanded", false, true),
 	Options::Option::USE_TOUCHSCREEN	 (16, "options.usetouchscreen", false, true),
@@ -449,6 +451,9 @@ void Options::update()
 		if (key == OptionStrings::Graphics_BetaVisuals) {
 			readBool(value, betaVisuals);
 		}
+		if (key == OptionStrings::Graphics_Fullscreen) {
+			readBool(value, fullscreen);
+		}
 		if (key == OptionStrings::Extra_InfiniteWorlds) {
 			readBool(value, infiniteWorlds);
 		}
@@ -634,6 +639,7 @@ void Options::save()
 	addOptionToSaveOutput(stringVec, OptionStrings::Graphics_GuiScale, guiScale);
 	addOptionToSaveOutput(stringVec, OptionStrings::Graphics_FOV, fieldOfView);
 	addOptionToSaveOutput(stringVec, OptionStrings::Graphics_BetaVisuals, betaVisuals);
+	addOptionToSaveOutput(stringVec, OptionStrings::Graphics_Fullscreen, fullscreen);
 // 
 // 	static const Option MUSIC;
 // 	static const Option SOUND;

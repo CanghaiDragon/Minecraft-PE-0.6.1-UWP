@@ -250,6 +250,9 @@ private:
 	bool _uwpBorrowedWorld;
 	bool _uwpSavedTouchscreen;
 	bool _uwpTouchscreenSaved;
+	bool _lightPriorityChunkValid;
+	int _lightPriorityChunkX;
+	int _lightPriorityChunkZ;
 	//int _respawnPlayerTicks;
 	Player* _pendingRemovePlayer; // @attn @todo @fix: remove this shait and fix the respawn behaviour
 

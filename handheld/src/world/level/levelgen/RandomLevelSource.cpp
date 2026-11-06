@@ -37,8 +37,6 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
 
 	buffer = new float[MAX_BUFFER_SIZE];
 
-	Random randomCopy = random;
-	printf("random.get : %d\n", randomCopy.nextInt());
 }
 
 RandomLevelSource::~RandomLevelSource() {

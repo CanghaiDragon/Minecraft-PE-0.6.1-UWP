@@ -264,6 +264,104 @@ namespace
 	private:
 		Button* backButton;
 	};
+
+	class UwpLaunchWorldErrorScreen final : public Screen
+	{
+		typedef Screen super;
+
+	public:
+		explicit UwpLaunchWorldErrorScreen(const std::string& details)
+			: backButton(nullptr), details(details)
+		{
+		}
+
+		~UwpLaunchWorldErrorScreen() override
+		{
+			delete backButton;
+		}
+
+		void init() override
+		{
+			// Match the selected native UI presentation.  PE uses the touch
+			// button artwork, while Java UI uses the regular desktop button.
+			if (minecraft->options.javaUi)
+				backButton = new Button(1, "Back");
+			else
+				backButton = new Touch::TButton(1, "Back");
+
+			backButton->width = 128;
+			backButton->height = 24;
+			buttons.push_back(backButton);
+			tabButtons.push_back(backButton);
+		}
+
+		void setupPositions() override
+		{
+			if (backButton == nullptr)
+				return;
+			backButton->x = (width - backButton->width) / 2;
+			backButton->y = height / 2 + 42;
+		}
+
+		void render(int xm, int ym, float a) override
+		{
+			renderDirtBackground(0);
+			drawCenteredString(font, "Unable to open world",
+				width / 2, height / 2 - 54, 0xffffff);
+
+			const std::string message =
+				"This shortcut could not open the saved world. " +
+				(details.empty()
+					? std::string("The world may have been renamed or deleted.")
+					: details);
+			const int messageWidth = width > 24 ? width - 24 : width;
+			font->drawWordWrap(message, (width - messageWidth) / 2,
+				height / 2 - 30, messageWidth, 0xffffff);
+			super::render(xm, ym, a);
+		}
+
+		void buttonClicked(Button* button) override
+		{
+			if (button == backButton)
+				returnToStartMenu();
+		}
+
+		bool handleBackEvent(bool isDown) override
+		{
+			if (!isDown)
+				returnToStartMenu();
+			return true;
+		}
+
+		bool isInGameScreen() override
+		{
+			return false;
+		}
+
+	protected:
+		void keyPressed(int eventKey) override
+		{
+			if (eventKey == Keyboard::KEY_ESCAPE)
+			{
+				returnToStartMenu();
+				return;
+			}
+			super::keyPressed(eventKey);
+		}
+
+	private:
+		void returnToStartMenu()
+		{
+			Keyboard::reset();
+			if (minecraft->options.javaUi)
+				minecraft->setScreen(new UwpStartMenuScreen());
+			else
+				minecraft->setScreen(new UwpTouchStartMenuScreen());
+		}
+
+		Button* backButton;
+		std::string details;
+	};
 }
 
 namespace
@@ -303,6 +401,7 @@ namespace
 		case UwpOptionId::TouchSneak: return &Options::Option::TOUCH_SNEAK;
 		case UwpOptionId::BetaVisuals: return &Options::Option::BETA_VISUALS;
 		case UwpOptionId::DebugScreen: return &Options::Option::DEBUG_SCREEN;
+		case UwpOptionId::Fullscreen: return &Options::Option::FULLSCREEN;
 		default: return nullptr;
 		}
 	}
@@ -533,6 +632,25 @@ bool UwpOriginalClientShowLegacyWorldFormatError(UwpOriginalClientHandle handle)
 
 	Keyboard::reset();
 	minecraft->setScreen(new UwpLegacyWorldFormatScreen());
+	return minecraft->screen != nullptr;
+}
+
+bool UwpOriginalClientShowLaunchWorldError(
+	UwpOriginalClientHandle handle, const std::string& details)
+{
+	Minecraft* minecraft = UwpOriginalClientGetMinecraft(handle);
+	if (minecraft == nullptr)
+		return false;
+
+	Keyboard::reset();
+	g_pendingMenuAction = UwpOriginalMenuAction::None;
+	g_pendingLevelId.clear();
+	g_pendingLevelName.clear();
+	g_pendingWorldEditId.clear();
+	g_pendingLevelSeed = -1;
+	g_pendingGameType = GameType::Undefined;
+	g_pendingWorldType = WorldType::Old;
+	minecraft->setScreen(new UwpLaunchWorldErrorScreen(details));
 	return minecraft->screen != nullptr;
 }
 

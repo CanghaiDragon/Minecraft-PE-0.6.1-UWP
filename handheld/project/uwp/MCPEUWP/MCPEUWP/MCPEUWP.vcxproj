@@ -9,9 +9,16 @@
     <ApplicationType>Windows Store</ApplicationType>
     <WindowsTargetPlatformVersion Condition=" '$(WindowsTargetPlatformVersion)' == '' ">10.0.19041.0</WindowsTargetPlatformVersion>
     <WindowsTargetPlatformMinVersion>10.0.10240.0</WindowsTargetPlatformMinVersion>
+    <!-- The Windows SDK is installed at D:\WindowsSDK on this machine.  Make
+         its Extension SDK root visible to MSBuild's SDK resolver. -->
+    <SDKExtensionDirectoryRoot Condition="'$(SDKExtensionDirectoryRoot)' == ''">D:\WindowsSDK</SDKExtensionDirectoryRoot>
     <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
     <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- Windows Mobile Extension SDK: exposes Windows.Phone.Devices.Notification. -->
+    <SDKReference Include="WindowsMobile, Version=10.0.19041.0" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|ARM">
@@ -111,15 +118,15 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup>
     <AngleRoot>$(ProjectDir)..\..\..\..\..\third_party\angle_windowsstore</AngleRoot>
-    <!-- ARM64 uses the independently built ANGLE tree.  Keep the legacy
-         ANGLE.WindowsStore tree above unchanged for Win32/x64/ARM. -->
-    <AngleArm64Root>$(ProjectDir)..\..\..\..\..\..\ANGLE_ARM64_UWP</AngleArm64Root>
-    <AngleArm64LibDir>$(AngleArm64Root)\out\arm64-uwp-release</AngleArm64LibDir>
-    <!-- ARM32 Release uses the independently rebuilt ANGLE with FL9_3 support. -->
-    <AngleArm32Root>$(ProjectDir)..\..\..\..\..\..\ANGLE_ARM_UWP\ANGLE_ARM32_WP\winrt\10\src</AngleArm32Root>
-    <AngleArm32IncludeDir>$(ProjectDir)..\..\..\..\..\..\ANGLE_ARM_UWP\ANGLE_ARM32_WP\include</AngleArm32IncludeDir>
-    <AngleArm32DllDir>$(AngleArm32Root)\Release_ARM</AngleArm32DllDir>
-    <AngleArm32LibDir>$(AngleArm32DllDir)\lib</AngleArm32LibDir>
+    <!-- ARM64 uses the bundled ANGLE headers and binaries. -->
+    <AngleArm64Root>$(ProjectDir)..\..\..\..\..\third_party\angle_arm64</AngleArm64Root>
+    <AngleArm64LibDir>$(AngleArm64Root)\lib</AngleArm64LibDir>
+    <AngleArm64DllDir>$(AngleArm64Root)\bin</AngleArm64DllDir>
+    <!-- ARM32 Release uses the bundled rebuilt ANGLE with FL9_3 support. -->
+    <AngleArm32Root>$(ProjectDir)..\..\..\..\..\third_party\angle_arm32</AngleArm32Root>
+    <AngleArm32IncludeDir>$(AngleArm32Root)\include</AngleArm32IncludeDir>
+    <AngleArm32DllDir>$(AngleArm32Root)\bin</AngleArm32DllDir>
+    <AngleArm32LibDir>$(AngleArm32Root)\lib</AngleArm32LibDir>
     <AnglePlatform Condition="'$(Platform)' == 'Win32'">Win32</AnglePlatform>
     <AnglePlatform Condition="'$(Platform)' == 'x64'">x64</AnglePlatform>
     <AnglePlatform Condition="'$(Platform)' == 'ARM'">ARM</AnglePlatform>
@@ -137,19 +144,19 @@
     <ZlibPlatform Condition="'$(Platform)' == 'ARM64'">arm64</ZlibPlatform>
     <ZlibLibDir>$(ZlibRoot)\lib\$(ZlibPlatform)</ZlibLibDir>
     <ZlibBinDir>$(ZlibRoot)\bin\$(ZlibPlatform)</ZlibBinDir>
-    <ZlibLinkName Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' != 'true'">zlib.lib</ZlibLinkName>
+    <ZlibLinkName>zlib.lib</ZlibLinkName>
     <!-- The legacy ARM zlib.lib requests LIBCMT.  All ARM32 UWP builds,
          including non-diagnostic builds, must use the UWP-compatible copy. -->
     <ZlibLibDir Condition="'$(Platform)' == 'ARM'">$(ZlibRoot)\lib\arm-uwp</ZlibLibDir>
     <ZlibBinDir Condition="'$(Platform)' == 'ARM'">$(ZlibRoot)\bin\arm</ZlibBinDir>
-    <ZlibLinkName Condition="'$(Platform)' == 'ARM'">zlib.lib</ZlibLinkName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-ANGLE-Test|ARM'">
     <AngleTestRoot>$(AngleArm32Root)</AngleTestRoot>
-    <AngleTestLibDir>$(AngleTestRoot)\Release_ARM</AngleTestLibDir>
+    <AngleTestLibDir>$(AngleArm32LibDir)</AngleTestLibDir>
+    <AngleTestDllDir>$(AngleArm32DllDir)</AngleTestDllDir>
     <OutDir>$(SolutionDir)Release-ANGLE-Test_ARM\</OutDir>
     <IntDir>$(OutDir)obj\$(ProjectName)\</IntDir>
-    <AppxPackageDir>D:\MCPE_0.6.1\MCPEUWP_Pack\Release-ANGLE-Test_ARM\</AppxPackageDir>
+    <AppxPackageDir>$(SolutionDir)..\..\..\AppPackages\Release-ANGLE-Test_ARM\</AppxPackageDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="(('$(Platform)' == 'x64' Or '$(Platform)' == 'Win32') Or ('$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true')) And '$(Configuration)' != 'Release-ANGLE-Test'">
     <ClCompile>
@@ -224,31 +231,11 @@
     <PackageCertificateThumbprint>454A3461584CC671165F8430913FD684E4324B69</PackageCertificateThumbprint>
     <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
     <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
-    <AppxPackageDir>D:\MCPE_0.6.1\MCPEUWP_Pack\</AppxPackageDir>
+    <AppxPackageDir>$(SolutionDir)..\..\..\AppPackages\</AppxPackageDir>
     <GenerateTestArtifacts>True</GenerateTestArtifacts>
     <AppxBundle>Always</AppxBundle>
-    <AppxBundlePlatforms Condition="'$(Platform)' == 'ARM64'">arm64</AppxBundlePlatforms>
-    <AppxBundlePlatforms Condition="'$(Platform)' != 'ARM64'">arm</AppxBundlePlatforms>
+    <AppxBundlePlatforms>x86|x64|arm|arm64</AppxBundlePlatforms>
     <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Platform)' == 'ARM'">
-    <!-- Full ARM32 startup is the default for this phase.  Override with
-         /p:MCPE_ARM32_STARTUP_DIAGNOSTIC=true to return to the verified
-         standalone startup page without changing source files. -->
-    <MCPE_ARM32_STARTUP_DIAGNOSTIC>false</MCPE_ARM32_STARTUP_DIAGNOSTIC>
-  </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' == 'true'">
-    <ClCompile>
-      <PreprocessorDefinitions>MCPE_ARM32_STARTUP_DIAGNOSTIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <Link>
-      <AdditionalDependencies>WindowsApp.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
-  </ItemDefinitionGroup>
-  <PropertyGroup Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_STARTUP_DIAGNOSTIC)' == 'true'">
-    <!-- Keep the diagnostic target on the ARM UWP/Store libraries.  This is
-         needed when the VS user property sheet supplies an x64 library path. -->
-    <LibraryPath>$(VCToolsInstallDir)lib\ARM\store;$(WindowsSdkDir)Lib\$(WindowsTargetPlatformVersion)\um\ARM;$(WindowsSdkDir)Lib\$(WindowsTargetPlatformVersion)\ucrt\ARM;$(WindowsSDK_LibraryPath_ARM)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <ClCompile>
@@ -363,7 +350,6 @@
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpAngleContext.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpCoreSession.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpGameLoop.h" />
-    <ClInclude Include="..\..\..\..\src\platform\uwp\UwpLevelDatSmoke.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpOriginalClientHost.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpOriginalClientBridge.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpLiveTile.h" />
@@ -386,9 +372,6 @@
     </ClInclude>
     <ClInclude Include="MainPage.xaml.h" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
       <DependentUpon>MainPage.xaml</DependentUpon>
-    </ClInclude>
-    <ClInclude Include="Arm32StartupTestPage.xaml.h">
-      <DependentUpon>Arm32StartupTestPage.xaml</DependentUpon>
     </ClInclude>
     <ClInclude Include="KeyMappingPage.xaml.h" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
       <DependentUpon>KeyMappingPage.xaml</DependentUpon>
@@ -413,9 +396,6 @@
     <Page Include="MainPage.xaml" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
       <SubType>Designer</SubType>
       <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
-    </Page>
-    <Page Include="Arm32StartupTestPage.xaml">
-      <SubType>Designer</SubType>
     </Page>
     <Page Include="KeyMappingPage.xaml" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
       <SubType>Designer</SubType>
@@ -454,25 +434,25 @@
     </Content>
   </ItemGroup>
   <ItemGroup Condition="'$(Configuration)|$(Platform)'=='Release-ANGLE-Test|ARM'">
-    <Content Include="$(AngleTestLibDir)\libEGL.dll">
+    <Content Include="$(AngleTestDllDir)\libEGL.dll">
       <Link>libEGL.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(AngleTestLibDir)\libGLESv2.dll">
+    <Content Include="$(AngleTestDllDir)\libGLESv2.dll">
       <Link>libGLESv2.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   <ItemGroup Condition="'$(Platform)' == 'ARM64'">
-    <Content Include="$(AngleArm64LibDir)\libEGL.dll">
+    <Content Include="$(AngleArm64DllDir)\libEGL.dll">
       <Link>libEGL.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(AngleArm64LibDir)\libGLESv2.dll">
+    <Content Include="$(AngleArm64DllDir)\libGLESv2.dll">
       <Link>libGLESv2.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(AngleArm64LibDir)\d3dcompiler_47.dll">
+    <Content Include="$(AngleArm64DllDir)\d3dcompiler_47.dll">
       <Link>d3dcompiler_47.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -526,9 +506,6 @@
     <ClCompile Include="App.xaml.cpp">
       <DependentUpon>App.xaml</DependentUpon>
     </ClCompile>
-    <ClCompile Include="Arm32StartupTestPage.xaml.cpp">
-      <DependentUpon>Arm32StartupTestPage.xaml</DependentUpon>
-    </ClCompile>
     <ClCompile Include="MainPage.xaml.cpp" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
       <DependentUpon>MainPage.xaml</DependentUpon>
       <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
@@ -573,10 +550,6 @@
     <ClCompile Include="..\..\..\..\src\platform\CThread.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PreprocessorDefinitions>WIN32;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\src\platform\uwp\UwpLevelDatSmoke.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PreprocessorDefinitions>WIN32;STANDALONE_SERVER;NO_NETWORK;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Include="..\..\..\..\src\platform\uwp\UwpOriginalClientHost.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -913,9 +886,6 @@
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Update="App.xaml.cpp">
-      <ExcludedFromBuild>false</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Update="Arm32StartupTestPage.xaml.cpp">
       <ExcludedFromBuild>false</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Update="pch.cpp">

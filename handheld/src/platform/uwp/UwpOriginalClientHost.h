@@ -31,6 +31,7 @@ public:
 	bool showOptions();
 	bool showSelectWorld();
 	bool showLegacyWorldFormatError();
+	bool showLaunchWorldError(const std::string& details);
 	bool showProgressScreen();
 	bool ensureStartMenu();
 	bool wantsToQuit() const;

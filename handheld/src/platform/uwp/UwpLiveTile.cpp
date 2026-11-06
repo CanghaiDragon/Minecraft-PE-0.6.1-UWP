@@ -1,9 +1,13 @@
 #include "pch.h"
 #include "UwpLiveTile.h"
 #include "UwpStoragePaths.h"
+#include "../../world/level/storage/ExternalFileLevelStorage.h"
+#include "../../world/level/storage/LevelData.h"
 
 #include <windows.data.xml.dom.h>
 #include <windows.ui.notifications.h>
+#include <ctime>
+#include <sstream>
 #include <string>
 
 using namespace Platform;
@@ -14,6 +18,102 @@ namespace
 {
 	int g_tileMode = 0;
 	unsigned int g_worldCount = 0;
+	std::wstring g_latestWorldName;
+	std::wstring g_latestWorldTime;
+
+	std::wstring Utf8ToWide(const std::string& value)
+	{
+		if (value.empty())
+			return std::wstring();
+
+		const int required = MultiByteToWideChar(
+			CP_UTF8, MB_ERR_INVALID_CHARS, value.c_str(), -1, nullptr, 0);
+		if (required <= 1)
+			return std::wstring();
+
+		std::wstring result(static_cast<size_t>(required), L'\0');
+		if (MultiByteToWideChar(
+			CP_UTF8, MB_ERR_INVALID_CHARS, value.c_str(), -1,
+			&result[0], required) <= 1)
+			return std::wstring();
+		result.resize(static_cast<size_t>(required - 1));
+		return result;
+	}
+
+	std::wstring EscapeXmlText(const std::wstring& value)
+	{
+		std::wstring escaped;
+		for (const wchar_t character : value)
+		{
+			switch (character)
+			{
+			case L'&': escaped += L"&amp;"; break;
+			case L'<': escaped += L"&lt;"; break;
+			case L'>': escaped += L"&gt;"; break;
+			default: escaped += character; break;
+			}
+		}
+		return escaped;
+	}
+
+	std::wstring FormatLastOpenedTime(long lastPlayed)
+	{
+		if (lastPlayed <= 0)
+			return std::wstring();
+
+		const std::time_t rawTime = static_cast<std::time_t>(lastPlayed);
+		tm localTime = {};
+		if (localtime_s(&localTime, &rawTime) != 0)
+			return std::wstring();
+
+		std::wostringstream formatted;
+		formatted << (localTime.tm_year + 1900) << L'-';
+		if (localTime.tm_mon + 1 < 10)
+			formatted << L'0';
+		formatted << (localTime.tm_mon + 1) << L'-';
+		if (localTime.tm_mday < 10)
+			formatted << L'0';
+		formatted << localTime.tm_mday << L' ';
+		if (localTime.tm_hour < 10)
+			formatted << L'0';
+		formatted << localTime.tm_hour << L':';
+		if (localTime.tm_min < 10)
+			formatted << L'0';
+		formatted << localTime.tm_min;
+		return formatted.str();
+	}
+
+	void RefreshLatestWorld()
+	{
+		g_latestWorldName.clear();
+		g_latestWorldTime.clear();
+
+		const std::string worldsRoot =
+			UwpStoragePaths::localFolderPathUtf8() +
+			"\\games\\com.mojang\\minecraftWorlds";
+		long latestLastPlayed = 0;
+		for (const std::string& folderName :
+			UwpStoragePaths::enumerateWorldFolderNamesBlocking())
+		{
+			LevelData data;
+			const std::string worldPath = worldsRoot + "\\" + folderName;
+			if (!ExternalFileLevelStorage::readLevelData(worldPath, data))
+				continue;
+
+			const long lastPlayed = data.getLastPlayed();
+			if (lastPlayed <= latestLastPlayed)
+				continue;
+
+			const std::wstring worldName = Utf8ToWide(data.getLevelName());
+			const std::wstring worldTime = FormatLastOpenedTime(lastPlayed);
+			if (worldName.empty() || worldTime.empty())
+				continue;
+
+			latestLastPlayed = lastPlayed;
+			g_latestWorldName = worldName;
+			g_latestWorldTime = worldTime;
+		}
+	}
 
 	XmlDocument^ CreateTileXml(
 		const wchar_t* squareImagePath,
@@ -53,11 +153,22 @@ namespace
 
 	XmlDocument^ CreateWorldCountTileXml()
 	{
-		const std::wstring worldCountText = g_worldCount == 0
-			? std::wstring(L"There are no saves yet")
-			: std::wstring(L"Currently there are ") +
+		std::wstring worldCountText;
+		if (g_worldCount == 0)
+			worldCountText = L"There are no saves yet";
+		else if (g_worldCount == 1)
+			worldCountText = L"There is 1 save";
+		else
+			worldCountText = std::wstring(L"Currently there are ") +
 				std::to_wstring(g_worldCount) +
 				L" saves";
+		if (!g_latestWorldName.empty() && !g_latestWorldTime.empty())
+		{
+			worldCountText += L"\nLast opened: ";
+			worldCountText += EscapeXmlText(g_latestWorldName);
+			worldCountText += L"\n";
+			worldCountText += g_latestWorldTime;
+		}
 		std::wstring xmlText =
 			L"<tile><visual version=\"2\">"
 			L"<binding template=\"TileSquare150x150Text04\">"
@@ -65,7 +176,7 @@ namespace
 		xmlText += worldCountText;
 		xmlText +=
 			L"</text></binding>"
-			L"<binding template=\"TileWide310x150Text03\">"
+			L"<binding template=\"TileWide310x150Text04\">"
 			L"<text id=\"1\">";
 		xmlText += worldCountText;
 		xmlText += L"</text></binding></visual></tile>";
@@ -139,6 +250,7 @@ void UwpLiveTileSetMode(int mode)
 {
 	g_tileMode = mode < 0 ? 0 : (mode > 2 ? 2 : mode);
 	g_worldCount = UwpStoragePaths::countValidWorldsBlocking();
+	RefreshLatestWorld();
 	QueueTileNotifications();
 }
 
@@ -150,6 +262,7 @@ void UwpLiveTileSetEnabled(bool enabled)
 void UwpLiveTileWorldsChanged()
 {
 	g_worldCount = UwpStoragePaths::countValidWorldsBlocking();
+	RefreshLatestWorld();
 	QueueTileNotifications();
 }
 
