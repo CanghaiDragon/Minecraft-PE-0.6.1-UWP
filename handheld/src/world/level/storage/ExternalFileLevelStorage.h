@@ -28,7 +28,12 @@ class CompoundTag;
 
 typedef struct UnsavedLevelChunk
 {
-	int				pos;
+	// Infinite worlds are not limited to the finite world's 32x32 cache
+	// coordinate range. The old x + z * CHUNK_CACHE_WIDTH key could collide
+	// for chunks separated by 32 in either axis, causing a dirty chunk to be
+	// treated as already queued and then lose its unsaved flag without being
+	// written.
+	int64_t			pos;
 	RakNet::TimeMS	addedToList;
 	LevelChunk*		chunk;
 } UnsavedLevelChunk;

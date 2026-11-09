@@ -19,6 +19,7 @@
 #include <windows.system.profile.h>
 #include "../../../../src/client/renderer/Textures.h"
 #include "../../../../src/client/renderer/gles.h"
+#include "../../../../src/world/level/Level.h"
 #include "../../../../src/world/level/LevelSettings.h"
 #include <ppltasks.h>
 #include <windows.applicationmodel.core.h>
@@ -1729,6 +1730,27 @@ void MainPage::SyncDesktopFullScreenMode()
 
 void MainPage::OnGameRender(float alpha)
 {
+	// The UWP scheduler advances world simulation at a fixed 20 Hz, while
+	// rendering can run more often.  The original client normally consumes
+	// pending light updates from its per-frame update path; keep that behavior
+	// on UWP by consuming one light batch before each original world render.
+	// This does not change the tick rate or process more than one batch per
+	// frame, but prevents distant newly loaded chunks from waiting only for
+	// fixed simulation ticks to drain the queue.
+	auto consumeOriginalLightUpdates = [this]()
+	{
+		if (!m_originalClientHost.isOriginalWorldTickEnabled())
+			return;
+
+		Minecraft* originalMinecraft = m_originalClientHost.minecraft();
+		if (originalMinecraft == nullptr || originalMinecraft->level == nullptr)
+			return;
+
+		Level* level = originalMinecraft->level;
+		if (level->getLightsToUpdate() > 0)
+			level->updateLights();
+	};
+
 	if (m_originalClientHost.isOriginalClientLoopEnabled() &&
 		!m_core.isActive())
 	{
@@ -1737,6 +1759,7 @@ void MainPage::OnGameRender(float alpha)
 		// UwpCoreSession, so use the original client's Level as the world
 		// presentation signal; otherwise the UWP overlay would keep drawing
 		// its dirt loading background over the already-running guest world.
+		consumeOriginalLightUpdates();
 		m_originalClientHost.render(alpha);
 		// UWP advances simulation at a fixed rate but renders at the display
 		// rate. Consume the relative mouse accumulator after this render so a
@@ -1763,6 +1786,7 @@ void MainPage::OnGameRender(float alpha)
 		// The fixed-step tick and variable-rate frame draw are separate on UWP.
 		// Route every presented frame through the original Minecraft ->
 		// GameRenderer -> LevelRenderer chain, without advancing simulation here.
+		consumeOriginalLightUpdates();
 		m_originalClientHost.render(alpha);
 		Mouse::reset2();
 		// Do not submit the UWP terrain pass on top of the original frame;

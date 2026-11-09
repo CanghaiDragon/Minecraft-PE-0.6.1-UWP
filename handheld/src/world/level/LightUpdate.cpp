@@ -73,7 +73,6 @@ void LightUpdate::update(Level* level)
         return;
     }
 
-
     int lastxc = 0;
     int lastzc = 0;
     bool hasLast = false;

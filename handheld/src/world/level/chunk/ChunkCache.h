@@ -11,7 +11,6 @@
 #include "../tile/entity/TileEntity.h"
 #include "../../../platform/log.h"
 #include <unordered_map>
-#include <unordered_set>
 #include <cstdint>
 #include <vector>
 
@@ -59,9 +58,8 @@ public:
         return it != chunks.end() && (it->second == emptyChunk || it->second->isAt(x, z));
     }
 
-    // Storage maintenance must inspect the cache without calling getChunk(),
-    // because getChunk() creates and generates a missing chunk.  The returned
-    // pointers are borrowed and remain owned by this cache.
+    // Storage maintenance needs to inspect resident chunks without calling
+    // getChunk(), because getChunk() creates/generates a missing chunk.
     void getLoadedChunks(std::vector<LevelChunk*>& result) {
         result.clear();
         result.reserve(chunks.size());
@@ -70,18 +68,6 @@ public:
                 result.push_back(entry.second);
         }
     }
-
-	// Requeue every resident chunk after prepareLevelFor() re-enables lighting.
-	// Existing worlds temporarily disable light updates while their chunks are
-	// loaded, so the insertion-time requests cannot be retained in that phase.
-	void queueLightUpdatesForLoadedChunks() {
-		std::vector<LevelChunk*> loadedChunks;
-		getLoadedChunks(loadedChunks);
-		for (size_t i = 0; i < loadedChunks.size(); ++i) {
-			if (loadedChunks[i] != NULL)
-				queueLightUpdatesForChunk(loadedChunks[i]->x, loadedChunks[i]->z);
-		}
-	}
 
     LevelChunk* create(int x, int z) {
         return getChunk(x, z);
@@ -94,23 +80,52 @@ public:
         int64_t key = chunkKey(x, z);
         if (!hasChunk(x, z)) {
             // No eviction needed — hash map holds each (x,z) independently
-            LevelChunk* newChunk = load(x, z);
+			LevelChunk* newChunk = load(x, z);
+			bool updateLights = false;
+			bool generatedChunk = false;
             if (newChunk == NULL) {
                 if (source == NULL) newChunk = emptyChunk;
-                else newChunk = source->getChunk(x, z);
+				else {
+					newChunk = source->getChunk(x, z);
+					generatedChunk = newChunk != NULL && newChunk != emptyChunk;
+				}
+			} else {
+				updateLights = true;
             }
             chunks[key] = newChunk;
             newChunk->lightLava();
 
+			// A generated chunk runs recalcHeightmap() inside its source before
+			// ChunkCache has inserted it into the resident-chunk map.  Any
+			// lightGaps() calls made during that first pass can therefore fail
+			// Level::hasChunkAt() for the chunk itself and silently enqueue no
+			// light work.  Repeat the height/light initialization after insertion
+			// so newly generated Infinite and Sky chunks can submit their light
+			// updates with the correct resident-chunk state.
+			if (generatedChunk)
+				newChunk->recalcHeightmap();
+
+			// Match the Universal client: a chunk loaded from storage gets
+			// targeted column updates.  Freshly generated chunks receive the
+			// post-insertion recalcHeightmap() pass above.
+			if (updateLights) {
+				for (int cx = 0; cx < 16; cx++) {
+					for (int cz = 0; cz < 16; cz++) {
+						int height = level->getHeightmap(cx + x * 16, cz + z * 16);
+						for (int cy = height; cy >= 0; cy--) {
+							level->updateLight(LightLayer::Sky,
+								cx + x * 16, cy, cz + z * 16,
+								cx + x * 16, cy, cz + z * 16);
+							level->updateLight(LightLayer::Block,
+								cx + x * 16 - 1, cy, cz + z * 16 - 1,
+								cx + x * 16 + 1, cy, cz + z * 16 + 1);
+						}
+					}
+				}
+			}
+
             LevelChunk* stored = chunks[key];
             if (stored != NULL) stored->load();
-
-			// Generated chunks can run lightGaps() before their neighbours are
-			// present.  Requeue this chunk and all resident neighbours only after
-			// insertion into the cache, so later generation can repair the earlier
-			// boundary misses as well.
-			if (stored != NULL && stored != emptyChunk)
-				queueLightUpdatesAround(x, z);
 
             // Tell the renderer (via LevelListener) that this chunk's blocks exist now,
             // so it rebuilds the faces at the boundary with already-rendered neighbours.
@@ -152,103 +167,95 @@ public:
         }
     }
 
-	// Finish population for every resident chunk before a forced save.  The
-	// renderer may keep a much larger ring than the simulation area, but a
-	// visible edge chunk is still a real generated chunk: writing its base
-	// terrain while leaving postProcess pending permanently loses trees, leaves
-	// and snow because the legacy loader restores every serialized chunk as
-	// terrainPopulated.  Do not call getChunk() while collecting; only chunks
-	// already resident at the start of this flush are candidates.  A feature
-	// can touch another resident chunk, so that chunk is included in the same
-	// snapshot.  If a feature had to create one dirty support chunk just outside
-	// the ring, allow one bounded follow-up pass for that chunk as well; this
-	// preserves cross-boundary leaves/snow without allowing the save to chase an
-	// unbounded chain of newly generated chunks.
+	// Finish population passes before a forced save.  The normal getChunk() path
+	// waits until (x + 1,z + 1), (x,z + 1), and (x + 1,z) exist before calling
+	// postProcess().  Calling postProcess() unconditionally here can run snow
+	// and foliage placement while the loading-edge neighbours are still absent;
+	// the pass then marks the chunk populated and the missing features can never
+	// be retried after the next load.  The save-time support pass below supplies
+	// only the required neighbours first.  If a chunk still cannot complete, it
+	// is serialized with its incomplete state so population can continue later.
 	void finishPostProcess() {
-		std::vector<int64_t> pending;
-		std::unordered_set<int64_t> resident;
+		size_t initialPending = 0;
+		std::vector<ChunkPos> pendingPopulation;
 		for (auto& entry : chunks) {
 			LevelChunk* chunk = entry.second;
-			if (chunk == NULL || chunk == emptyChunk || chunk->terrainPopulated)
-				continue;
-			resident.insert(entry.first);
-			pending.push_back(entry.first);
+			if (chunk != NULL && chunk != emptyChunk && !chunk->terrainPopulated) {
+				++initialPending;
+				pendingPopulation.push_back(ChunkPos(chunk->x, chunk->z));
+			}
 		}
-		const size_t initialPending = pending.size();
-		size_t cursor = 0;
+
+		// Infinite worlds load chunks on demand.  A chunk at the loading edge can
+		// therefore be resident while the three +X/+Z neighbours required by the
+		// original population order are still absent.  In that state postProcess()
+		// cannot run, so snow/foliage written by the population pass may be missing
+		// when the world is saved.  The population pass itself can also write into
+		// the first +X/+Z neighbour layer.  At save time only, create a bounded
+		// two-chunk-deep +X/+Z support area so that both the original chunk and its
+		// directly modified neighbour chunks can finish postProcess().  This does
+		// not enlarge the normal runtime loading radius and the ready-loop below
+		// still controls the order in which population is completed.
+		if (level->isInfinite()) {
+			for (size_t i = 0; i < pendingPopulation.size(); ++i) {
+				const ChunkPos& pos = pendingPopulation[i];
+				for (int dx = 0; dx <= 2; ++dx) {
+					for (int dz = 0; dz <= 2; ++dz) {
+						if (dx == 0 && dz == 0)
+							continue;
+						getChunk(pos.x + dx, pos.z + dz);
+					}
+				}
+			}
+		}
+
 		size_t processed = 0;
-		while (cursor < pending.size()) {
-			const int64_t key = pending[cursor++];
-			auto entry = chunks.find(key);
-			if (entry == chunks.end() || entry->second == NULL ||
-				entry->second == emptyChunk || entry->second->terrainPopulated)
-				continue;
-
-			LevelChunk* chunk = entry->second;
-			postProcess(this, chunk->x, chunk->z);
-			++processed;
-		}
-
-		// Population can create a neighboring resident chunk while processing a
-		// feature at the edge of the render ring.  A single follow-up scan is not
-		// sufficient: that neighbor can in turn expose another edge chunk.  Walk
-		// to a bounded fixed point, just like the original chunk source does, while
-		// never revisiting a coordinate in this save operation.  The bound keeps a
-		// malformed/corrupt source from turning shutdown into an infinite wait.
-		std::unordered_set<int64_t> attempted;
-		for (size_t i = 0; i < pending.size(); ++i)
-			attempted.insert(pending[i]);
-		size_t supportProcessed = 0;
-		size_t supportRounds = 0;
-		const size_t MAX_SUPPORT_ROUNDS = 8;
-		while (supportRounds < MAX_SUPPORT_ROUNDS) {
-			std::vector<int64_t> supportPending;
+		while (true) {
+			// Collect keys first because postProcess() can generate a neighbour
+			// and mutate the cache while the pass is running.
+			std::vector<int64_t> ready;
 			for (auto& entry : chunks) {
 				LevelChunk* chunk = entry.second;
-				if (chunk == NULL || chunk == emptyChunk || chunk->terrainPopulated ||
-					attempted.find(entry.first) != attempted.end())
+				if (chunk == NULL || chunk == emptyChunk || chunk->terrainPopulated)
 					continue;
-				supportPending.push_back(entry.first);
+				if (hasChunk(chunk->x + 1, chunk->z + 1) &&
+					hasChunk(chunk->x, chunk->z + 1) &&
+					hasChunk(chunk->x + 1, chunk->z))
+					ready.push_back(entry.first);
 			}
-			if (supportPending.empty())
+			if (ready.empty())
 				break;
 
-			++supportRounds;
-			for (size_t i = 0; i < supportPending.size(); ++i) {
-				const int64_t key = supportPending[i];
-				attempted.insert(key);
-				auto entry = chunks.find(key);
+			for (size_t i = 0; i < ready.size(); ++i) {
+				auto entry = chunks.find(ready[i]);
 				if (entry == chunks.end() || entry->second == NULL ||
 					entry->second == emptyChunk || entry->second->terrainPopulated)
 					continue;
 				LevelChunk* chunk = entry->second;
 				postProcess(this, chunk->x, chunk->z);
-				++supportProcessed;
+				++processed;
 			}
 		}
 
 		size_t remaining = 0;
 		for (auto& entry : chunks) {
 			LevelChunk* chunk = entry.second;
-			if (chunk != NULL && chunk != emptyChunk && !chunk->terrainPopulated &&
-				resident.find(entry.first) != resident.end())
+			if (chunk != NULL && chunk != emptyChunk && !chunk->terrainPopulated)
 				++remaining;
 		}
-		size_t newIncomplete = 0;
-		for (auto& entry : chunks) {
-			LevelChunk* chunk = entry.second;
-			if (chunk != NULL && chunk != emptyChunk && !chunk->terrainPopulated &&
-				resident.find(entry.first) == resident.end())
-				++newIncomplete;
-		}
-		LOGI("ChunkCache finishPostProcess: resident=%u initial=%u processed=%u support=%u rounds=%u remaining=%u newIncomplete=%u\n",
-			static_cast<unsigned int>(resident.size()),
+		LOGI("ChunkCache finishPostProcess: initial=%u processed=%u remaining=%u\n",
 			static_cast<unsigned int>(initialPending),
 			static_cast<unsigned int>(processed),
-			static_cast<unsigned int>(supportProcessed),
-			static_cast<unsigned int>(supportRounds),
-			static_cast<unsigned int>(remaining),
-			static_cast<unsigned int>(newIncomplete));
+			static_cast<unsigned int>(remaining));
+	}
+
+	// Requeue a bounded 3x3 area around the player. Each vertical slice is
+	// deliberately small so the existing 500-update budget can consume the
+	// repair over several frames instead of blocking on one full-chunk pass.
+	void queueLightUpdatesAround(int chunkX, int chunkZ) override {
+		for (int dx = -1; dx <= 1; ++dx)
+			for (int dz = -1; dz <= 1; ++dz)
+				queueLightUpdatesForChunk(chunkX + dx, chunkZ + dz);
 	}
 
     //bool save(bool force, ProgressListener progressListener) {
@@ -317,22 +324,24 @@ public:
 					}
 				}
 				#endif
-				// Never serialize base terrain whose population pass has not
-				// completed.  The legacy chunk format restores loaded chunks as
-				// terrainPopulated, so writing one here would permanently suppress
-				// the later tree/snow/plant pass on the next load.
-				if (chunk && chunk != emptyChunk && chunk->terrainPopulated)
-					// A newly generated chunk may have had its unsaved bit moved into
-					// ExternalFileLevelStorage's delayed queue already.  Include it in
-					// an explicit shutdown save until one successful serialization has
-					// recorded that it is persisted.
+				// A population pass can write snow/foliage into a neighbouring chunk
+				// before that chunk has completed its own postProcess().  Such a chunk
+				// must still be serialized: the UWP chunk record now carries its
+				// terrainPopulated state so it can continue population after reload.
+				// A newly generated chunk may have had its unsaved bit moved into
+				// ExternalFileLevelStorage's delayed queue already.  Include it in
+				// an explicit shutdown save until one successful serialization has
+				// recorded that it is persisted.
+				if (chunk && chunk != emptyChunk &&
+					(chunk->terrainPopulated || level->isInfinite()))
 					if (!onlyUnsaved || chunk->shouldSave(false) || !chunk->createdFromSave)
 						chunkList.push_back(chunk);
 				#if defined(_DEBUG)
 				if (hasChest)
 					LOGI("[SAVE_ALL] chunk=%d,%d candidate=%d onlyUnsaved=%d unsaved=%d createdFromSave=%d terrainPopulated=%d\n",
 						chunk->x, chunk->z,
-						(chunk && chunk != emptyChunk && chunk->terrainPopulated &&
+						(chunk && chunk != emptyChunk &&
+							(chunk->terrainPopulated || level->isInfinite()) &&
 							(!onlyUnsaved || chunk->shouldSave(false) || !chunk->createdFromSave)) ? 1 : 0,
 						onlyUnsaved ? 1 : 0, chunk->unsaved ? 1 : 0,
 						chunk->createdFromSave ? 1 : 0,
@@ -354,46 +363,32 @@ private:
 		if (it == chunks.end() || it->second == NULL || it->second == emptyChunk)
 			return;
 
+		LevelChunk* chunk = it->second;
+
 		const int x0 = x * CHUNK_WIDTH;
 		const int z0 = z * CHUNK_WIDTH;
 		const int x1 = x0 + CHUNK_WIDTH - 1;
 		const int z1 = z0 + CHUNK_WIDTH - 1;
-
-		// Split the chunk vertically so one LightUpdate cannot monopolize the
-		// fixed-step thread.  The surrounding chunks are queued separately by
-		// queueLightUpdatesAround(), so propagation across a newly completed 3x3
-		// neighbourhood is still repaired.
 		const int lightSliceHeight = 8;
 		for (int y0 = 0; y0 < Level::DEPTH; y0 += lightSliceHeight) {
 			int y1 = y0 + lightSliceHeight - 1;
 			if (y1 >= Level::DEPTH)
 				y1 = Level::DEPTH - 1;
 
-			level->updateLight(
-				LightLayer::Sky,
-				x0, y0, z0,
-				x1, y1, z1);
-			level->updateLight(
-				LightLayer::Block,
-				x0, y0, z0,
-				x1, y1, z1);
+			level->updateLight(LightLayer::Sky, x0, y0, z0, x1, y1, z1);
+			level->updateLight(LightLayer::Block, x0, y0, z0, x1, y1, z1);
 		}
+
+		// Lighting propagation changes the serialized skyLight/blockLight arrays,
+		// but LevelChunk::setBrightness() deliberately does not mark a chunk dirty
+		// for every individual light cell.  Old chunks therefore used to be repaired
+		// only in memory and reverted to their stale lighting after a reload.  The
+		// bounded player-area repair is the right place to persist that repair once,
+		// without turning normal lighting propagation into a continuous save stream.
+		if (chunk->createdFromSave)
+			chunk->markUnsaved();
 	}
 
-	public:
-	void queueLightUpdatesAround(int x, int z) {
-		queueLightUpdatesAround(x, z, 1);
-	}
-
-	void queueLightUpdatesAround(int x, int z, int radius) {
-		for (int dx = -radius; dx <= radius; ++dx) {
-			for (int dz = -radius; dz <= radius; ++dz) {
-				queueLightUpdatesForChunk(x + dx, z + dz);
-			}
-		}
-	}
-
-	private:
     LevelChunk* load(int x, int z) {
         if (storage == NULL) return NULL;
         LevelChunk* levelChunk = storage->load(level, x, z);

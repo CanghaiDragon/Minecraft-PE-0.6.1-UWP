@@ -138,12 +138,8 @@ public:
     void updateLightIfOtherThan(const LightLayer& layer, int x, int y, int z, int expected);
 
 	int getLightsToUpdate();
-	void prioritizeLightUpdatesAround(int chunkX, int chunkZ, bool refresh);
-	void warmupLightUpdatesAround(int chunkX, int chunkZ, int radius);
-	// maxSeconds < 0 keeps the original unbounded drain behavior used during
-	// world preparation.  The UWP fixed-step loop supplies a small budget while
-	// the world is running so lighting cannot monopolize the UI thread.
-	bool updateLights(int maxUpdates = 500, float maxSeconds = -1.0f);
+	void forceLightUpdatesAround(int chunkX, int chunkZ);
+	bool updateLights();
 	void setUpdateLights(bool doUpdate);
 	void updateLight(const LightLayer& layer, int x0, int y0, int z0, int x1, int y1, int z1);
 	void updateLight(const LightLayer& layer, int x0, int y0, int z0, int x1, int y1, int z1, bool join);

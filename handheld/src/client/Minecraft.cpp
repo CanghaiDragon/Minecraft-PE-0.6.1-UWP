@@ -490,8 +490,6 @@ void Minecraft::prepareLevelFor(Level* targetLevel, const std::string& title) {
     }
 	A.stop();
 	level->setUpdateLights(true);
-	if (level->getChunkSource() != NULL)
-		level->getChunkSource()->queueLightUpdatesForLoadedChunks();
 
 	// All chunks have been loaded from the region file. Release the in-memory
 	// file cache that was populated by ExternalFileLevelStorage::load() on the
@@ -664,30 +662,22 @@ void Minecraft::updateUwpFixedStep()
 	{
 		const int playerChunkX = Mth::floor(player->x / CHUNK_WIDTH);
 		const int playerChunkZ = Mth::floor(player->z / CHUNK_WIDTH);
-		const bool refreshPriority =
-			!_lightPriorityChunkValid ||
+		if (!_lightPriorityChunkValid ||
 			playerChunkX != _lightPriorityChunkX ||
-			playerChunkZ != _lightPriorityChunkZ;
-
-		// Keep only lighting work for the player's current 3x3 chunk area.
-		// Rebuild that area when crossing a chunk boundary so newly reached
-		// chunks are repaired immediately and distant backlog is discarded.
-		level->prioritizeLightUpdatesAround(
-			playerChunkX, playerChunkZ, refreshPriority);
-
-		_lightPriorityChunkX = playerChunkX;
-		_lightPriorityChunkZ = playerChunkZ;
-		_lightPriorityChunkValid = true;
+			playerChunkZ != _lightPriorityChunkZ)
+		{
+			// Keep the normal world-wide light drain, but explicitly requeue the
+			// player's 3x3 area when entering a new chunk. This repairs rare local
+			// lighting misses without clearing the distant queue.
+			level->forceLightUpdatesAround(playerChunkX, playerChunkZ);
+			_lightPriorityChunkX = playerChunkX;
+			_lightPriorityChunkZ = playerChunkZ;
+			_lightPriorityChunkValid = true;
+		}
 	}
 
 	if (level != NULL && !isGeneratingLevel)
-	{
-		// Keep lighting responsive without allowing a newly loaded 3x3 region
-		// to block the UWP composition/UI thread for a long frame.  The queued
-		// work remains in Level and is continued on later fixed steps.
-		const float lightBudgetSeconds = 0.004f;
-		level->updateLights(500, lightBudgetSeconds);
-	}
+		level->updateLights();
 	if (gameMode != NULL)
 		gameMode->render(0.0f);
 	if (soundEngine != NULL)
@@ -732,20 +722,6 @@ bool Minecraft::attachUwpWorld(Level* world, LocalPlayer* localPlayer)
 	cameraTargetPlayer = localPlayer;
 	_lightPriorityChunkValid = false;
 	level->raknetInstance = raknetInstance;
-
-	// Warm up the initial player area before the first world frame is shown.
-	// Cliff interiors depend on horizontal sky-light propagation, so the
-	// terrain can be visible before its lighting queue has finished.  Loading
-	// only this 5x5 area keeps the one-time cost bounded; runtime movement
-	// continues to use the lighter 3x3 priority policy below.
-	const int initialChunkX = Mth::floor(player->x / CHUNK_WIDTH);
-	const int initialChunkZ = Mth::floor(player->z / CHUNK_WIDTH);
-	for (int dx = -2; dx <= 2; ++dx)
-		for (int dz = -2; dz <= 2; ++dz)
-			level->getChunk(initialChunkX + dx, initialChunkZ + dz);
-	level->warmupLightUpdatesAround(initialChunkX, initialChunkZ, 2);
-	while (level->updateLights())
-		;
 
 	_uwpSavedTouchscreen = options.useTouchScreen;
 	_uwpTouchscreenSaved = true;

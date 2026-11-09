@@ -52,7 +52,15 @@ Packet* SignTileEntity::getUpdatePacket() {
 
 void SignTileEntity::setLevelAndPos( Level* level, int x, int y, int z ) {
 	super::setLevelAndPos(level, x, y, z);
-	if(level->getTile(x, y, z) != Tile::sign->id) {
+	// A tile entity can be attached while its chunk is still being loaded from
+	// UWP storage.  Calling Level::getTile() here would request that same chunk
+	// again and recurse through the storage loader.  LevelChunk::setTileEntity()
+	// performs the authoritative local-tile check after this callback returns.
+	if (level == NULL || !level->hasChunk(x >> 4, z >> 4))
+		return;
+
+	const int tileId = level->getTile(x, y, z);
+	if (tileId != Tile::sign->id && tileId != Tile::wallSign->id) {
 		remove = true;
 	}
 }

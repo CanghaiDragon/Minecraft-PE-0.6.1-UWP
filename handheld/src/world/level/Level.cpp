@@ -1938,58 +1938,21 @@ int Level::getLightsToUpdate() {
     return _lightUpdates.size();
 }
 
-void Level::prioritizeLightUpdatesAround(int chunkX, int chunkZ, bool refresh) {
-	const int minX = (chunkX - 1) * CHUNK_WIDTH;
-	const int minZ = (chunkZ - 1) * CHUNK_WIDTH;
-	const int maxX = (chunkX + 2) * CHUNK_WIDTH - 1;
-	const int maxZ = (chunkZ + 2) * CHUNK_WIDTH - 1;
-
-	if (refresh) {
-		// A new player area supersedes all older distant work.  The current
-		// brightness values remain in the chunks, so the active 3x3 area can be
-		// safely requeued from scratch below.
-		_lightUpdates.clear();
-	}
-	else {
-		LightUpdateList nearUpdates;
-		nearUpdates.reserve(_lightUpdates.size());
-		for (size_t i = 0; i < _lightUpdates.size(); ++i) {
-			const LightUpdate& update = _lightUpdates[i];
-			if (update.x1 >= minX && update.x0 <= maxX &&
-				update.z1 >= minZ && update.z0 <= maxZ)
-				nearUpdates.push_back(update);
-		}
-		_lightUpdates.swap(nearUpdates);
-	}
-
-	if (refresh && _chunkSource != NULL)
+void Level::forceLightUpdatesAround(int chunkX, int chunkZ) {
+	if (_chunkSource != NULL)
 		_chunkSource->queueLightUpdatesAround(chunkX, chunkZ);
 }
 
-void Level::warmupLightUpdatesAround(int chunkX, int chunkZ, int radius) {
-	_lightUpdates.clear();
-	if (_chunkSource != NULL)
-		_chunkSource->queueLightUpdatesAround(chunkX, chunkZ, radius);
-}
-
-bool Level::updateLights(int maxUpdates, float maxSeconds) {
+bool Level::updateLights() {
     if (_maxRecurse >= 50) {
         return false;
     }
 	//static int _MaxSize = 0;
     _maxRecurse++;
-	Stopwatch lightBudget;
-	if (maxSeconds >= 0.0f)
-		lightBudget.start();
     //try {
-        int max = maxUpdates;
+        int max = 500;
         while ((int)_lightUpdates.size() > 0) {
             if (--max <= 0)
-			{
-				_maxRecurse--;
-				return true;
-			}
-			if (maxSeconds >= 0.0f && lightBudget.stopContinue() >= maxSeconds)
 			{
 				_maxRecurse--;
 				return true;
@@ -2025,7 +1988,8 @@ void Level::updateLight(const LightLayer& layer, int x0, int y0, int z0, int x1,
 
     maxLoop++;
 	//if (x0 < -5 || z0 < -5) LOGI("x, z: %d, %d\n", x0, z0);
-    if (maxLoop == 50) {
+	if (maxLoop == 50) {
+		_lightUpdates.push_back(LightUpdate(layer, x0, y0, z0, x1, y1, z1));
         maxLoop--;
         return;
     }
@@ -2040,24 +2004,24 @@ void Level::updateLight(const LightLayer& layer, int x0, int y0, int z0, int x1,
 		maxLoop--;
 		return;
 	}
-    int count = _lightUpdates.size();
-    if (join) {
-        int toCheck = 5;
-        if (toCheck > count) toCheck = count;
-        for (int i = 0; i < toCheck; i++) {
-            LightUpdate& last = _lightUpdates[_lightUpdates.size() - i - 1];
-            if (last.layer == &layer && last.expandToContain(x0, y0, z0, x1, y1, z1)) {
-                maxLoop--;
-                return;
-            }
-        }
-    }
-    _lightUpdates.push_back(LightUpdate(layer, x0, y0, z0, x1, y1, z1));
-    int max = 1000000;
-    if ((int)_lightUpdates.size() > max) {
-        LOGI("More than %d updates, aborting lighting updates\n", max);
-        _lightUpdates.clear();
-    }
+	int count = _lightUpdates.size();
+	if (join) {
+		int toCheck = 5;
+		if (toCheck > count) toCheck = count;
+		for (int i = 0; i < toCheck; i++) {
+			LightUpdate& last = _lightUpdates[_lightUpdates.size() - i - 1];
+			if (last.layer == &layer && last.expandToContain(x0, y0, z0, x1, y1, z1)) {
+				maxLoop--;
+				return;
+			}
+		}
+	}
+	_lightUpdates.push_back(LightUpdate(layer, x0, y0, z0, x1, y1, z1));
+	int max = 1000000;
+	if ((int)_lightUpdates.size() > max) {
+		LOGI("More than %d updates, aborting lighting updates\n", max);
+		_lightUpdates.clear();
+	}
     maxLoop--;
 }
 //

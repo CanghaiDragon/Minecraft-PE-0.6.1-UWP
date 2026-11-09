@@ -430,6 +430,14 @@ bool ExternalFileLevelStorage::readPlayerData(const std::string& filename, Level
 	return true;
 }
 
+// The save queue must distinguish every loaded chunk in an infinite world.
+// Do not use x + z * CHUNK_CACHE_WIDTH here: that only works for the old
+// finite 32x32 coordinate range and aliases distant chunks in infinite worlds.
+static inline int64_t chunkSaveKey(int x, int z)
+{
+	return ((int64_t)(uint32_t)x << 32) | (uint32_t)z;
+}
+
 void ExternalFileLevelStorage::tick()
 {
 	tickCount++;
@@ -449,10 +457,11 @@ void ExternalFileLevelStorage::tick()
 			chunkCache->getLoadedChunks(loadedChunks);
 			for (LevelChunk* chunk : loadedChunks)
 			{
-				if (chunk == NULL || !chunk->unsaved || !chunk->terrainPopulated)
+				if (chunk == NULL || !chunk->unsaved ||
+					(!level->isInfinite() && !chunk->terrainPopulated))
 					continue;
 
-				const int pos = chunk->x + chunk->z * CHUNK_CACHE_WIDTH;
+				const int64_t pos = chunkSaveKey(chunk->x, chunk->z);
 				UnsavedChunkList::iterator prev = unsavedChunkList.begin();
 				for (; prev != unsavedChunkList.end(); ++prev)
 				{
@@ -482,14 +491,10 @@ void ExternalFileLevelStorage::tick()
 						chunk->x, chunk->z,
 						static_cast<unsigned int>(unsavedChunkList.size()));
 				#endif
-				chunk->unsaved = false;
-				#if defined(_DEBUG)
-				if (chunkHasChest(chunk))
-					LOGI("[SAVE_QUEUE] action=clear_unsaved chunk=%d,%d queue_size=%u unsaved_after=%d\n",
-						chunk->x, chunk->z,
-						static_cast<unsigned int>(unsavedChunkList.size()),
-						chunk->unsaved ? 1 : 0);
-				#endif
+				// Keep the dirty flag set until save() has successfully written this
+				// chunk.  Queue membership is already deduplicated by the full
+				// coordinate key; clearing unsaved here could lose the chunk if the
+				// queue entry is deferred, interrupted, or otherwise not written.
 			}
 		}
 #else
@@ -500,7 +505,7 @@ void ExternalFileLevelStorage::tick()
 				LevelChunk* chunk = level->getChunk(x, z);
 				if (chunk && chunk->unsaved)
 				{
-					int pos = x + z * CHUNK_CACHE_WIDTH;
+					int64_t pos = chunkSaveKey(x, z);
 					UnsavedChunkList::iterator prev = unsavedChunkList.begin();
 					for ( ; prev != unsavedChunkList.end(); ++prev)
 					{
@@ -519,7 +524,9 @@ void ExternalFileLevelStorage::tick()
 						unsaved.chunk = chunk;
 						unsavedChunkList.push_back(unsaved);
 					}
-					chunk->unsaved = false; // not actually saved, but in our working list at least
+					// Keep unsaved=true until save() confirms the write.  This is
+					// especially important when a queue entry is deferred or when the
+					// world is closed before the next queue drain.
 				}
 			}
 		}
@@ -611,7 +618,8 @@ void ExternalFileLevelStorage::save(Level* level, LevelChunk* levelChunk)
 #if defined(MCPE_UWP)
 	if (level->isInfinite()) {
 	// UWP stores non-player entities with the chunk that currently contains
-	// them. Player state remains in level.dat, as in the original format.
+	// them. Player state remains in level.dat, as in the original format. The
+	// same metadata record also carries the optional population state.
 	ListTag* entityTags = new ListTag();
 	int entityCount = 0;
 	for (unsigned int i = 0; i < level->entities.size(); ++i) {
@@ -673,6 +681,10 @@ void ExternalFileLevelStorage::save(Level* level, LevelChunk* levelChunk)
 	CompoundTag entityRoot;
 	entityRoot.put("Entities", entityTags);
 	entityRoot.put("TileEntities", tileEntityTags);
+	// Keep the population state with the existing per-chunk UWP metadata.
+	// This does not change the chunk suffix version: old records simply do not
+	// contain this optional field and are treated as fully populated on load.
+	entityRoot.putByte("TerrainPopulated", levelChunk->terrainPopulated ? 1 : 0);
 	RakNet::BitStream entityData;
 	RakDataOutput entityOutput(entityData);
 	NbtIo::write(&entityRoot, &entityOutput);
@@ -697,10 +709,15 @@ void ExternalFileLevelStorage::save(Level* level, LevelChunk* levelChunk)
 	#endif
 
 	if (writeSucceeded)
+	{
 		// For a generated (not loaded-from-disk) chunk this flag doubles as the
 		// persistence watermark used by ChunkCache::saveAll(true).  Do not mark it
 		// until the region write has actually succeeded.
 		levelChunk->createdFromSave = true;
+		// The chunk is no longer dirty only after the complete record, including
+		// blocks, data, lighting, update map, and optional entities, is on disk.
+		levelChunk->unsaved = false;
+	}
 
 	//LOGI("Saved chunk (%d, %d)\n", levelChunk->x, levelChunk->z);
 }
@@ -746,6 +763,10 @@ LevelChunk* ExternalFileLevelStorage::load(Level* level, int x, int z)
 	}
 
 	chunkData->ResetReadPointer();
+	// Legacy UWP chunk records have no population marker.  They were always
+	// loaded as complete, so retain that behavior when the optional field is
+	// absent.
+	bool savedTerrainPopulated = true;
 
 	unsigned char* blockIds = new unsigned char[CHUNK_BLOCK_COUNT];
 	chunkData->Read((char*)blockIds, CHUNK_BLOCK_COUNT);
@@ -760,8 +781,8 @@ LevelChunk* ExternalFileLevelStorage::load(Level* level, int x, int z)
 
 #if defined(MCPE_UWP)
 	if (level->isInfinite()) {
-	// Entity data is an optional suffix. Old chunks end immediately after the
-	// update map, so they remain readable while simply contributing no entities.
+	// Entity/metadata data is an optional suffix. Old chunks end immediately
+	// after the update map, so they remain readable and default to populated.
 	const unsigned int entityHeaderBytes = sizeof(int) * 2;
 	if (chunkData->GetNumberOfUnreadBits() >= entityHeaderBytes * 8) {
 		int entityVersion = 0;
@@ -776,6 +797,10 @@ LevelChunk* ExternalFileLevelStorage::load(Level* level, int x, int z)
 					RakNet::BitStream entityStream(entityBuffer, entityBytes, false);
 					RakDataInput entityInput(entityStream);
 					CompoundTag* entityRoot = NbtIo::read(&entityInput);
+					if (entityRoot != NULL &&
+						entityRoot->contains("TerrainPopulated", Tag::TAG_Byte)) {
+						savedTerrainPopulated = entityRoot->getBoolean("TerrainPopulated");
+					}
 					if (entityRoot != NULL &&
 						entityRoot->contains("Entities", Tag::TAG_List)) {
 						ListTag* entityTags = entityRoot->getList("Entities");
@@ -862,7 +887,7 @@ LevelChunk* ExternalFileLevelStorage::load(Level* level, int x, int z)
 
 	levelChunk->recalcHeightmap();
 	levelChunk->unsaved = changed;
-	levelChunk->terrainPopulated = true;
+	levelChunk->terrainPopulated = savedTerrainPopulated;
 	levelChunk->createdFromSave = true;
 
 	return levelChunk;
@@ -1144,8 +1169,8 @@ int ExternalFileLevelStorage::savePendingUnsavedChunks( int maxCount ) {
                 remove = it;
             }
         }
-        // Copy the queue record before erasing its list node.  The deferred
-        // path below must not dereference the invalidated iterator pointer.
+		// Copy the queue record before erasing its list node so the chunk pointer
+		// remains valid while the queue node is removed.
         const UnsavedLevelChunk pending = *oldest;
         LevelChunk* chunk = pending.chunk;
         unsavedChunkList.erase(remove);
@@ -1159,15 +1184,14 @@ int ExternalFileLevelStorage::savePendingUnsavedChunks( int maxCount ) {
 		#endif
 
 #if defined(MCPE_UWP)
-        // A feature can write into a neighbouring chunk while that chunk is
-        // still waiting for its own postProcess pass.  Do not serialize that
-        // base-only state: load() restores legacy chunks as populated, which
-        // would permanently suppress the missing snow/foliage pass.  Keep
-        // the queue entry so it can be saved once population completes.
-        if (chunk != NULL && !chunk->terrainPopulated) {
-            deferredPopulation.push_back(pending);
-            continue;
-        }
+		// Finite/Old worlds retain the previous behavior.  Infinite and Sky
+		// chunks carry the optional population marker and may be serialized
+		// before their own postProcess() has completed.
+		if (chunk != NULL && !chunk->terrainPopulated &&
+			(level == NULL || !level->isInfinite())) {
+			deferredPopulation.push_back(pending);
+			continue;
+		}
 #endif
 
         save(level, chunk);
@@ -1175,9 +1199,6 @@ int ExternalFileLevelStorage::savePendingUnsavedChunks( int maxCount ) {
 #if defined(MCPE_UWP)
     for (const UnsavedLevelChunk& deferred : deferredPopulation)
         unsavedChunkList.push_back(deferred);
-    if (!deferredPopulation.empty())
-        LOGI("ExternalFileLevelStorage deferred %u incomplete chunks\n",
-            static_cast<unsigned int>(deferredPopulation.size()));
 #endif
     return count;
 }
