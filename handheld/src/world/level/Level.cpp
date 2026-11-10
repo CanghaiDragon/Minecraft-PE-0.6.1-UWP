@@ -29,6 +29,7 @@
 #include "../inventory/BaseContainerMenu.h"
 #include "../Difficulty.h"
 #include "../../network/packet/ExplodePacket.h"
+#include "../../platform/time.h"
 
 Level::Level(LevelStorage* levelStorage, const std::string& levelName, const LevelSettings& settings, int generatorVersion, Dimension* fixedDimension /* = NULL */)
 :	levelStorage(levelStorage),
@@ -44,6 +45,8 @@ Level::Level(LevelStorage* levelStorage, const std::string& levelName, const Lev
 	_addend(1013904223),
 	_maxRecurse(0),
 	_updateLights(true),
+	_lightUpdateBudget(500),
+	_lightUpdateTimeBudget(-1.0f),
 	_pathFinder(NULL),
 	_spawnFriendlies(true),
 	_spawnEnemies(true),
@@ -1949,10 +1952,20 @@ bool Level::updateLights() {
     }
 	//static int _MaxSize = 0;
     _maxRecurse++;
-    //try {
-        int max = 500;
+	Stopwatch lightBudget;
+	if (_lightUpdateTimeBudget >= 0.0f)
+		lightBudget.start();
+	//try {
+		int max = _lightUpdateBudget;
+		if (max < 1) max = 1;
         while ((int)_lightUpdates.size() > 0) {
             if (--max <= 0)
+			{
+				_maxRecurse--;
+				return true;
+			}
+			if (_lightUpdateTimeBudget >= 0.0f &&
+				lightBudget.stopContinue() >= _lightUpdateTimeBudget)
 			{
 				_maxRecurse--;
 				return true;
@@ -1971,6 +1984,14 @@ bool Level::updateLights() {
     //} finally {
         //maxRecurse--;
     //}
+}
+
+void Level::setLightUpdateBudget(int budget) {
+	_lightUpdateBudget = budget < 1 ? 1 : budget;
+}
+
+void Level::setLightUpdateTimeBudget(float seconds) {
+	_lightUpdateTimeBudget = seconds;
 }
 
 void Level::setUpdateLights(bool doUpdate) {

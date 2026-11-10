@@ -140,6 +140,8 @@ public:
 	int getLightsToUpdate();
 	void forceLightUpdatesAround(int chunkX, int chunkZ);
 	bool updateLights();
+	void setLightUpdateBudget(int budget);
+	void setLightUpdateTimeBudget(float seconds);
 	void setUpdateLights(bool doUpdate);
 	void updateLight(const LightLayer& layer, int x0, int y0, int z0, int x1, int y1, int z1);
 	void updateLight(const LightLayer& layer, int x0, int y0, int z0, int x1, int y1, int z1, bool join);
@@ -337,6 +339,8 @@ private:
 	LightUpdateList _lightUpdates;
 	EntityMap _pendingEntityData;
 	bool _updateLights;
+	int _lightUpdateBudget;
+	float _lightUpdateTimeBudget;
 
 	int  _maxRecurse;
 	bool _isNew;

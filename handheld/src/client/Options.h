@@ -216,6 +216,9 @@ public:
 	bool fullscreen;
 	bool isJoyTouchArea;
 	bool useTouchScreen;
+	// Persist the selected startup/performance profile independently from the
+	// individual options changed by the user.
+	DefaultProfile activeDefaultProfile;
 	bool infiniteWorlds;
 	// Optional Java Beta-inspired presentation.  This is deliberately a
 	// renderer-only preference: it never changes a world's data or generation.
@@ -245,10 +248,25 @@ public:
 		thirdPersonViewMode = THIRD_PERSON_FIRST;
 		dynamicTileMode = DYNAMIC_TILE_OFF;
 		fullscreen = false;
+		activeDefaultProfile = DefaultProfile::DesktopDefault;
 	}
 
 	void initDefaultValues(DefaultProfile profile = DefaultProfile::DesktopDefault);
 	void applyDefaultProfile(DefaultProfile profile);
+	DefaultProfile getDefaultProfile() const { return activeDefaultProfile; }
+	int getLightUpdateBudget() const {
+		return activeDefaultProfile == DefaultProfile::DesktopDefault ? 500 : 96;
+	}
+	float getLightUpdateTimeBudget() const {
+		switch (activeDefaultProfile) {
+		case DefaultProfile::DesktopLowPerformance:
+			return 0.003f; // 3 ms per game tick
+		case DefaultProfile::Mobile:
+			return 0.002f; // 2 ms per game tick
+		default:
+			return -1.0f; // Desktop Default keeps the original count-only path
+		}
+	}
 	void resetKeyMappings();
 	void cycleThirdPersonView();
 	void setThirdPersonViewMode(int mode);

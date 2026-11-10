@@ -3,6 +3,8 @@
 
 class OptionStrings {
 public:
+    static const char* Performance_DefaultProfile;
+
     static const char* Audio_Music;
     static const char* Audio_Sound;
 

@@ -1,5 +1,7 @@
 #include "OptionStrings.h"
 
+const char* OptionStrings::Performance_DefaultProfile = "performance_default_profile";
+
 const char* OptionStrings::Audio_Music                = "audio_music";
 const char* OptionStrings::Audio_Sound                = "audio_sound";
 

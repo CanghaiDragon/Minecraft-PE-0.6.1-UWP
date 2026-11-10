@@ -18,6 +18,7 @@
 bool Options::debugGl = false;
 
 void Options::initDefaultValues(DefaultProfile profile) {
+	activeDefaultProfile = profile;
 	difficulty = Difficulty::NORMAL;
 	hideGui = false;
 	thirdPersonView = false;
@@ -124,6 +125,7 @@ void Options::initDefaultValues(DefaultProfile profile) {
 
 void Options::applyDefaultProfile(DefaultProfile profile)
 {
+	activeDefaultProfile = profile;
 	switch (profile)
 	{
 	case DefaultProfile::DesktopDefault:
@@ -142,6 +144,7 @@ void Options::applyDefaultProfile(DefaultProfile profile)
 		viewDistance = 2; // Short
 		ambientOcclusion = false;
 		fancyGraphics = false; // Fast
+		activeDefaultProfile = profile;
 		break;
 
 	case DefaultProfile::Mobile:
@@ -150,6 +153,7 @@ void Options::applyDefaultProfile(DefaultProfile profile)
 		applyDefaultProfile(DefaultProfile::DesktopLowPerformance);
 		useTouchScreen = true;
 		destroyVibration = true;
+		activeDefaultProfile = profile;
 		break;
 	}
 }
@@ -331,6 +335,14 @@ void Options::update()
 		}
 
         //LOGI("reading key: %s (%s)\n", key.c_str(), value.c_str());
+
+		if (key == OptionStrings::Performance_DefaultProfile) {
+			int profile = static_cast<int>(activeDefaultProfile);
+			if (readInt(value, profile) &&
+				profile >= static_cast<int>(DefaultProfile::DesktopDefault) &&
+				profile <= static_cast<int>(DefaultProfile::Mobile))
+				activeDefaultProfile = static_cast<DefaultProfile>(profile);
+		}
 
 		// Audio
 		if (key == OptionStrings::Audio_Music) readFloat(value, music);
@@ -583,6 +595,8 @@ void Options::load()
 void Options::save()
 {
 	StringVector stringVec;
+	addOptionToSaveOutput(stringVec, OptionStrings::Performance_DefaultProfile,
+		static_cast<int>(activeDefaultProfile));
 
 	// Audio
 	addOptionToSaveOutput(stringVec, OptionStrings::Audio_Music, music);

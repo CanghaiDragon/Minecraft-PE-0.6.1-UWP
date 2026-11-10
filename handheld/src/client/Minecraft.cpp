@@ -595,6 +595,8 @@ void Minecraft::update() {
 
 	TIMER_POP_PUSH("updatelights");
 	if (level && !isGeneratingLevel) {
+		level->setLightUpdateBudget(options.getLightUpdateBudget());
+		level->setLightUpdateTimeBudget(options.getLightUpdateTimeBudget());
 		level->updateLights();
 	}
 	TIMER_POP();
@@ -677,7 +679,11 @@ void Minecraft::updateUwpFixedStep()
 	}
 
 	if (level != NULL && !isGeneratingLevel)
+	{
+		level->setLightUpdateBudget(options.getLightUpdateBudget());
+		level->setLightUpdateTimeBudget(options.getLightUpdateTimeBudget());
 		level->updateLights();
+	}
 	if (gameMode != NULL)
 		gameMode->render(0.0f);
 	if (soundEngine != NULL)
