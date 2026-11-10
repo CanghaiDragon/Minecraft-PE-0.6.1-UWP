@@ -85,29 +85,7 @@
 
 - Java Edition 风格 UI
 
-![原版 PE 视觉效果下的无限世界](docs/pe_inf.png)
-
-![Java Beta 视觉效果下的无限世界](docs/beta_inf.png)
-
-<div align="center">原版 PE 视觉效果与 Java Beta 视觉效果对比</div>
-
-![原版 UI](docs/pe_main.png)
-
-![Java 风格 UI](docs/Java_main.png)
-
-<div align="center">原版 UI 与 Java Edition 风格 UI 对比</div>
-
-![触摸屏潜行](docs/sneak.png)
-
-<div align="center">触摸输入模式下的潜行功能</div>
-
-![皮肤设置](docs/gallery2.png)
-
-<div align="center">自定义皮肤</div>
-
-![F3 调试界面](docs/F3.png)
-
-![F3 切换](docs/F3_enter.png)
+![F3 切换](docs/F3_enter_cn.png)
 
 <div align="center">F3 调试界面</div>
 
@@ -152,7 +130,7 @@
 
 - 四种动物均可生成，而非只有鸡可以生成。鸡相较其他三种动物仍拥有更高的生成概率。
 - 生存模式中保留昼夜循环。
-- 浮岛最低的方块大约位于 Y = 18，因此在 Java 版原始 Sky 世界中钻石无法生成。本项目调整了矿石生成高度，使矿石可以在实际存在方块的高度范围内生成，因此可以找到钻石。
+- 浮岛最低的方块大约位于 Y = 18，因此在 Java 版原始 Sky 世界中钻石无法生成。本项目调整了矿石生成高度，使矿石可以在实际存在方块的高度范围内生成，因此可以找到钻石。同时提高了金矿的生成率，使下界反应堆更容易制作。
 - 为平衡难度，怪物只有在光照足够低，并且 Y 轴上方至少存在一个方块时才会生成。这意味着夜间的露天区域不会刷怪。
 
 ![Java Beta 视觉效果下的天域](docs/beta_sky.png)
@@ -181,6 +159,57 @@
 - 改进扩展世界的区块加载、区块边界渲染和光照更新。
 - 保留原版有限世界格式及其与原版 PE 多人游戏的互通能力。
 - 增加针对不同处理器架构的打包和运行时依赖处理。
+
+---
+
+<h2 align="center">安装</h2>
+
+可在 [Releases](https://github.com/CanghaiDragon/Minecraft-PE-0.6.1-UWP/releases) 页面下载适用于 x86、x64、ARM32 和 ARM64 的预编译 AppX 安装包。
+
+### 1. 启用侧载
+
+安装游戏前，请确保 Windows 允许安装 Microsoft Store 以外来源的应用。
+
+- **Windows 10：** 打开 **设置 → 更新和安全 → 开发者选项**，启用 **旁加载应用**（部分 Windows 版本可能需要启用 **开发人员模式**）。
+- **Windows 11：** 打开 **设置 → 系统 → 开发者选项**，根据系统要求启用 **开发人员模式**。
+- **Windows 10 Mobile：** 打开 **设置 → 更新和安全 → 开发者选项**，启用 **旁加载应用**或**开发人员模式**。
+
+### 2. 安装证书
+
+如果 AppX 安装包使用的签名证书尚未被设备信任，则需要先安装该证书。
+
+1. 找到 Release 中提供的 `.cer` 证书文件。
+2. 在 Windows 桌面系统中打开证书，选择 **安装证书**。
+3. 选择 **本地计算机**，然后手动将证书放入 **受信任人**（Trusted People）证书存储区。
+4. 完成安装；此操作可能需要管理员权限。
+
+**重要提醒：** 只安装来自可信来源的证书。除非确有必要且了解相关安全风险，否则不要将证书安装到 **受信任的根证书颁发机构** 存储区。
+
+在 Windows 10 Mobile 上，可能需要先将 `.cer` 文件传输到手机，再通过手机打开并安装证书。
+
+### 3. 安装 AppX 安装包
+
+1. 主安装包为包含全部四种架构的 `.appxbundle`，安装所需依赖后即可直接安装。
+2. 如果 Release 中包含 `Dependencies` 文件夹，请先安装与你的设备架构对应的依赖包。
+3. 打开 `.appxbundle` 文件，按照提示完成安装。
+4. 从开始菜单或应用列表启动 **Minecraft PE 0.6.1 UWP**。
+
+如果在 Windows 桌面系统中无法通过双击安装，也可以使用 PowerShell：
+
+```powershell
+Add-AppxPackage -Path "appxbundle 文件名"
+```
+
+请将示例中的文件名替换为实际的安装包文件名。
+
+如果 Windows 提示缺少框架依赖，请先安装 Release 中 `Dependencies` 文件夹内对应的依赖包，再重新尝试安装。
+
+### 注意事项
+
+- 安装时请确保设备使用受支持的处理器架构。
+- ARM32 版本主要面向兼容的 Windows 10 Mobile 和 Windows on ARM 设备。
+- 本 UWP 版本不支持 Windows 8（Metro）。
+- 如安装失败，请检查是否已启用侧载、签名证书是否受到信任，以及所需依赖是否均已安装。
 
 ---
 
@@ -236,16 +265,15 @@ ARM32 和 ARM64 配置所需的 ANGLE 头文件、导入库和运行时 DLL 位�
 
 - 在已测试的 Lumia 640 上，破坏方块时的震动反馈目前无法正常工作。
 - 目前不支持 Infinite（无限）和 Sky（天域）世界的多人联机。
-- 悬崖下方可能出现光照异常；玩家靠近后通常可以恢复正常。
 
 ---
 
 <h2 align="center">未来计划</h2>
 
-- 新增中文
-- 改进区块渲染机制
-- 为后续 MCPE 版本开发 Infinite/Sky 世界转换工具
-- 成就系统（生存模式）
+- 中文本地化
+- 新的世界类型
+- 为后续 MCPE 版本开发 Infinite/Sky 世界存档转换功能（正在开发中）
+- 可能加入成就系统
 - Infinite/Sky 世界多人联机
 
 ---

@@ -85,28 +85,6 @@ The additional features below can be experienced after opening the corresponding
 
 - Java Edition style UI
 
-![loading-ag-568](docs/pe_inf.png)
-
-![loading-ag-569](docs/beta_inf.png)
-
-<div align="center">Comparison of original PE visual and Java Beta visual</div>
-
-![Original ui](docs/pe_main.png)
-
-![Java UI](docs/Java_main.png)
-
-<div align="center">Comparison of original UI and Java Edition style UI</div>
-
-![Touch sneak](docs/sneak.png)
-
-<div align="center">Ability to sneak under touch input</div>
-
-![Skin settings](docs/gallery2.png)
-
-<div align="center">Skin customization</div>
-
-![F3 debug screen](docs/F3.png)
-
 ![F3 toggle](docs/F3_enter.png)
 
 <div align="center">F3 Debug Screen</div>
@@ -154,7 +132,7 @@ Sky world is a floating-island world type based on the unused Sky dimension logi
 
 - Day-night cycle is kept in survival mode.
 
-- The lowest block of the floating island is around Y = 18, so in Java Edition, diamonds cannot spawn in Sky. Here, ores generate in the height range where blocks generate, so diamonds can be found.
+- The lowest block of the floating island is around Y = 18, so in Java Edition, diamonds cannot spawn in Sky. Here, ores generate in the height range where blocks generate, so diamonds can be found. Rate of gold ores is also increased, easier for making nether reactor.
 
 - To balance the difficulty, mobs only spawn when the light level is low enough and there is at least one block above along the Y axis, which means mobs do not spawn at night in open areas.
   
@@ -188,6 +166,65 @@ Dynamic Live Tiles and adaptation to UWP navigation bar are also added.
 - Reworked chunk loading, chunk-boundary rendering and lighting updates for extended worlds.
 - Preserved the original finite-world format and its interoperability with original PE multiplayer.
 - Added architecture-specific packaging and runtime dependency handling.
+
+---
+
+<h2 align="center">Installation</h2>
+
+Prebuilt AppX packages for x86, x64, ARM32 and ARM64 are available on the [Releases](https://github.com/CanghaiDragon/Minecraft-PE-0.6.1-UWP/releases) page.
+
+### 1. Enable sideloading
+
+Before installing the game, make sure Windows allows the installation of apps from outside the Microsoft Store.
+
+* **Windows 10:** Open **Settings → Update & Security → For developers**, then enable **Sideload apps** (or **Developer mode**, depending on your Windows version).
+
+* **Windows 11:** Open **Settings → System → For developers** and enable **Developer Mode** if required by your system.
+
+* **Windows 10 Mobile:** Open **Settings → Update & security → For developers** and enable **Sideload apps** or **Developer mode**.
+
+### 2. Install the certificate
+
+If the AppX package is signed with a certificate that is not already trusted by your device, you must install the signing certificate before installing the game.
+
+1. Locate the `.cer` certificate provided with the release.
+
+2. On Windows desktop, open the certificate and select **Install Certificate**.
+
+3. Select **Local Machine** and manually place the certificate in **Trusted People**.
+
+4. Complete the certificate installation. Administrator permission may be required.
+
+**Important:** Only install certificates from sources you trust. Do not install certificates into **Trusted Root Certification Authorities** unless specifically necessary and you understand the security implications.
+
+For Windows 10 Mobile, certificate installation may require transferring the `.cer` file to the phone and opening it there.
+
+### 3. Install the AppX package
+
+1. The main package is an appxbundle containing all 4 architectures. After installing the needed dependency, it can be directly installed.
+
+2. If the release includes a `Dependencies` folder, install the required dependency packages for your architecture first.
+
+3. Open the `.appxbundle` file and follow the installation prompts.
+
+4. Launch **Minecraft PE 0.6.1 UWP** from the Start menu or app list.
+
+If the package cannot be installed by double-clicking, you can also use PowerShell on Windows desktop:
+    Add-AppxPackage -Path "appxbundle filename"
+
+Replace the filename with the actual package name.
+
+If Windows reports a missing framework dependency, install the corresponding package from the release's `Dependencies` folder before retrying.
+
+### Notes
+
+* Use the package matching your device's CPU architecture.
+
+* ARM32 packages are primarily intended for compatible Windows 10 Mobile and Windows on ARM devices.
+
+* Windows 8 (Metro) is not supported by this UWP version.
+
+* If installation fails, check that sideloading is enabled, the signing certificate is trusted, and all required dependencies are installed.
 
 ---
 
@@ -243,7 +280,6 @@ Below are the default keyboard controls for keyboard input. They can be revised 
 
 - Block-destruction vibration is currently not working on the tested Lumia 640.
 - Multiplayer for Infinite and Sky worlds is not currently supported.
-- Lighting issues may occur under cliffs and can be solved when player moves closer.
 
 ---
 
@@ -251,9 +287,9 @@ Below are the default keyboard controls for keyboard input. They can be revised 
 
 - Chinese localization
 
-- Better chunk rendering mechanism
+- New world types
 
-- Infinite/Sky world conversion tools for later MCPE versions
+- Infinite/Sky world conversion tools for later MCPE versions (Already in Progress!)
 
 - Possible achievement system
 

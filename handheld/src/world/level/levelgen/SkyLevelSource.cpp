@@ -260,7 +260,8 @@ void SkyLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
         placeOre(random, level, xo + random.nextInt(16), zo + random.nextInt(16), random.nextInt(128), Tile::coalOre->id, 16);
     for (int i = 0; i < 20; ++i)
         placeOre(random, level, xo + random.nextInt(16), zo + random.nextInt(16), getOreStartY(random, lowestRockY, 64), Tile::ironOre->id, 8);
-    for (int i = 0; i < 2; ++i)
+    // Match iron's vein count while retaining gold's lower height band.
+    for (int i = 0; i < 20; ++i)
         placeOre(random, level, xo + random.nextInt(16), zo + random.nextInt(16), getOreStartY(random, lowestRockY, 32), Tile::goldOre->id, 8);
     for (int i = 0; i < 8; ++i)
         placeOre(random, level, xo + random.nextInt(16), zo + random.nextInt(16), getOreStartY(random, lowestRockY, 16), Tile::redStoneOre->id, 7);
