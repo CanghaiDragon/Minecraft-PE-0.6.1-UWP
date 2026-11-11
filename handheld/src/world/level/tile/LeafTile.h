@@ -6,6 +6,7 @@
 #include "TransparentTile.h"
 #include "../Level.h"
 #include "../biome/BiomeSource.h"
+#include "../biome/Biome.h"
 #include "../material/Material.h"
 #include "../../item/Item.h"
 #include "../../item/ItemInstance.h"
@@ -50,6 +51,17 @@ public:
     }
 
     int getColor(LevelSource* level, int x, int y, int z) {
+		// Alpha's dedicated leaf atlas is used for PE visuals and for Fancy
+		// Java/Beta visuals.  Fast Java/Beta keeps the same opaque leaf path as
+		// the other world types, so that its original fast texture is not
+		// filtered through the Alpha material.
+		const bool useAlphaLeafMaterial =
+			(Tile::useAlphaTextures()
+				|| level->getBiome(x, z) == Biome::alpha
+				|| level->getBiome(x, z) == Biome::winter)
+			&& (!Tile::useBetaVisuals() || allowSame);
+		if (useAlphaLeafMaterial)
+			return 0xffffff;
 
         int data = (level->getData(x, y, z) & LEAF_TYPE_MASK);
         if (data == EVERGREEN_LEAF) {
@@ -197,6 +209,10 @@ public:
     }
 
 	int getTexture(int face, int data) {
+		if (Tile::useAlphaTextures()
+			&& (!Tile::useBetaVisuals() || allowSame))
+			return Tile::ALPHA_LEAVES_TEXTURE;
+
 		// Beta's grayscale foliage atlas uses the cutout texture intended for
 		// Fancy graphics.  Fast graphics already puts leaves in the opaque
 		// render layer, so using that texture there leaves holes through which

@@ -502,7 +502,10 @@ LevelChunk* RandomLevelSource::getChunk(int xOffs, int zOffs) {
     prepareHeights(xOffs, zOffs, blocks, 0, temperatures);//biomes, temperatures);
     buildSurfaces(xOffs, zOffs, blocks, biomes);
 
-	//caveFeature.apply(this, level, xOffs, zOffs, blocks, LevelChunk::ChunkBlockCount);
+	// Finite worlds retain the original PE no-cave behavior. Infinite worlds
+	// restore the Java/PE large-cave pass; Alpha uses its own source below.
+	if (level->getLevelData()->getWorldType() == WorldType::Infinite)
+		caveFeature.apply(this, level, xOffs, zOffs, blocks, LevelChunk::ChunkBlockCount);
     levelChunk->recalcHeightmap();
 
     return levelChunk;

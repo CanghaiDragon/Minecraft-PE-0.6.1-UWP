@@ -439,6 +439,8 @@ void SelectWorldScreen::tick()
 					int worldType = WorldType::Old;
 					if (sv.size() >= 4 && sv[3] == "infinite")
 						worldType = WorldType::Infinite;
+					else if (sv.size() >= 4 && sv[3] == "alpha")
+						worldType = WorldType::Alpha;
 
 					// Start a new level with the given name and seed
 					LOGI("Creating a level with id '%s', name '%s' and seed '%d'\n", levelId.c_str(), levelName.c_str(), seed);

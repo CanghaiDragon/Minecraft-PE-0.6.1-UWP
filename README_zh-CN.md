@@ -49,7 +49,7 @@
 
 部分 Java Beta 视觉效果的思路和相关实现参考了 [minecraft-pe-0.6.1-on-all](https://github.com/Minecraft-PE-0-6-1/minecraft-pe-0.6.1-on-all)，下文称为 **Project A**。
 
-天域世界以及部分视觉效果参考了 Minecraft Java Edition Beta 1.7.3 的源代码，并使用 Mod Coder Pack 4.3：[mcp43](https://www.mediafire.com/file/03d94f13c9ulj5a/mcp43.zip)。上述参考并不意味着本项目与 Mojang 存在任何官方关联或获得其授权。
+天域世界以及部分视觉效果参考了通过 Mod Coder Pack 4.3 反编译的 Minecraft Java Edition Beta 1.7.3 源代码。Alpha 世界则参考了通过 Mod Coder Pack 1.6 反编译的 Java Edition Alpha 1.1.2_01 源代码。这些参考并不意味着本项目与 Mojang 存在任何官方关联或获得其授权。
 
 部分图片来自 [Minecraft Wiki](https://minecraft.wiki/)。AppX 资源来自官方 [Windows Phone 8.1 版 Minecraft PE](https://microsoft.com/p/-/9wzdncrdzsbb)。
 
@@ -73,7 +73,7 @@
 
 以下功能可通过“Options（选项）”→“Additional（附加设置）”中的对应设置体验。如果希望获得接近原版 MCPE 0.6.1 的游戏体验，可以保持这些选项关闭。
 
-- 更多世界类型（Infinite 无限世界和 Sky 天域世界）
+- 更多世界类型（Infinite 无限世界、Sky 天域世界和 Alpha 世界）
 
 - Java Edition Beta 风格视觉效果
 
@@ -118,15 +118,15 @@
 
 ### Old（有限）世界
 
-原版世界类型，使用与原版 MCPE 0.6.1 相同的生成机制。玩家可以在边界为 256×256 的世界中游玩，世界外围由隐形基岩包围。需要注意的是，由于随机数的差异，原版 MCPE 0.6.1 中创造模式和生存模式的出生点并不相同。本项目保留了这一特性。
+原版世界类型，使用与原版 MCPE 0.6.1 相同的生成机制。玩家可以在边界为 256×256 的世界中游玩，世界外围由隐形基岩包围。原版 0.6.1 不会生成洞穴，本项目保留了这一特性。需要注意的是，由于随机数的差异，原版 MCPE 0.6.1 中创造模式和生存模式的出生点并不相同。本项目保留了这一特性。
 
 ### Infinite（无限）世界
 
-无限世界采用多 Region 区块存储，可以探索原版 256×256 世界边界之外的区域。其生成器由有限世界生成器改造而来，因此使用相同种子时，在有限世界边界范围内可以生成与有限世界完全相同的地形。生存模式与创造模式出生点不同的特性同样得到保留。
+无限世界采用多 Region 区块存储，可以探索原版 256×256 世界边界之外的区域。其生成器由有限世界生成器改造而来，因此使用相同种子时，在有限世界边界范围内可以生成与有限世界完全相同的地形。生存模式与创造模式出生点不同的特性同样得到保留。无限世界会生成洞穴。
 
 ### Sky（天域）世界
 
-天域世界是一种浮空岛世界类型，基于 Minecraft Java Edition Beta 1.6–1.8 中未实装的 Sky Dimension 逻辑实现。它使用固定的 Sky 生物群系以及独立的地形生成规则。云层位于浮岛下方。启用 Java Beta Visual 后，天空呈浅紫色。为了确保生存模式下的可玩性，本项目进行了以下调整：
+天域世界是一种浮空岛世界类型，基于 Minecraft Java Edition Beta 1.6–1.8 中未实装的 Sky Dimension 逻辑实现。它使用固定的 Sky 生物群系以及独立的地形生成规则。云层位于浮岛下方。启用 Java Beta Visual 后，天空呈浅紫色。天域世界会生成洞穴。为了确保生存模式下的可玩性，本项目进行了以下调整：
 
 - 四种动物均可生成，而非只有鸡可以生成。鸡相较其他三种动物仍拥有更高的生成概率。
 - 生存模式中保留昼夜循环。
@@ -138,6 +138,16 @@
 ![原版 PE 视觉效果下的天域](docs/pe_sky.png)
 
 <div align="center">天域在 Java Beta 与原版 PE 视觉效果下的对比</div>
+
+### Alpha 世界
+
+该世界类型基于 Minecraft Java Edition Alpha v1.1.2_01。世界中只会生成 Alpha 或 Winter 生物群系，以模拟早期 Java 版 Minecraft 的世界环境。树叶和草方块呈现与后续版本不同的鲜绿色。Alpha 世界会生成洞穴。创建 Alpha 世界时，有 25% 的概率生成特殊的冬天模式世界。
+
+![Alpha 世界](docs/alpha.png)
+
+![Alpha 冬季世界](docs/alpha_winter.png)
+
+<div align="center">普通 Alpha 世界与特殊的“冬天模式”Alpha 世界</div>
 
 ---
 
@@ -155,7 +165,7 @@
 - 增加 x86、x64、ARM32 和 ARM64 构建配置。
 - 调整渲染后端，以适配不同平台的 OpenGL 和 ANGLE 路径。
 - 增加键盘、鼠标和触摸屏输入抽象层。
-- 增加多 Region 存储，以及新的 Infinite/Sky 世界生成系统。
+- 增加多 Region 存储，以及新的 Infinite/Sky/Alpha 世界生成系统。
 - 改进扩展世界的区块加载、区块边界渲染和光照更新。
 - 保留原版有限世界格式及其与原版 PE 多人游戏的互通能力。
 - 增加针对不同处理器架构的打包和运行时依赖处理。
@@ -271,7 +281,6 @@ ARM32 和 ARM64 配置所需的 ANGLE 头文件、导入库和运行时 DLL 位�
 <h2 align="center">未来计划</h2>
 
 - 中文本地化
-- 新的世界类型
 - 为后续 MCPE 版本开发 Infinite/Sky 世界存档转换功能（正在开发中）
 - 可能加入成就系统
 - Infinite/Sky 世界多人联机

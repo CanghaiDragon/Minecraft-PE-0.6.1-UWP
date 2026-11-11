@@ -386,10 +386,24 @@ int LevelChunk::getBrightness( const LightLayer& layer, int x, int y, int z )
 
 void LevelChunk::setBrightness( const LightLayer& layer, int x, int y, int z, int brightness )
 {
-	//this->unsaved = true;
-	if (&layer == &LightLayer::Sky) skyLight.set(x, y, z, brightness);
-	else if (&layer == &LightLayer::Block) blockLight.set(x, y, z, brightness);
-	else return;
+	int oldBrightness;
+	if (&layer == &LightLayer::Sky) {
+		oldBrightness = skyLight.get(x, y, z);
+		if (oldBrightness == brightness) return;
+		skyLight.set(x, y, z, brightness);
+	} else if (&layer == &LightLayer::Block) {
+		oldBrightness = blockLight.get(x, y, z);
+		if (oldBrightness == brightness) return;
+		blockLight.set(x, y, z, brightness);
+	} else return;
+
+	// Lighting is part of the serialized chunk record.  Generated chunks are
+	// already included in the first world save, but a chunk loaded from disk
+	// must become dirty when propagation changes one of its light cells;
+	// otherwise the correction remains memory-only and the next reload can
+	// restore stale (including completely dark) lighting.
+	if (createdFromSave)
+		unsaved = true;
 }
 
 int LevelChunk::getRawBrightness( int x, int y, int z, int skyDampen )

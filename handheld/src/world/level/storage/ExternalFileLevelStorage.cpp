@@ -885,7 +885,18 @@ LevelChunk* ExternalFileLevelStorage::load(Level* level, int x, int z)
 	//if (loadedStorageVersion > SharedConstants::StorageVersion)
 		changed |= LevelConverters::ReplaceUnavailableBlocks(levelChunk);
 
-	levelChunk->recalcHeightmap();
+	// Current chunk records already contain the complete sky/block light
+	// arrays.  Recalculating the full heightmap here would partially overwrite
+	// the serialized sky light while light updates are disabled during world
+	// loading; preserve the stored lighting and only rebuild the heightmap.
+	// Older records have no light arrays, so they still need the full initial
+	// light calculation and must be written back in the current format.
+	if (loadedStorageVersion >= ChunkVersion_Light) {
+		levelChunk->recalcHeightmapOnly();
+	} else {
+		levelChunk->recalcHeightmap();
+		changed = true;
+	}
 	levelChunk->unsaved = changed;
 	levelChunk->terrainPopulated = savedTerrainPopulated;
 	levelChunk->createdFromSave = true;

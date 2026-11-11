@@ -365,6 +365,8 @@ void SelectWorldScreen::tick()
 					int worldType = WorldType::Old;
 					if (sv.size() >= 4 && sv[3] == "infinite")
 						worldType = WorldType::Infinite;
+					else if (sv.size() >= 4 && sv[3] == "alpha")
+						worldType = WorldType::Alpha;
 
 					// Start a new level with the given name and seed
 					LevelSettings settings(seed, isCreative? GameType::Creative : GameType::Survival, worldType);

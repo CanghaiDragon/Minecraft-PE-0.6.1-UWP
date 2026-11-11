@@ -526,7 +526,7 @@ void Level::validateSpawn() {
 }
 
 int Level::getTopTile(int x, int z) {
-    if (levelData.getWorldType() == WorldType::Sky) {
+    if (levelData.getWorldType() == WorldType::Sky || levelData.getWorldType() == WorldType::Alpha) {
         int y = getTopTileY(x, z);
         return y < 0 ? 0 : getTile(x, y, z);
     }
@@ -538,7 +538,7 @@ int Level::getTopTile(int x, int z) {
 }
 
 int Level::getTopTileY(int x, int z) {
-    if (levelData.getWorldType() == WorldType::Sky) {
+    if (levelData.getWorldType() == WorldType::Sky || levelData.getWorldType() == WorldType::Alpha) {
         for (int y = DEPTH - 1; y >= 0; --y) {
             const Material* material = getMaterial(x, y, z);
             // Snow layers and small plants do not replace the spawn's supporting block.

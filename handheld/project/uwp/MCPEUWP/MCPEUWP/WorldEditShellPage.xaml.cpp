@@ -175,6 +175,8 @@ namespace
 			return L"Infinite";
 		if (worldType == WorldType::Sky)
 			return L"Sky / Nether Reactor";
+		if (worldType == WorldType::Alpha)
+			return L"Alpha";
 		return L"Old / Finite";
 	}
 
@@ -230,6 +232,8 @@ namespace
 			return isNewUwpFormat ? L"Infinite" : L"Infinite Legacy (Unsupported)";
 		if (worldType == WorldType::Sky)
 			return isNewUwpFormat ? L"Sky" : L"Sky Legacy (Unsupported)";
+		if (worldType == WorldType::Alpha)
+			return isNewUwpFormat ? L"Alpha" : L"Alpha Legacy (Unsupported)";
 		return L"Old / Finite";
 	}
 

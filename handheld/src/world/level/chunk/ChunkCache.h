@@ -307,6 +307,22 @@ public:
 	
 	void saveAll(bool onlyUnsaved) {
 		finishPostProcess();
+
+		// A shutdown save must not serialize a half-drained light queue.  During
+		// normal play lighting is intentionally processed over several frames,
+		// but an already queued update can be the only thing that turns a solid
+		// block's underside from stale black into its correct value.  Drain the
+		// existing queue before taking the chunk snapshot; this does not create
+		// new repair work for distant chunks.
+		if (level != NULL) {
+			int lightPasses = 0;
+			while (level->updateLights())
+				++lightPasses;
+			if (lightPasses > 0)
+				LOGI("ChunkCache saveAll: drained %d light passes before serialization\n",
+					lightPasses);
+		}
+
 		if (storage != NULL) {
 			std::vector<LevelChunk*> chunkList;
 			for (auto& kv : chunks) {

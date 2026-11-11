@@ -177,7 +177,16 @@ void Inventory::setupDefault() {
 		addItem(new ItemInstance(Tile::emeraldBlock));
 		addItem(new ItemInstance(Tile::lapisBlock));
 		addItem(new ItemInstance(Tile::obsidian));
+		// Add the source liquid blocks themselves, not the bucket items.
+		// Their inventory representation uses the existing 2D terrain icon.
+		addItem(new ItemInstance(Tile::water));
+		addItem(new ItemInstance(Tile::lava));
+		// Expose both snow forms and ice in the creative inventory.  The
+		// full snow block was already present; topSnow is the thin surface
+		// layer used by Winter worlds.
+		addItem(new ItemInstance(Tile::topSnow));
 		addItem(new ItemInstance(Tile::snow));
+		addItem(new ItemInstance(Tile::ice));
 		addItem(new ItemInstance(Tile::glass));
         addItem(new ItemInstance(Tile::lightGem));
 

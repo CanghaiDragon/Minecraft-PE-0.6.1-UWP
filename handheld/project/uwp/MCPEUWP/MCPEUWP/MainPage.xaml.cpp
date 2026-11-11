@@ -2619,6 +2619,7 @@ void MainPage::BeginOriginalClientTexturePreload()
 		"item/arrows.png",
 		"item/sign.png",
 		"environment/clouds.png",
+		"environment/snow.png",
 		"terrain/sun.png",
 		"terrain/moon.png",
 		"mob/char.png",

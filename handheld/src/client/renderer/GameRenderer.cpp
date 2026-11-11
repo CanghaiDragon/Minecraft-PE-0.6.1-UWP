@@ -351,7 +351,9 @@ void GameRenderer::renderLevel(float a) {
         frustum.prepare(xOff, yOff, zOff);
 
 		TIMER_POP_PUSH("culling");
-        mc->levelRenderer->cull(&frustum, a);
+		// Update the Java-style spectator visibility state before terrain draws.
+		mc->levelRenderer->updateXrayRenderState(cameraEntity);
+		mc->levelRenderer->cull(&frustum, a);
         mc->levelRenderer->updateDirtyChunks(cameraEntity, false);
 
 		// PE's projection-reset helper is only suitable for its flat cloud
@@ -401,30 +403,45 @@ void GameRenderer::renderLevel(float a) {
         setupFog(0);
         glEnable2(GL_BLEND);
         glDisable2(GL_CULL_FACE);
-		glDepthMask(GL_FALSE);
         glDisable2(GL_ALPHA_TEST);
 		mc->textures->loadAndBindTexture("terrain.png");
-        //if (mc->options.fancyGraphics) {
-        //    glColorMask(false, false, false, false);
-        //    int visibleWaterChunks = levelRenderer->render(cameraEntity, 1, a);
-        //    glColorMask(true, true, true, true);
-        //    if (mc->options.anaglyph3d) {
-        //        if (i == 0) glColorMask(false, true, true, false);
-        //        else glColorMask(true, false, false, false);
-        //    }
-        //    if (visibleWaterChunks > 0) {
-        //        levelRenderer->renderSameAsLast(1, a);
-        //    }
-        //} else
-		{
-			//glDepthRangef(0.1f, 1.0f);
-			//glDepthMask(GL_FALSE);
+		const bool betaFancyTranslucency =
+			mc->options.betaVisuals && mc->options.fancyGraphics;
+		if (betaFancyTranslucency) {
+			// Match Java Beta's Fancy pass-1 depth prepass: submit the same
+			// sorted transparent chunk lists once with color writes disabled,
+			// then replay those lists for the visible color pass. Ice and water
+			// are both in UWP layer 2, so this applies to both together.
+			if (mc->options.ambientOcclusion) {
+				glShadeModel2(GL_SMOOTH);
+			}
+			glEnable2(GL_DEPTH_TEST);
+			glDepthMask(GL_TRUE);
+			glColorMask(false, false, false, false);
+			TIMER_POP_PUSH("terrain-water-depth");
+			int visibleBlendChunks = levelRenderer->render(cameraEntity, 2, a);
+
+			if (mc->options.anaglyph3d) {
+				if (i == 0) glColorMask(false, true, true, false);
+				else glColorMask(true, false, false, false);
+			} else {
+				glColorMask(true, true, true, true);
+			}
+
+			if (visibleBlendChunks > 0) {
+				TIMER_POP_PUSH("terrain-water-color");
+				levelRenderer->renderSameAsLast(2, a);
+			}
+			glShadeModel2(GL_FLAT);
+		} else {
+			// PE and Beta+Fast retain the established single transparent water
+			// pass. Ice is opaque in these modes and was already rendered in
+			// layer 0.
+			glDepthMask(GL_FALSE);
 			TIMER_POP_PUSH("terrain-water");
 			glEnable2(GL_DEPTH_TEST);
-            levelRenderer->render(cameraEntity, 2, a);
-			//glDepthRangef(0, 1);
-
-        }
+			levelRenderer->render(cameraEntity, 2, a);
+		}
         
 		glDepthMask(GL_TRUE);
         glEnable2(GL_CULL_FACE);
@@ -442,17 +459,48 @@ void GameRenderer::renderLevel(float a) {
 			}
 		}
 
-		glDisable2(GL_FOG);
+		const bool snowWeather =
+			mc->options.fancyGraphics && levelRenderer->isSnowWeatherActive(cameraEntity);
+
 		// Java Beta draws the fancy 3D cloud volume after terrain (including
-		// translucent terrain), not inside PE's sky pre-pass.  Its first
-		// depth-only pass can therefore correctly resolve neighbouring cells.
+		// translucent terrain), not inside PE's sky pre-pass.  Keep its normal
+		// depth-only pass so the cloud volume sorts correctly internally.
 		if (mc->options.fancyGraphics && mc->options.betaVisuals) {
+			glDisable2(GL_FOG);
 			setupFog(0);
 			glEnable2(GL_FOG);
 			TIMER_POP_PUSH("beta-clouds");
 			levelRenderer->renderBetaClouds(a);
 			glDisable2(GL_FOG);
 		}
+
+		// Alpha's winter visual is a direct snow-screen pass rather than a
+		// weather particle system.  Beta clouds have already populated the
+		// depth buffer, so rebuild only opaque terrain depth before drawing the
+		// snow.  This removes cloud depth while preserving terrain occlusion.
+		glDisable2(GL_FOG);
+		if (snowWeather && mc->options.betaVisuals) {
+			glClear(GL_DEPTH_BUFFER_BIT);
+			glEnable2(GL_DEPTH_TEST);
+			glDepthMask(GL_TRUE);
+			glEnable2(GL_CULL_FACE);
+			glDisable2(GL_BLEND);
+			glEnable2(GL_ALPHA_TEST);
+			glEnable2(GL_TEXTURE_2D);
+			glColorMask(false, false, false, false);
+			mc->textures->loadAndBindTexture("terrain.png");
+			TIMER_POP_PUSH("snow-terrain-depth");
+			levelRenderer->render(cameraEntity, 0, a);
+
+			if (mc->options.anaglyph3d) {
+				if (i == 0) glColorMask(false, true, true, false);
+				else glColorMask(true, false, false, false);
+			} else {
+				glColorMask(true, true, true, true);
+			}
+		}
+		levelRenderer->renderSnowWeather(cameraEntity, a);
+
         setupFog(1);
 
         if (zoom == 1) {

@@ -2062,16 +2062,18 @@ void Minecraft::optionUpdated( const Options::Option* option, bool value ) {
 	if (option == &Options::Option::DYNAMIC_TILE)
 		UwpLiveTileSetEnabled(value);
 #endif
+	if ((option == &Options::Option::BETA_VISUALS ||
+		 option == &Options::Option::GRAPHICS) && levelRenderer != NULL) {
+		// Grass and leaf tint is baked into chunk meshes, so switching the
+		// presentation mode must invalidate them immediately. Ice's render
+		// layer also depends on the Beta+Fancy combination.
+		levelRenderer->allChanged();
+	}
 #if defined(MCPE_UWP_CLIENT_LIFECYCLE_ONLY)
 	(void)option;
 	(void)value;
 	return;
 #else
-	if (option == &Options::Option::BETA_VISUALS && levelRenderer != NULL) {
-		// Grass and leaf tint is baked into chunk meshes, so switching the
-		// presentation mode must invalidate them immediately.
-		levelRenderer->allChanged();
-	}
 	if(netCallback != NULL && option == &Options::Option::SERVER_VISIBLE) {
 		ServerSideNetworkHandler* ss = (ServerSideNetworkHandler*) netCallback;
 		ss->allowIncomingConnections(value);

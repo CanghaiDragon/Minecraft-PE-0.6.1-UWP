@@ -312,6 +312,7 @@
     <ClCompile Include="..\..\src\world\level\levelgen\LargeCaveFeature.cpp" />
     <ClCompile Include="..\..\src\world\level\levelgen\LargeFeature.cpp" />
     <ClCompile Include="..\..\src\world\level\levelgen\RandomLevelSource.cpp" />
+    <ClCompile Include="..\..\src\world\level\levelgen\AlphaLevelSource.cpp" />
     <ClCompile Include="..\..\src\world\level\levelgen\SkyLevelSource.cpp" />
     <ClCompile Include="..\..\src\world\level\levelgen\synth\ImprovedNoise.cpp" />
     <ClCompile Include="..\..\src\world\level\levelgen\synth\PerlinNoise.cpp" />

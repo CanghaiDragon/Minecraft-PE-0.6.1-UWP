@@ -206,6 +206,7 @@ LevelChunk* SkyLevelSource::getChunk(int x, int z) {
 	Biome** biomes = level->getBiomeSource()->getBiomeBlock(x * 16, z * 16, 16, 16);
 	prepareHeights(x, z, blocks);
 	buildSurfaces(x, z, blocks, biomes);
+	caveFeature.apply(this, level, x, z, blocks, LevelChunk::ChunkBlockCount);
 	chunk->recalcHeightmap();
 	return chunk;
 }

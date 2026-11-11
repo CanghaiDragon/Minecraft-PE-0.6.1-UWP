@@ -940,16 +940,32 @@ bool UwpWorldRenderer::renderOriginalLevelRenderer(const float* projection,
 		m_originalRenderPlayer, 1, 0.0f);
 	hasGeometry = hasGeometry || m_originalLevelRenderer->hasRenderableGeometry(1);
 
-	// Liquids and other translucent tiles are submitted last with the original
-	// blend/depth-mask state.  Keeping this call here also prevents stale layer
-	// 2 VBOs from being mistaken for an opaque draw after a block update.
+	// Liquids and, in Beta+Fancy, ice are submitted last with the original
+	// blend state. Java Beta uses a color-mask-off depth prepass and then
+	// replays the same sorted render lists for the visible color pass.
 	glEnable(GL_BLEND);
 	glBlendFunc2(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glDisable(GL_ALPHA_TEST);
 	glDisable(GL_CULL_FACE);
-	glDepthMask(GL_FALSE);
-	submitted += m_originalLevelRenderer->render(
-		m_originalRenderPlayer, 2, 0.0f);
+	if (Tile::useBetaFancyGraphics())
+	{
+		glDepthMask(GL_TRUE);
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+		const int visibleBlendChunks = m_originalLevelRenderer->render(
+			m_originalRenderPlayer, 2, 0.0f);
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		if (visibleBlendChunks > 0)
+			m_originalLevelRenderer->renderSameAsLast(2, 0.0f);
+		submitted += visibleBlendChunks;
+	}
+	else
+	{
+		// PE and Beta+Fast retain the existing single transparent water pass;
+		// ice is opaque and was submitted in layer 0.
+		glDepthMask(GL_FALSE);
+		submitted += m_originalLevelRenderer->render(
+			m_originalRenderPlayer, 2, 0.0f);
+	}
 	hasGeometry = hasGeometry || m_originalLevelRenderer->hasRenderableGeometry(2);
 
 	glBindBuffer2(GL_ARRAY_BUFFER, 0);

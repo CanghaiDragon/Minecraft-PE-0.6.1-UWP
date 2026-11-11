@@ -43,13 +43,13 @@ This project focuses on UWP. Other platforms (Android, iOS) are not intended tar
 
 This UWP project was transplanted from my win32 version [Minecraft-PE-0.6.1-Windows-Universal](https://github.com/CanghaiDragon/Minecraft-PE-0.6.1-Windows-Universal). The main features are the same. Below I will mention a few unique features of this UWP version.
 
-In March 2026, the source code of Minecraft Pocket Edition v0.6.1 was leaked on the Internet. You can find it at [Minecraft PE Source Code](https://archive.org/details/Minecraftpesorucecode). This is the reason why several revisions of MCPE0.6.1 appear on GitHub and other sites. This project is also a revision of the original source code. None of the revisions **is** directly authorized by Mojang.
+In early 2026, the source code of Minecraft Pocket Edition v0.6.1 was leaked on the Internet. You can find it at [Minecraft PE Source Code](https://archive.org/details/Minecraftpesorucecode). This is the reason why several revisions of MCPE0.6.1 appear on GitHub and other sites. This project is also a revision of the original source code. **None** of the revisions is directly authorized by Mojang.
 
 This project originated from [programmer1o1/MinecraftPE-v0.6.1](https://github.com/programmer1o1/MinecraftPE-v0.6.1), referred to below as **Project B**. Project B provides the main modernized source base and multi-platform porting work.
 
 Some Java Beta visual ideas and related implementation details were studied from [minecraft-pe-0.6.1-on-all](https://github.com/Minecraft-PE-0-6-1/minecraft-pe-0.6.1-on-all), referred to below as **Project A**.
 
-The Sky world and several visual behaviors were implemented with reference to Minecraft Java Edition Beta 1.7.3 source code using Mod Coder Pack 4.3: [mcp43](https://www.mediafire.com/file/03d94f13c9ulj5a/mcp43.zip). These references do not imply official affiliation or authorization by Mojang.
+The Sky world and several visual behaviors were implemented with reference to Minecraft Java Edition Beta 1.7.3 source code using Mod Coder Pack 4.3. Alpha world is referenced to Java Edition Alpha 1.1.2_01 using Mode Coder Pack 1.6. These references do not imply official affiliation or authorization by Mojang.
 
 A few images come from [Minecraft Wiki](https://minecraft.wiki/). Appx resources come from the official [Windows Phone 8.1 version of Minecraft PE](https://microsoft.com/p/-/9wzdncrdzsbb).
 
@@ -73,7 +73,7 @@ The main work of this project is assisted with the help of Codex.
 
 The additional features below can be experienced after opening the corresponding settings in Options → Additional. If you wish to have an experience close to the original MCPE 0.6.1, you can leave those settings off.
 
-- Additional world type (Infinite and Sky)
+- Additional world type (Infinite, Sky and Alpha)
 
 - Java Edition Beta visual effects
 
@@ -118,15 +118,15 @@ The additional features below can be experienced after opening the corresponding
 
 ### Old (finite) world
 
-The original world type uses the same generator as the original MCPE 0.6.1. Players can play in a world with a boundary of 256×256, and the outer space is filled with invisible bedrock. Note that due to random-number variation, the spawn point in Creative mode and Survival mode is different in the original MCPE 0.6.1. This project inherits this feature.
+The original world type uses the same generator as the original MCPE 0.6.1. Players can play in a world with a boundary of 256×256, and the outer space is filled with invisible bedrock. Cave is unabled in the origin 0.6.1, and this version inherits this feature. Note that due to random-number variation, the spawn point in Creative mode and Survival mode is different in the original MCPE 0.6.1. This project inherits this feature.
 
 ### Infinite world
 
-Infinite worlds use multi-region chunk storage and support exploration beyond the original 256×256 world boundary. The generator is adapted from the finite generator, which means you can find the exact same terrain as the finite world at coordinates within the finite-world boundary when using the same seed. The feature of different spawn points in Survival and Creative modes is also inherited.
+Infinite worlds use multi-region chunk storage and support exploration beyond the original 256×256 world boundary. The generator is adapted from the finite generator, which means you can find the exact same terrain as the finite world at coordinates within the finite-world boundary when using the same seed. The feature of different spawn points in Survival and Creative modes is also inherited. Cave is enabled.
 
 ### Sky world
 
-Sky world is a floating-island world type based on the unused Sky dimension logic in Java Edition Beta 1.6 - 1.8. It uses a fixed Sky biome and separate terrain generation rules. Clouds are below the floating island. The sky color is light purple (only when Java Beta Visual is enabled). Several changes have been made to ensure playability in Survival mode:
+Sky world is a floating-island world type based on the unused Sky dimension logic in Java Edition Beta 1.6 - 1.8. It uses a fixed Sky biome and separate terrain generation rules. Clouds are below the floating island. The sky color is light purple (only when Java Beta Visual is enabled). Cave is enabled. Several changes have been made to ensure playability in Survival mode:
 
 - 4 types of animals can all spawn instead of only chickens. Chickens still have a higher spawn rate than the other three types of animals.
 
@@ -143,6 +143,16 @@ Sky world is a floating-island world type based on the unused Sky dimension logi
 ![Sky world with original PE visuals](docs/pe_sky.png)
 
 <div align="center">Difference view of Sky world under Java Beta and PE visual</div>
+
+### Alpha World
+
+The world type based on Java Edition Alpha v1.1.2_01. Only the biome "Alpha" or "Winter" will generate to stimulate the situation of Java Edition early stage. Trees and grass blocks are in light green colors, separate from later Minecraft versions. Cave is enabled. There is a chance of 25% to enter the "Winter" world when creating a Alpha world.
+
+![Alpha](docs/alpha.png)
+
+![Alpha Winter](docs/alpha_winter.png)
+
+<div align="center">Normal Alpha world and the special "Winter" Alpha world</div>
 
 ---
 
@@ -286,8 +296,6 @@ Below are the default keyboard controls for keyboard input. They can be revised 
 <h2 align="center">Future plans</h2>
 
 - Chinese localization
-
-- New world types
 
 - Infinite/Sky world conversion tools for later MCPE versions (Already in Progress!)
 
