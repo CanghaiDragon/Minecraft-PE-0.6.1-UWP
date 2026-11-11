@@ -36,6 +36,8 @@ New features:
 
 - Spectator mode (toggle F to enter in creative mode) can now X-ray inside blocks.
 
+- All world types excluding finite (from origin PE) now have cave generation enabled.
+
 Bug fix:
 
 - Lightning under trees can now be saved and rendered correctly.
