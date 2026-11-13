@@ -41,7 +41,7 @@
 
 <h2 align="center">上游项目与参考资料</h2>
 
-本 UWP 项目由我此前的 Win32 版本 [Minecraft-PE-0.6.1-Windows-Universal](https://github.com/CanghaiDragon/Minecraft-PE-0.6.1-Windows-Universal) 移植而来，主要功能基本相同。下文将介绍 UWP 版本的一些独有功能。
+本 UWP 项目由我此前的 Win32 版本 [Minecraft-PE-0.6.1-Windows-Universal](https://github.com/CanghaiDragon/Minecraft-PE-0.6.1-Windows-Universal) 移植而来，主要功能基本相同。
 
 2026 年 3 月，Minecraft Pocket Edition v0.6.1 的源代码在互联网上泄露，可以在 [Minecraft PE Source Code](https://archive.org/details/Minecraftpesorucecode) 找到。这也是 GitHub 等网站上出现多个 MCPE 0.6.1 修改版本的原因。本项目同样是基于原始代码开发的修改版本。这些修改版本均**未获得 Mojang 的直接授权**。
 
@@ -169,6 +169,8 @@
 - 改进扩展世界的区块加载、区块边界渲染和光照更新。
 - 保留原版有限世界格式及其与原版 PE 多人游戏的互通能力。
 - 增加针对不同处理器架构的打包和运行时依赖处理。
+
+若想了解技术细节和具体版本的变更请访问[更新日志](docs/Update log.md)。
 
 ---
 

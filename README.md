@@ -41,7 +41,7 @@ This project focuses on UWP. Other platforms (Android, iOS) are not intended tar
 
 <h2 align="center">Upstream projects and references</h2>
 
-This UWP project was transplanted from my win32 version [Minecraft-PE-0.6.1-Windows-Universal](https://github.com/CanghaiDragon/Minecraft-PE-0.6.1-Windows-Universal). The main features are the same. Below I will mention a few unique features of this UWP version.
+This UWP project was transplanted from my win32 version [Minecraft-PE-0.6.1-Windows-Universal](https://github.com/CanghaiDragon/Minecraft-PE-0.6.1-Windows-Universal). The main features are the same.
 
 In early 2026, the source code of Minecraft Pocket Edition v0.6.1 was leaked on the Internet. You can find it at [Minecraft PE Source Code](https://archive.org/details/Minecraftpesorucecode). This is the reason why several revisions of MCPE0.6.1 appear on GitHub and other sites. This project is also a revision of the original source code. **None** of the revisions is directly authorized by Mojang.
 
@@ -177,7 +177,7 @@ Dynamic Live Tiles and adaptation to UWP navigation bar are also added.
 - Preserved the original finite-world format and its interoperability with original PE multiplayer.
 - Added architecture-specific packaging and runtime dependency handling.
 
-For historical fixes and version-specific changes, see the [Update log](Update log.md).
+For historical fixes and version-specific changes, see the [Update log](docs/Update log.md).
 
 ---
 
