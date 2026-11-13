@@ -177,7 +177,7 @@ Dynamic Live Tiles and adaptation to UWP navigation bar are also added.
 - Preserved the original finite-world format and its interoperability with original PE multiplayer.
 - Added architecture-specific packaging and runtime dependency handling.
 
-For historical fixes and version-specific changes, see the [Update log](docs/Update log.md).
+For historical fixes and version-specific changes, see the [Update log](docs/Update_log.md).
 
 ---
 
