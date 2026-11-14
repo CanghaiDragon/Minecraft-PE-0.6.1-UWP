@@ -585,6 +585,7 @@
     <ClCompile Include="..\..\..\..\src\platform\uwp\UwpOriginalClientHost.cpp" />
     <ClCompile Include="..\..\..\..\src\platform\uwp\UwpOriginalClientBridge.cpp" />
     <ClCompile Include="..\..\..\..\src\platform\uwp\UwpStoragePaths.cpp" />
+    <ClCompile Include="..\..\..\..\src\platform\uwp\UwpZip.cpp" />
     <ClCompile Include="..\..\..\..\src\platform\uwp\UwpUiRenderer.cpp" />
     <ClCompile Include="..\..\..\..\src\platform\uwp\UwpWorldRenderer.cpp" />
     <ClCompile Include="..\..\..\..\src\platform\uwp\UwpSettingsModel.cpp" />
@@ -3199,6 +3200,7 @@
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpOriginalClientHost.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpOriginalClientBridge.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpStoragePaths.h" />
+    <ClInclude Include="..\..\..\..\src\platform\uwp\UwpZip.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpUiRenderer.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpWorldRenderer.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpSettingsModel.h" />
@@ -3291,6 +3293,7 @@
     <Page Include="WorldImportPage.xaml" />
     <Page Include="WorldEditShellPage.xaml" />
     <Page Include="WorldTileIconPage.xaml" />
+    <Page Include="WorldConvertPage.xaml" />
     <Page Include="SettingsPage.xaml" />
   </ItemGroup>
   <ItemGroup>

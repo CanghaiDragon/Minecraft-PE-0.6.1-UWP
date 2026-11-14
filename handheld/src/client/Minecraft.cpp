@@ -26,6 +26,7 @@ extern void setWin32GuiInputEnabled(bool enabled);
 #include "../world/level/storage/LevelStorageSource.h"
 #include "../world/level/storage/LevelStorage.h"
 #include "../world/level/storage/ExternalFileLevelStorage.h"
+#include "../world/level/storage/ExternalFileLevelStorageSource.h"
 #include "player/input/KeyboardInput.h"
 #ifndef STANDALONE_SERVER
 #include "player/input/touchscreen/TouchInputHolder.h"
@@ -189,6 +190,7 @@ Minecraft::Minecraft()
 	isGeneratingLevel(false),
 	_hasSignaledGeneratingLevelFinished(true),
 	generateLevelThread(NULL),
+	legacyWorldConversionThread(NULL),
 	progressStagePercentage(0),
 	progressStageStatusId(0),
 	isLookingForMultiplayer(false),
@@ -204,6 +206,11 @@ Minecraft::Minecraft()
     _isSuperFast(false),
 #endif
 	_powerVr(false),
+	_legacyConversionRunning(false),
+	_legacyConversionFinished(false),
+	_legacyConversionSucceeded(false),
+	_legacyConversionProgress(0),
+	_finiteWorldUpgrade(false),
 	_uwpBorrowedWorld(false),
 	_uwpSavedTouchscreen(false),
 	_uwpTouchscreenSaved(false),
@@ -278,6 +285,10 @@ Minecraft::~Minecraft()
 	//delete player;
 	delete user;
 	delete inputHolder;
+	if (legacyWorldConversionThread != NULL) {
+		delete legacyWorldConversionThread;
+		legacyWorldConversionThread = NULL;
+	}
 
 	delete storageSource;
 	delete _perfRenderer;
@@ -291,6 +302,81 @@ Minecraft::~Minecraft()
 #endif
 }
 
+void* Minecraft::legacyWorldConversion_tspawn(void* p_param)
+{
+	Minecraft* minecraft = static_cast<Minecraft*>(p_param);
+	ExternalFileLevelStorageSource* source =
+		dynamic_cast<ExternalFileLevelStorageSource*>(minecraft->storageSource);
+	bool success = false;
+	if (source != NULL) {
+		if (minecraft->_finiteWorldUpgrade)
+			success = source->convertFiniteLevelToInfiniteWithProgress(
+				minecraft->_legacyConversionLevelId,
+				&minecraft->_legacyConversionProgress);
+		else
+			success = source->convertLevelWithProgress(
+				minecraft->_legacyConversionLevelId,
+				&minecraft->_legacyConversionProgress);
+	}
+
+	minecraft->_legacyConversionSucceeded = success;
+	minecraft->_legacyConversionFinished = true;
+	minecraft->_legacyConversionRunning = false;
+	return NULL;
+}
+
+bool Minecraft::startLegacyWorldConversion(const std::string& levelId)
+{
+	if (_legacyConversionRunning)
+		return false;
+
+	if (legacyWorldConversionThread != NULL) {
+		delete legacyWorldConversionThread;
+		legacyWorldConversionThread = NULL;
+	}
+
+	_legacyConversionLevelId = levelId;
+	_finiteWorldUpgrade = false;
+	_legacyConversionProgress = 0;
+	_legacyConversionSucceeded = false;
+	_legacyConversionFinished = false;
+	_legacyConversionRunning = true;
+	legacyWorldConversionThread = new CThread(
+		Minecraft::legacyWorldConversion_tspawn, this);
+	return true;
+}
+
+bool Minecraft::startFiniteWorldUpgrade(const std::string& levelId)
+{
+	if (_legacyConversionRunning)
+		return false;
+
+	if (legacyWorldConversionThread != NULL) {
+		delete legacyWorldConversionThread;
+		legacyWorldConversionThread = NULL;
+	}
+
+	_legacyConversionLevelId = levelId;
+	_finiteWorldUpgrade = true;
+	_legacyConversionProgress = 0;
+	_legacyConversionSucceeded = false;
+	_legacyConversionFinished = false;
+	_legacyConversionRunning = true;
+	legacyWorldConversionThread = new CThread(
+		Minecraft::legacyWorldConversion_tspawn, this);
+	return true;
+}
+
+void Minecraft::finishLegacyWorldConversion()
+{
+	if (legacyWorldConversionThread != NULL) {
+		delete legacyWorldConversionThread;
+		legacyWorldConversionThread = NULL;
+	}
+	_legacyConversionRunning = false;
+	_finiteWorldUpgrade = false;
+}
+
 // Only called by server
 void Minecraft::selectLevel( const std::string& levelId, const std::string& levelName, const LevelSettings& settings )
 {
@@ -299,6 +385,14 @@ void Minecraft::selectLevel( const std::string& levelId, const std::string& leve
 	// Keep the original SelectWorldScreen as the UI and selection owner, but
 	// let UwpCoreSession perform the actual Level construction/storage handoff.
 	// This prevents Minecraft and the UWP session from owning two worlds.
+	ExternalFileLevelStorageSource* source =
+		dynamic_cast<ExternalFileLevelStorageSource*>(storageSource);
+	if (source != NULL && source->requiresConversion(levelId))
+	{
+		UwpOriginalClientShowLegacyWorldFormatConversionForMinecraft(
+			this, levelId);
+		return;
+	}
 	(void)settings;
 	UwpOriginalClientRequestLevelSelection(levelId, levelName, settings);
 	return;
@@ -940,6 +1034,11 @@ public:
 void Minecraft::tickInput() {
 #ifndef STANDALONE_SERVER
 	InputRAII raiiInput;
+	// Spectator flight is an opt-in debug feature.  If the F3 debug screen is
+	// disabled from the options menu while flight is active, clear the movement
+	// state before the next gameplay input frame so it cannot become stranded.
+	if (!options.debugScreenEnabled && options.isFlying)
+		setSpectatorMode(false);
 
 	if (screen && !screen->passEvents) {
 		screenMutex = true;
@@ -1079,9 +1178,9 @@ void Minecraft::tickInput() {
 				// Keep the old no-physics flight shortcut available only in
 				// creative mode.  setIsCreativeMode() clears it when switching
 				// back to survival.
-				if (key == options.keySpectator.key && isCreativeMode()) {
-					options.isFlying = !options.isFlying;
-					player->noPhysics = options.isFlying;
+				if (key == options.keySpectator.key && isCreativeMode() &&
+					options.debugScreenEnabled) {
+					setSpectatorMode(!isSpectatorMode());
 				}
 
 				// Q is the drop-item shortcut; keyboard crafting is bound to R.
@@ -2021,6 +2120,22 @@ void Minecraft::setIsCreativeMode(bool isCreative)
 
 bool Minecraft::isCreativeMode() {
 	return _isCreativeMode;
+}
+
+bool Minecraft::isSpectatorMode() const
+{
+	return options.debugScreenEnabled && options.isFlying &&
+		player != NULL && player->noPhysics;
+}
+
+void Minecraft::setSpectatorMode(bool enabled)
+{
+	if (!enabled || !isCreativeMode() || !options.debugScreenEnabled)
+		enabled = false;
+
+	options.isFlying = enabled;
+	if (player != NULL)
+		player->noPhysics = enabled;
 }
 
 bool Minecraft::isKindleFire(int kindleVersion) {

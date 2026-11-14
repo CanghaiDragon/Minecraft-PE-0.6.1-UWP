@@ -2,6 +2,24 @@
 
 This changelog covers the UWP project. It is separate from the Win32 changelog.
 
+## 1.1.3
+
+New features:
+
+- Allow v1.0 saves to be converted to new version's formate and opened.
+
+- Old (Finite) world can be converted to infinite world.
+
+- All world types can now be converted and exported in a 0.9+ PE supported format.
+
+Bug fix:
+
+- Pressing Esc when sleeping can correctly leave bed instead of entering pause interface.
+
+Improvements:
+
+- Adding icon and button for spectator mode (keyboard F). It is avaliable after opening Options → Additional → "Debug Function".
+
 ## 1.1.2
 
 New features:

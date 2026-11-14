@@ -57,7 +57,7 @@ std::string I18n::get( const std::string& id )
 		{ "options.skinMenu", "Optimized Skin" },
 		{ "options.importSkin", "Import Skin" },
 		{ "options.touchSneak", "Touch Sneak" },
-		{ "options.debugScreen", "Debug Screen F3" },
+		{ "options.debugScreen", "Debug Function" },
 		{ "options.fullscreen", "Fullscreen" },
 		{ "options.skinArmType", "Arm Type" },
 		{ "options.skinArmType.classic", "Classic" },

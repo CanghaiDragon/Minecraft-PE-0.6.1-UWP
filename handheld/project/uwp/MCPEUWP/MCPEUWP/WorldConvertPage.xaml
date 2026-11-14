@@ -1,0 +1,134 @@
+<Page
+    x:Class="MCPEUWP.WorldConvertPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid Background="Transparent"
+          Padding="16,12,16,12"
+          RequestedTheme="Dark">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Name="ConversionTitleText"
+                   Grid.Row="0"
+                   Text="Convert to PE 0.9+"
+                   Foreground="White"
+                   FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                   FontSize="28"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,12" />
+
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel MaxWidth="700"
+                        HorizontalAlignment="Center">
+                <TextBlock Text="Source world"
+                           Foreground="White"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontSize="18"
+                           Margin="0,4,0,4" />
+                <TextBlock x:Name="SourcePathText"
+                           Text="Not configured"
+                           Foreground="#FFB0E0FF"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontSize="14"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,12" />
+
+                <TextBlock Text="Output ZIP file"
+                           Foreground="White"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontSize="18"
+                           Margin="0,4,0,4" />
+                <TextBlock x:Name="DestinationPathText"
+                           Text="Choose a destination ZIP file after clicking Convert"
+                           Foreground="#FFB0E0FF"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontSize="14"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,14" />
+
+                <CheckBox x:Name="TestLimitCheckBox"
+                          Content="Convert at most 64 chunks near the saved player (test)"
+                          Foreground="White"
+                          FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                          FontSize="16"
+                          Margin="0,2,0,6" />
+                <CheckBox x:Name="Bedrock17VoidWorldCheckBox"
+                          Content="Convert to 1.17+ void world"
+                          Visibility="Collapsed"
+                          Foreground="White"
+                          FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                          FontSize="16"
+                          Margin="0,2,0,6"
+                          Click="On17VoidWorldToggleClick" />
+                <CheckBox x:Name="LowerSeaLevelCheckBox"
+                          Content="Lower sea level: clear y=63 water/ice and restore grass at y=62"
+                          Foreground="White"
+                          FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                          FontSize="16"
+                          Margin="0,2,0,6" />
+                <CheckBox x:Name="WinterFreezeWaterCheckBox"
+                          Content="Winter: freeze remaining y=62 water (requires lower sea level)"
+                          Foreground="White"
+                          FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                          FontSize="16"
+                          Margin="0,2,0,6" />
+                <CheckBox x:Name="SkyBedrockFloorCheckBox"
+                          Content="Sky: fill y=0-4 air with bedrock"
+                          Foreground="White"
+                          FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                          FontSize="16"
+                          Margin="0,2,0,12" />
+
+                <TextBlock x:Name="StorageFormatWarningText"
+                           Text="Conversion is unavailable until this world is opened and saved in the game to upgrade it to the latest UWP storage format."
+                           Visibility="Collapsed"
+                           Foreground="#FFFF8080"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontSize="16"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"
+                           Margin="0,4,0,12" />
+
+                <Button x:Name="ConvertButton"
+                        Content="Convert to PE 0.9+"
+                        Click="OnConvertClick"
+                        FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                        FontSize="18"
+                        Foreground="White"
+                        Height="56"
+                        HorizontalAlignment="Stretch" />
+                <ProgressBar x:Name="ConversionProgressBar"
+                             Visibility="Collapsed"
+                             IsIndeterminate="True"
+                             Height="12"
+                             Margin="0,14,0,4" />
+                <TextBlock x:Name="ConversionStatusText"
+                           Text="Configure a source world to begin."
+                           Foreground="#FFFFD080"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontSize="16"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"
+                           Margin="0,8,0,12" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <Button x:Name="BackButton"
+                Grid.Row="2"
+                Content="Back"
+                Click="OnBackClick"
+                FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                FontSize="18"
+                Foreground="White"
+                Height="56"
+                MaxWidth="320"
+                HorizontalAlignment="Center"
+                Margin="0,12,0,0" />
+    </Grid>
+</Page>

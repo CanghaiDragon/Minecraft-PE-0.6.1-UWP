@@ -7,6 +7,7 @@
 #include "../../client/player/LocalPlayer.h"
 #include "../../client/renderer/Textures.h"
 #include "../../client/renderer/LevelRenderer.h"
+#include "../../client/renderer/Tesselator.h"
 #include "../../network/RakNetInstance.h"
 #include "../../network/ServerSideNetworkHandler.h"
 #include "../../client/gui/screens/StartMenuScreen.h"
@@ -19,6 +20,8 @@
 #include "../../client/gui/screens/touch/TouchStartMenuScreen.h"
 #include "../../platform/input/Keyboard.h"
 #include "../../world/level/LevelSettings.h"
+
+#include <cstdio>
 
 namespace
 {
@@ -186,14 +189,21 @@ namespace
 		typedef Screen super;
 
 	public:
-		UwpLegacyWorldFormatScreen()
-			: backButton(nullptr)
+		explicit UwpLegacyWorldFormatScreen(const std::string& levelId,
+			bool finiteWorldUpgrade = false)
+			: backButton(nullptr),
+			  convertButton(nullptr),
+			  m_levelId(levelId),
+			  m_statusMessage(),
+			  m_finiteWorldUpgrade(finiteWorldUpgrade),
+			  m_conversionStarted(false)
 		{
 		}
 
 		~UwpLegacyWorldFormatScreen() override
 		{
 			delete backButton;
+			delete convertButton;
 		}
 
 		void init() override
@@ -201,20 +211,36 @@ namespace
 			// Match the selected UI presentation rather than the input device.
 			// PE UI uses touchgui.png; Java UI uses gui.png.
 			if (minecraft->options.javaUi)
+			{
 				backButton = new Button(1, "Back");
+				convertButton = new Button(2,
+					m_finiteWorldUpgrade ? "Upgrade" : "Convert");
+			}
 			else
+			{
 				backButton = new Touch::TButton(1, "Back");
+				convertButton = new Touch::TButton(2,
+					m_finiteWorldUpgrade ? "Upgrade" : "Convert");
+			}
 
 			backButton->width = 128;
 			backButton->height = 24;
+			convertButton->width = 128;
+			convertButton->height = 24;
+			buttons.push_back(convertButton);
 			buttons.push_back(backButton);
+			tabButtons.push_back(convertButton);
 			tabButtons.push_back(backButton);
 		}
 
 		void setupPositions() override
 		{
-			backButton->x = (width - backButton->width) / 2;
-			backButton->y = height / 2 + 24;
+			const int gap = 8;
+			const int totalWidth = convertButton->width + gap + backButton->width;
+			const int left = (width - totalWidth) / 2;
+			convertButton->x = left;
+			backButton->x = left + convertButton->width + gap;
+			convertButton->y = backButton->y = height / 2 + 24;
 		}
 
 		void render(int xm, int ym, float a) override
@@ -223,24 +249,112 @@ namespace
 			// explicit dirt renderer keeps the native MC background even if a
 			// previously opened world has left transient renderer state behind.
 			renderDirtBackground(0);
-			drawCenteredString(font,
-				"This world is in an unsupported legacy format.",
-				width / 2, height / 2 - 42, 0xffffff);
+			if (m_conversionStarted)
+			{
 				drawCenteredString(font,
-					"Use Windows Universal v1.0 to open it.",
-				width / 2, height / 2 - 26, 0xffffff);
+					m_finiteWorldUpgrade ? "Upgrading finite world..." : "Converting world...",
+					width / 2, height / 2 - 42, 0xffffff);
+				drawCenteredString(font,
+					m_finiteWorldUpgrade
+						? "The original world will not be changed."
+						: "Ordinary entities will not be migrated.",
+					width / 2, height / 2 - 26, 0xffffff);
+
+				const int progress = minecraft->getLegacyWorldConversionProgress();
+				char progressText[32];
+				sprintf(progressText, "%d%%", progress);
+				drawCenteredString(font, progressText,
+					width / 2, height / 2 - 10, 0xffffff);
+
+				const int barWidth = 200;
+				const int barHeight = 4;
+				const int barX = width / 2 - barWidth / 2;
+				const int barY = height / 2 + 12;
+				const int filledWidth = barWidth * progress / 100;
+				glDisable2(GL_TEXTURE_2D);
+				Tesselator& t = Tesselator::instance;
+				t.begin();
+				t.color(0x808080);
+				t.vertex((float)barX, (float)barY, 0);
+				t.vertex((float)barX, (float)(barY + barHeight), 0);
+				t.vertex((float)(barX + barWidth),
+					(float)(barY + barHeight), 0);
+				t.vertex((float)(barX + barWidth), (float)barY, 0);
+				t.color(0x80ff80);
+				t.vertex((float)barX, (float)barY, 0);
+				t.vertex((float)barX, (float)(barY + barHeight), 0);
+				t.vertex((float)(barX + filledWidth),
+					(float)(barY + barHeight), 0);
+				t.vertex((float)(barX + filledWidth), (float)barY, 0);
+				t.draw();
+				glEnable2(GL_TEXTURE_2D);
+			}
+			else
+			{
+				drawCenteredString(font,
+					m_finiteWorldUpgrade
+						? "Create a new Infinite copy of this finite world."
+						: "This world is in an unsupported legacy format.",
+					width / 2, height / 2 - 42, 0xffffff);
+				drawCenteredString(font,
+					m_finiteWorldUpgrade
+						? "Existing chunks stay in place; new chunks can generate outside."
+						: "Convert it to a new copy before opening it.",
+					width / 2, height / 2 - 26, 0xffffff);
+			}
+			if (!m_statusMessage.empty())
+				drawCenteredString(font, m_statusMessage.c_str(),
+					width / 2, height / 2 - 10, 0xffffff);
 			super::render(xm, ym, a);
 		}
 
 		void buttonClicked(Button* button) override
 		{
 			if (button == backButton)
+			{
+				if (!m_conversionStarted)
+					minecraft->screenChooser.setScreen(SCREEN_SELECTWORLD);
+			}
+			else if (button == convertButton)
+			{
+				const bool started = m_finiteWorldUpgrade
+					? minecraft->startFiniteWorldUpgrade(m_levelId)
+					: minecraft->startLegacyWorldConversion(m_levelId);
+				if (started)
+				{
+					m_conversionStarted = true;
+					convertButton->active = false;
+					backButton->active = false;
+				}
+				else
+					m_statusMessage = "A conversion is already in progress.";
+			}
+		}
+
+		void tick() override
+		{
+			if (!m_conversionStarted ||
+				!minecraft->isLegacyWorldConversionFinished())
+				return;
+
+			const bool succeeded = minecraft->legacyWorldConversionSucceeded();
+			minecraft->finishLegacyWorldConversion();
+			m_conversionStarted = false;
+			if (succeeded)
 				minecraft->screenChooser.setScreen(SCREEN_SELECTWORLD);
+			else
+			{
+				m_statusMessage = m_finiteWorldUpgrade
+					? "Upgrade failed. The original world was not changed."
+					: "Conversion failed. The original world was not changed.";
+				convertButton->active = true;
+				backButton->active = true;
+			}
 		}
 
 		bool handleBackEvent(bool isDown) override
 		{
-			if (!isDown)
+			if (!isDown && !m_conversionStarted)
 				minecraft->screenChooser.setScreen(SCREEN_SELECTWORLD);
 			return true;
 		}
@@ -255,7 +369,8 @@ namespace
 		{
 			if (eventKey == Keyboard::KEY_ESCAPE)
 			{
-				minecraft->screenChooser.setScreen(SCREEN_SELECTWORLD);
+				if (!m_conversionStarted)
+					minecraft->screenChooser.setScreen(SCREEN_SELECTWORLD);
 				return;
 			}
 			super::keyPressed(eventKey);
@@ -263,6 +378,11 @@ namespace
 
 	private:
 		Button* backButton;
+		Button* convertButton;
+		std::string m_levelId;
+		std::string m_statusMessage;
+		bool m_finiteWorldUpgrade;
+		bool m_conversionStarted;
 	};
 
 	class UwpLaunchWorldErrorScreen final : public Screen
@@ -631,8 +751,44 @@ bool UwpOriginalClientShowLegacyWorldFormatError(UwpOriginalClientHandle handle)
 		return false;
 
 	Keyboard::reset();
-	minecraft->setScreen(new UwpLegacyWorldFormatScreen());
+	minecraft->setScreen(new UwpLegacyWorldFormatScreen(std::string()));
 	return minecraft->screen != nullptr;
+}
+
+bool UwpOriginalClientShowLegacyWorldFormatConversionForMinecraft(
+	Minecraft* minecraft, const std::string& levelId)
+{
+	if (minecraft == nullptr || levelId.empty())
+		return false;
+
+	Keyboard::reset();
+	minecraft->setScreen(new UwpLegacyWorldFormatScreen(levelId));
+	return minecraft->screen != nullptr;
+}
+
+bool UwpOriginalClientShowFiniteWorldUpgradeForMinecraft(
+	Minecraft* minecraft, const std::string& levelId)
+{
+	if (minecraft == nullptr || levelId.empty())
+		return false;
+
+	Keyboard::reset();
+	minecraft->setScreen(new UwpLegacyWorldFormatScreen(levelId, true));
+	return minecraft->screen != nullptr;
+}
+
+bool UwpOriginalClientShowLegacyWorldFormatConversion(
+	UwpOriginalClientHandle handle, const std::string& levelId)
+{
+	return UwpOriginalClientShowLegacyWorldFormatConversionForMinecraft(
+		UwpOriginalClientGetMinecraft(handle), levelId);
+}
+
+bool UwpOriginalClientShowFiniteWorldUpgrade(
+	UwpOriginalClientHandle handle, const std::string& levelId)
+{
+	return UwpOriginalClientShowFiniteWorldUpgradeForMinecraft(
+		UwpOriginalClientGetMinecraft(handle), levelId);
 }
 
 bool UwpOriginalClientShowLaunchWorldError(

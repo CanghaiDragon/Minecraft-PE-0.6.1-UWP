@@ -711,7 +711,7 @@ void MainPage::BeginWorldLoad(const std::wstring& worldId,
 			m_core.startNewWorld(worldId, worldName, seed, gameType, worldType);
 		else
 			m_core.startSavedWorld(worldId, worldName);
-	}).then([this](task<void> result)
+	}).then([this, worldId](task<void> result)
 	{
 		try
 		{
@@ -735,7 +735,10 @@ void MainPage::BeginWorldLoad(const std::wstring& worldId,
 					m_originalPointerX = -1.0f;
 					m_originalPointerY = -1.0f;
 					m_originalClientHost.setLoopEnabled(true);
-					m_originalMenuActive = m_originalClientHost.showLegacyWorldFormatError();
+					const std::string legacyWorldId(worldId.begin(), worldId.end());
+					m_originalMenuActive =
+						m_originalClientHost.showLegacyWorldFormatConversion(
+							legacyWorldId);
 					if (!m_originalMenuActive)
 						ShowOriginalWorldSelection();
 				}
@@ -969,6 +972,43 @@ void MainPage::ShowWorldEditPage(const std::string& worldId)
 							HideWorldEditPage();
 						});
 					WorldEditDiagnostic(L"after BackRequested subscription");
+					m_worldEditShellPage->LegacyFormatConversionRequested +=
+						ref new EventHandler<String^>(
+							[this](Object^, String^ legacyWorldId)
+						{
+								if (legacyWorldId == nullptr ||
+									legacyWorldId->Length() == 0)
+									return;
+
+								HideWorldEditPage();
+								m_originalClientHost.setLoopEnabled(true);
+								m_originalMenuActive =
+									m_originalClientHost.showLegacyWorldFormatConversion(
+										NarrowNativeText(std::wstring(
+											legacyWorldId->Data())));
+								if (!m_originalMenuActive)
+									m_originalMenuActive =
+										m_originalClientHost.showSelectWorld();
+							});
+					m_worldEditShellPage->FiniteWorldUpgradeRequested +=
+						ref new EventHandler<String^>(
+							[this](Object^, String^ finiteWorldId)
+						{
+								if (finiteWorldId == nullptr ||
+									finiteWorldId->Length() == 0)
+									return;
+
+								HideWorldEditPage();
+								m_originalClientHost.setLoopEnabled(true);
+								m_originalMenuActive =
+									m_originalClientHost.showFiniteWorldUpgrade(
+										NarrowNativeText(std::wstring(
+											finiteWorldId->Data())));
+								if (!m_originalMenuActive)
+									m_originalMenuActive =
+										m_originalClientHost.showSelectWorld();
+							});
+					WorldEditDiagnostic(L"after legacy conversion subscription");
 				}
 				const std::wstring wideId(requestedWorldId.begin(), requestedWorldId.end());
 				WorldEditDiagnostic(L"before WorldEditFrame->Content");
@@ -2609,6 +2649,7 @@ void MainPage::BeginOriginalClientTexturePreload()
 		"gui/icons.png",
 		"gui/cursor.png",
 		"gui/touchgui.png",
+		"gui/touchgui2.png",
 		"gui/background.png",
 		"gui/title.png",
 		"gui/default_world.png",

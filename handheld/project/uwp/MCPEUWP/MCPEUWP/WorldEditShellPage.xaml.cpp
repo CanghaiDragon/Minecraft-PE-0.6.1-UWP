@@ -3,6 +3,7 @@
 
 #include "../../../../src/platform/uwp/UwpLiveTile.h"
 #include "../../../../src/platform/uwp/UwpStoragePaths.h"
+#include "../../../../src/SharedConstants.h"
 #include "../../../../src/world/level/LevelSettings.h"
 #include "../../../../src/world/level/storage/ExternalFileLevelStorage.h"
 #include "../../../../src/world/level/storage/LevelData.h"
@@ -225,7 +226,6 @@ namespace
 		UwpStorageMarkerKind marker)
 	{
 		const bool isNewUwpFormat =
-			marker == UwpStorageMarkerKind::V1Raw ||
 			marker == UwpStorageMarkerKind::V2Zlib;
 
 		if (worldType == WorldType::Infinite)
@@ -522,6 +522,12 @@ WorldEditShellPage::WorldEditShellPage()
 
 bool WorldEditShellPage::HandleEscapeKey()
 {
+	if (WorldConvertOverlay != nullptr &&
+		WorldConvertOverlay->Visibility == Windows::UI::Xaml::Visibility::Visible)
+	{
+		HideWorldConvertPage();
+		return true;
+	}
 	if (WorldTileIconOverlay != nullptr &&
 		WorldTileIconOverlay->Visibility == Windows::UI::Xaml::Visibility::Visible)
 	{
@@ -535,12 +541,28 @@ void WorldEditShellPage::SetWorldId(Platform::String^ worldId)
 {
 	WorldEditShellDiagnostic(L"SetWorldId");
 	m_worldId = worldId == nullptr ? ref new Platform::String(L"") : worldId;
+	m_worldType = WorldType::Old;
+	m_worldSeed = 0;
+	m_worldStorageFormatCurrent = false;
+	m_legacyFormatConversionAvailable = false;
+	m_finiteWorldUpgradeAvailable = false;
 	m_selectedTileIcon = nullptr;
 	m_pinOperationPending = false;
 	if (FolderNameValueText != nullptr)
 		FolderNameValueText->Text = m_worldId;
-	if (StartMenuIconValueText != nullptr)
-		StartMenuIconValueText->Text = ref new Platform::String(L"Not configured");
+	if (ConvertTo09Button != nullptr)
+		ConvertTo09Button->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
+	if (ConvertToNewFormatButton != nullptr)
+		ConvertToNewFormatButton->Visibility =
+			Windows::UI::Xaml::Visibility::Collapsed;
+	if (UpgradeToInfiniteButton != nullptr)
+		UpgradeToInfiniteButton->Visibility =
+			Windows::UI::Xaml::Visibility::Collapsed;
+	if (PinToStartButton != nullptr)
+		PinToStartButton->Visibility =
+			Windows::UI::Xaml::Visibility::Collapsed;
+	if (WorldConvertOverlay != nullptr)
+		WorldConvertOverlay->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
 	if (SizeOnDiskValueText != nullptr)
 		SizeOnDiskValueText->Text = ref new Platform::String(L"Unavailable");
 	if (StorageVersionValueText != nullptr)
@@ -573,8 +595,6 @@ void WorldEditShellPage::ShowWorldTileIconPage()
 				if (m_pinOperationPending)
 					return;
 				m_selectedTileIcon = iconName;
-				if (StartMenuIconValueText != nullptr)
-					StartMenuIconValueText->Text = iconName;
 				HideWorldTileIconPage();
 				PinWorldShortcut(iconName);
 			});
@@ -984,9 +1004,41 @@ void WorldEditShellPage::LoadWorldData()
 
 		const UwpStorageMarkerKind marker =
 			ReadUwpStorageMarker(WorldDirectory());
+		m_worldType = data.getWorldType();
+		m_worldSeed = data.getSeed();
+		const bool finiteStorageV3 =
+			!data.isInfinite() &&
+			data.getStorageVersion() == SharedConstants::StorageVersion;
+		m_worldStorageFormatCurrent = finiteStorageV3 ||
+			marker == UwpStorageMarkerKind::V2Zlib &&
+			data.getStorageVersion() == SharedConstants::StorageVersion;
+		m_finiteWorldUpgradeAvailable = finiteStorageV3;
+		m_legacyFormatConversionAvailable = data.isInfinite() &&
+			(marker == UwpStorageMarkerKind::Missing ||
+			 marker == UwpStorageMarkerKind::Unknown);
 		if (WorldTypeValueText != nullptr)
 			WorldTypeValueText->Text = ref new Platform::String(
 				WorldTypeDisplayName(data.getWorldType(), marker).c_str());
+		if (PinToStartButton != nullptr)
+			PinToStartButton->Visibility = m_legacyFormatConversionAvailable
+				? Windows::UI::Xaml::Visibility::Collapsed
+				: Windows::UI::Xaml::Visibility::Visible;
+		if (ConvertTo09Button != nullptr)
+			ConvertTo09Button->Visibility =
+			((data.isInfinite() && !m_legacyFormatConversionAvailable) ||
+			 finiteStorageV3)
+				? Windows::UI::Xaml::Visibility::Visible
+				: Windows::UI::Xaml::Visibility::Collapsed;
+		if (ConvertToNewFormatButton != nullptr)
+			ConvertToNewFormatButton->Visibility =
+				m_legacyFormatConversionAvailable
+				? Windows::UI::Xaml::Visibility::Visible
+				: Windows::UI::Xaml::Visibility::Collapsed;
+		if (UpgradeToInfiniteButton != nullptr)
+			UpgradeToInfiniteButton->Visibility =
+				m_finiteWorldUpgradeAvailable
+				? Windows::UI::Xaml::Visibility::Visible
+				: Windows::UI::Xaml::Visibility::Collapsed;
 
 		if (SizeOnDiskValueText != nullptr)
 		{
@@ -1013,7 +1065,9 @@ void WorldEditShellPage::LoadWorldData()
 			StorageVersionValueText->Text = ref new Platform::String(
 				storageVersion.str().c_str());
 		}
-		SetStatus(L"World information loaded.");
+		SetStatus(m_legacyFormatConversionAvailable
+			? L"Legacy world format detected. Convert it before opening the world."
+			: L"World information loaded.");
 	}
 	catch (...)
 	{
@@ -1024,9 +1078,151 @@ void WorldEditShellPage::LoadWorldData()
 void WorldEditShellPage::OnChooseStartIconClick(
 	Platform::Object^, Windows::UI::Xaml::RoutedEventArgs^)
 {
-	if (m_operationPending || m_pinOperationPending)
+	if (m_operationPending || m_pinOperationPending ||
+		m_legacyFormatConversionAvailable)
 		return;
 	ShowWorldTileIconPage();
+}
+
+void WorldEditShellPage::OnConvertTo09Click(
+	Platform::Object^, Windows::UI::Xaml::RoutedEventArgs^)
+{
+	if (m_operationPending || m_worldId == nullptr ||
+		m_worldId->Length() == 0 || m_legacyFormatConversionAvailable)
+		return;
+	ShowWorldConvertPage();
+}
+
+void WorldEditShellPage::OnUpgradeToInfiniteClick(
+	Platform::Object^, Windows::UI::Xaml::RoutedEventArgs^)
+{
+	if (m_operationPending || !m_finiteWorldUpgradeAvailable ||
+		m_worldId == nullptr || m_worldId->Length() == 0)
+		return;
+
+	SetStatus(L"Opening the finite world upgrade screen...");
+	this->FiniteWorldUpgradeRequested(this, m_worldId);
+}
+
+void WorldEditShellPage::OnConvertToNewFormatClick(
+	Platform::Object^, Windows::UI::Xaml::RoutedEventArgs^)
+{
+	if (m_operationPending || !m_legacyFormatConversionAvailable ||
+		m_worldId == nullptr || m_worldId->Length() == 0)
+		return;
+
+	SetStatus(L"Opening the world format conversion screen...");
+	this->LegacyFormatConversionRequested(this, m_worldId);
+}
+
+void WorldEditShellPage::ShowWorldConvertPage()
+{
+	if (WorldConvertOverlay == nullptr || WorldConvertFrame == nullptr)
+		return;
+
+	if (m_worldConvertPage == nullptr)
+	{
+		m_worldConvertPage = ref new WorldConvertPage();
+		m_worldConvertPage->BackRequested +=
+			ref new Windows::Foundation::EventHandler<Platform::Object^>(
+				[this](Platform::Object^, Platform::Object^)
+				{
+					HideWorldConvertPage();
+				});
+	}
+
+	// The converter writes the PE 0.9-compatible world to the fixed temporary
+	// world slot. Keep the source path owned by the shell, which already uses
+	// the same LocalFolder world layout as the editor and world loader.
+	Platform::String^ displayName = m_worldId;
+	if (WorldNameValueText != nullptr && WorldNameValueText->Text != nullptr &&
+		WorldNameValueText->Text->Length() > 0 &&
+		std::wcscmp(WorldNameValueText->Text->Data(), L"Unavailable") != 0)
+		displayName = WorldNameValueText->Text;
+	m_worldConvertPage->SetWorldContext(
+		ref new Platform::String(Utf8ToWide(WorldDirectory()).c_str()),
+		m_worldId,
+		displayName,
+		m_worldType,
+		m_worldType == WorldType::Alpha &&
+			WorldType::isAlphaWinter(m_worldSeed),
+		m_worldStorageFormatCurrent);
+
+	WorldConvertFrame->Content = m_worldConvertPage;
+	WorldConvertOverlay->Visibility =
+		Windows::UI::Xaml::Visibility::Visible;
+	AnimateWorldConvertPage(true);
+}
+
+void WorldEditShellPage::HideWorldConvertPage()
+{
+	AnimateWorldConvertPage(false);
+}
+
+void WorldEditShellPage::AnimateWorldConvertPage(bool entering)
+{
+	if (WorldConvertOverlay == nullptr)
+		return;
+
+	if (m_worldConvertTransition != nullptr)
+	{
+		m_worldConvertTransition->Stop();
+		if (m_worldConvertTransitionCompletedToken.Value != 0)
+		{
+			m_worldConvertTransition->Completed -=
+				m_worldConvertTransitionCompletedToken;
+			m_worldConvertTransitionCompletedToken.Value = 0;
+		}
+		m_worldConvertTransition = nullptr;
+	}
+
+	if (entering)
+	{
+		WorldConvertOverlay->Visibility =
+			Windows::UI::Xaml::Visibility::Visible;
+		WorldConvertOverlay->Opacity = 0.0;
+	}
+
+	auto transition = ref new Storyboard();
+	auto fade = ref new DoubleAnimation();
+	fade->From = entering ? 0.0 : WorldConvertOverlay->Opacity;
+	fade->To = entering ? 1.0 : 0.0;
+	Windows::Foundation::TimeSpan duration;
+	duration.Duration = entering ? 2200000 : 1800000;
+	fade->Duration = duration;
+	Storyboard::SetTarget(fade, WorldConvertOverlay);
+	Storyboard::SetTargetProperty(
+		fade, ref new Platform::String(L"Opacity"));
+	transition->Children->Append(fade);
+
+	m_worldConvertTransition = transition;
+	m_worldConvertTransitionCompletedToken = transition->Completed +=
+		ref new Windows::Foundation::EventHandler<Platform::Object^>(
+			[this, transition, entering](Platform::Object^, Platform::Object^)
+		{
+				if (m_worldConvertTransition != transition)
+					return;
+
+				if (!entering && WorldConvertOverlay != nullptr)
+				{
+					WorldConvertOverlay->Visibility =
+						Windows::UI::Xaml::Visibility::Collapsed;
+					WorldConvertOverlay->Opacity = 0.0;
+				}
+				else if (entering && WorldConvertOverlay != nullptr)
+				{
+					WorldConvertOverlay->Opacity = 1.0;
+				}
+
+				if (m_worldConvertTransitionCompletedToken.Value != 0)
+				{
+					transition->Completed -=
+						m_worldConvertTransitionCompletedToken;
+					m_worldConvertTransitionCompletedToken.Value = 0;
+				}
+				m_worldConvertTransition = nullptr;
+			});
+	transition->Begin();
 }
 
 void WorldEditShellPage::OnChangeFolderNameClick(

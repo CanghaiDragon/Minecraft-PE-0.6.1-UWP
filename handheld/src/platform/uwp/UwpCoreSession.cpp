@@ -543,7 +543,7 @@ void UwpCoreSession::beginWorld(const std::wstring& worldId,
 		LOGE("UWP native world creation failed: %s\n", error.what());
 		if (std::string(error.what()) == "MCPEUWP_LEGACY_INFINITE_STORAGE")
 		{
-			m_errorText = L"Legacy Infinite/Sky save detected; convert this world before opening";
+			m_errorText = L"Legacy Infinite/Sky/Alpha save detected; convert this world before opening";
 			m_legacyStorageRejected = true;
 		}
 		else

@@ -31,6 +31,8 @@ public:
 	bool showOptions();
 	bool showSelectWorld();
 	bool showLegacyWorldFormatError();
+	bool showLegacyWorldFormatConversion(const std::string& levelId);
+	bool showFiniteWorldUpgrade(const std::string& levelId);
 	bool showLaunchWorldError(const std::string& details);
 	bool showProgressScreen();
 	bool ensureStartMenu();

@@ -198,12 +198,12 @@ ExternalFileLevelStorage::ExternalFileLevelStorage(const std::string& levelId, c
 	if (readLevelData(levelPath, *loadedLevelData))
 	{
 	#if defined(MCPE_UWP)
-		// Only the UWP Infinite/Sky storage path is gated.  Finite/Old worlds
+		// Only the UWP Infinite/Sky/Alpha storage path is gated.  Finite/Old worlds
 		// deliberately retain the original format and never need this marker.
 		if (loadedLevelData->isInfinite() &&
 			!hasRecognizedUwpStorageMarker(levelPath))
 		{
-			LOGW("UWP refusing legacy Infinite/Sky world without storage marker: %s\n",
+			LOGW("UWP refusing legacy Infinite/Sky/Alpha world without storage marker: %s\n",
 				levelPath.c_str());
 			delete loadedLevelData;
 			loadedLevelData = NULL;
@@ -273,7 +273,7 @@ void ExternalFileLevelStorage::saveLevelData( const std::string& levelPath, Leve
     }
 
 #if defined(MCPE_UWP)
-	// New markers are written only for newly saved Infinite/Sky storage.  Old
+	// New markers are written only for newly saved Infinite/Sky/Alpha storage.  Old
 	// finite worlds remain byte-for-byte free of this UWP-only gate.
 	if (levelData.isInfinite() && !writeCurrentUwpStorageMarker(levelPath))
 		LOGE("UWP could not write storage marker at %s\n", levelPath.c_str());

@@ -2,6 +2,7 @@
 
 #include "WorldEditShellPage.g.h"
 #include "WorldTileIconPage.xaml.h"
+#include "WorldConvertPage.xaml.h"
 
 #include <windows.ui.xaml.media.animation.h>
 
@@ -17,6 +18,8 @@ namespace MCPEUWP
 		bool HandleEscapeKey();
 
 		event Windows::Foundation::EventHandler<Platform::Object^>^ BackRequested;
+		event Windows::Foundation::EventHandler<Platform::String^>^ LegacyFormatConversionRequested;
+		event Windows::Foundation::EventHandler<Platform::String^>^ FiniteWorldUpgradeRequested;
 
 	private:
 		void OnBackClick(Platform::Object^ sender,
@@ -31,6 +34,12 @@ namespace MCPEUWP
 			Windows::UI::Xaml::RoutedEventArgs^ e);
 		void OnChooseStartIconClick(Platform::Object^ sender,
 			Windows::UI::Xaml::RoutedEventArgs^ e);
+		void OnConvertTo09Click(Platform::Object^ sender,
+			Windows::UI::Xaml::RoutedEventArgs^ e);
+		void OnUpgradeToInfiniteClick(Platform::Object^ sender,
+			Windows::UI::Xaml::RoutedEventArgs^ e);
+		void OnConvertToNewFormatClick(Platform::Object^ sender,
+			Windows::UI::Xaml::RoutedEventArgs^ e);
 		void OnSecondaryDialogPrimaryClick(Platform::Object^ sender,
 			Windows::UI::Xaml::RoutedEventArgs^ e);
 		void OnSecondaryDialogCancelClick(Platform::Object^ sender,
@@ -44,6 +53,9 @@ namespace MCPEUWP
 		void ShowWorldTileIconPage();
 		void HideWorldTileIconPage();
 		void AnimateWorldTileIconPage(bool entering);
+		void ShowWorldConvertPage();
+		void HideWorldConvertPage();
+		void AnimateWorldConvertPage(bool entering);
 		void PinWorldShortcut(Platform::String^ iconName);
 		void SetStatus(const std::wstring& text);
 		std::string WorldDirectory() const;
@@ -53,6 +65,12 @@ namespace MCPEUWP
 		Platform::String^ m_worldId;
 		Platform::String^ m_selectedTileIcon;
 		WorldTileIconPage^ m_worldTileIconPage;
+		WorldConvertPage^ m_worldConvertPage;
+		int m_worldType = 0;
+		long m_worldSeed = 0;
+		bool m_worldStorageFormatCurrent = false;
+		bool m_legacyFormatConversionAvailable = false;
+		bool m_finiteWorldUpgradeAvailable = false;
 		bool m_operationPending = false;
 		bool m_pinOperationPending = false;
 		int m_secondaryDialogKind = 0;
@@ -60,5 +78,7 @@ namespace MCPEUWP
 		Windows::Foundation::EventRegistrationToken m_secondaryDialogTransitionCompletedToken{};
 		Windows::UI::Xaml::Media::Animation::Storyboard^ m_worldTileIconTransition;
 		Windows::Foundation::EventRegistrationToken m_worldTileIconTransitionCompletedToken{};
+		Windows::UI::Xaml::Media::Animation::Storyboard^ m_worldConvertTransition;
+		Windows::Foundation::EventRegistrationToken m_worldConvertTransitionCompletedToken{};
 	};
 }

@@ -70,6 +70,20 @@ bool UwpOriginalClientShowSelectWorld(UwpOriginalClientHandle handle);
 // The screen deliberately stays inside the original client so it uses the
 // native dirt background, MC font, and input/button rendering.
 bool UwpOriginalClientShowLegacyWorldFormatError(UwpOriginalClientHandle handle);
+// Shows the conversion screen for a selected legacy Infinite/Sky/Alpha save.
+// The conversion writes a new world directory and leaves the source untouched.
+bool UwpOriginalClientShowLegacyWorldFormatConversion(
+	UwpOriginalClientHandle handle, const std::string& levelId);
+// Shows the native conversion screen for a current finite StorageVersion 3
+// world and creates a new UWP Infinite copy.
+bool UwpOriginalClientShowFiniteWorldUpgrade(
+	UwpOriginalClientHandle handle, const std::string& levelId);
+// Direct entry used by Minecraft::selectLevel(), which already has the
+// concrete Minecraft instance rather than the opaque host handle.
+bool UwpOriginalClientShowLegacyWorldFormatConversionForMinecraft(
+	Minecraft* minecraft, const std::string& levelId);
+bool UwpOriginalClientShowFiniteWorldUpgradeForMinecraft(
+	Minecraft* minecraft, const std::string& levelId);
 // Shows the native error screen used when a Start-menu world shortcut cannot
 // find or load its saved world.  The screen selects the Java or PE button
 // style from the current UI option and returns to the matching start menu.

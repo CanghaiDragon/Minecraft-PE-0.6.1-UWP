@@ -125,6 +125,20 @@ bool UwpOriginalClientHost::showLegacyWorldFormatError()
 		UwpOriginalClientShowLegacyWorldFormatError(m_client);
 }
 
+bool UwpOriginalClientHost::showLegacyWorldFormatConversion(
+	const std::string& levelId)
+{
+	return m_clientInitialized && m_client != nullptr &&
+		UwpOriginalClientShowLegacyWorldFormatConversion(m_client, levelId);
+}
+
+bool UwpOriginalClientHost::showFiniteWorldUpgrade(
+	const std::string& levelId)
+{
+	return m_clientInitialized && m_client != nullptr &&
+		UwpOriginalClientShowFiniteWorldUpgrade(m_client, levelId);
+}
+
 bool UwpOriginalClientHost::showLaunchWorldError(const std::string& details)
 {
 	return m_clientInitialized && m_client != nullptr &&

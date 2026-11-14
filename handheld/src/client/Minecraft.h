@@ -70,7 +70,16 @@ public:
 	void toggleDimension(){}
 	bool isCreativeMode();
 	void setIsCreativeMode(bool isCreative);
+	bool isSpectatorMode() const;
+	void setSpectatorMode(bool enabled);
 	void setScreen(Screen*);
+	bool startLegacyWorldConversion(const std::string& levelId);
+	bool startFiniteWorldUpgrade(const std::string& levelId);
+	bool isLegacyWorldConversionRunning() const { return _legacyConversionRunning; }
+	bool isLegacyWorldConversionFinished() const { return _legacyConversionFinished; }
+	bool legacyWorldConversionSucceeded() const { return _legacyConversionSucceeded; }
+	int getLegacyWorldConversionProgress() const { return _legacyConversionProgress; }
+	void finishLegacyWorldConversion();
 
 	virtual void selectLevel(const std::string& levelId, const std::string& levelName, const LevelSettings& settings);
 	virtual void setLevel(Level* level, const std::string& message = "", LocalPlayer* forceInsertPlayer = NULL);
@@ -153,6 +162,7 @@ protected:
 
 private:
 	static void* prepareLevel_tspawn(void *p_param);
+	static void* legacyWorldConversion_tspawn(void *p_param);
 
 	void handleMouseClick(int button);
 	void handleMouseDown(int button, bool down);
@@ -202,6 +212,7 @@ public:
 	Gui gui;
 #endif
 	CThread* generateLevelThread;
+	CThread* legacyWorldConversionThread;
 	Screen* screen;
 	static int customDebugId;
 
@@ -231,6 +242,12 @@ protected:
 	LevelStorageSource* storageSource;
 	bool _running;
 	bool _powerVr;
+	volatile bool _legacyConversionRunning;
+	volatile bool _legacyConversionFinished;
+	volatile bool _legacyConversionSucceeded;
+	volatile int _legacyConversionProgress;
+	std::string _legacyConversionLevelId;
+	volatile bool _finiteWorldUpgrade;
 
 private:
 	volatile int progressStageStatusId;

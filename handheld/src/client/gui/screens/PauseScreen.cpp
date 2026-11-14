@@ -20,7 +20,9 @@ PauseScreen::PauseScreen(bool wasBackPaused)
 	bThirdPerson(&Options::Option::THIRD_PERSON),
 	bHideGui(&Options::Option::HIDE_GUI),
 	bEntityButton(5, ""),
-	entityButtonState(false)
+	entityButtonState(false),
+	bSpectatorButton(6, ""),
+	spectatorButtonState(false)
 {
 	ImageDef def;
 	// touchguinew.png keeps the pause icons in three consecutive rows.
@@ -48,6 +50,19 @@ PauseScreen::PauseScreen(bool wasBackPaused)
 	entityButtonOn.height = 31 * 0.666667f;
 	entityButtonState = false;
 	bEntityButton.setImageDef(entityButtonState ? entityButtonOn : entityButtonOff, true);
+	// The two eye states are supplied by touchgui2.png.  The left frame is
+	// spectator mode off; the right frame is spectator mode on.
+	spectatorButtonOff.setSrc(IntRectangle(160, 142, 39, 31));
+	spectatorButtonOff.name = "gui/touchgui2.png";
+	spectatorButtonOff.width = 39 * 0.666667f;
+	spectatorButtonOff.height = 31 * 0.666667f;
+	spectatorButtonOn.setSrc(IntRectangle(199, 142, 39, 31));
+	spectatorButtonOn.name = "gui/touchgui2.png";
+	spectatorButtonOn.width = 39 * 0.666667f;
+	spectatorButtonOn.height = 31 * 0.666667f;
+	spectatorButtonState = false;
+	bSpectatorButton.setImageDef(
+		spectatorButtonState ? spectatorButtonOn : spectatorButtonOff, true);
 	//void setImageDef(ImageDef& imageDef, bool setButtonSize);
 }
 
@@ -62,6 +77,9 @@ PauseScreen::~PauseScreen() {
 void PauseScreen::init() {
 	entityButtonState = minecraft->options.renderDebug;
 	bEntityButton.setImageDef(entityButtonState ? entityButtonOn : entityButtonOff, false);
+	spectatorButtonState = minecraft->isSpectatorMode();
+	bSpectatorButton.setImageDef(
+		spectatorButtonState ? spectatorButtonOn : spectatorButtonOff, false);
 
 	// Pause presentation follows Java UI, not the selected input device. PE
 	// pause controls must remain available when a keyboard is connected.
@@ -90,6 +108,9 @@ void PauseScreen::init() {
 	bEntityButton.visible = minecraft->options.debugScreenEnabled;
 	if (bEntityButton.visible)
 		buttons.push_back(&bEntityButton);
+	bSpectatorButton.visible = minecraft->options.debugScreenEnabled;
+	if (bSpectatorButton.visible)
+		buttons.push_back(&bSpectatorButton);
     //buttons.push_back(&bHideGui);
 
 	// If Back wasn't pressed, set up additional items (more than Quit to menu
@@ -163,6 +184,8 @@ void PauseScreen::setupPositions() {
 	bHideGui.x = bThirdPerson.x + 4 + bThirdPerson.width;
 	bEntityButton.y = bThirdPerson.y;
 	bEntityButton.x = bThirdPerson.x + bThirdPerson.width + 4;
+	bSpectatorButton.y = bEntityButton.y;
+	bSpectatorButton.x = bEntityButton.x + bEntityButton.width + 4;
 
 	//bThirdPerson->x = (width - bThirdPerson->w) / 2;
 	//bThirdPerson->y = yBase + 32 * 4;
@@ -183,6 +206,13 @@ void PauseScreen::render(int xm, int ym, float a) {
 	if (entityButtonState != debugEnabled) {
 		entityButtonState = debugEnabled;
 		bEntityButton.setImageDef(entityButtonState ? entityButtonOn : entityButtonOff, false);
+	}
+	bool spectatorEnabled = minecraft->isSpectatorMode();
+	bSpectatorButton.visible = minecraft->options.debugScreenEnabled;
+	if (spectatorButtonState != spectatorEnabled) {
+		spectatorButtonState = spectatorEnabled;
+		bSpectatorButton.setImageDef(
+			spectatorButtonState ? spectatorButtonOn : spectatorButtonOff, false);
 	}
 
 	//bool isSaving = !minecraft->level.pauseSave(saveStep++);
@@ -206,6 +236,14 @@ void PauseScreen::buttonClicked(Button* button) {
 		entityButtonState = !entityButtonState;
 		minecraft->options.renderDebug = entityButtonState;
 		bEntityButton.setImageDef(entityButtonState ? entityButtonOn : entityButtonOff, false);
+	}
+	if (button->id == bSpectatorButton.id) {
+		if (!minecraft->options.debugScreenEnabled || !minecraft->isCreativeMode())
+			return;
+		minecraft->setSpectatorMode(!minecraft->isSpectatorMode());
+		spectatorButtonState = minecraft->isSpectatorMode();
+		bSpectatorButton.setImageDef(
+			spectatorButtonState ? spectatorButtonOn : spectatorButtonOff, false);
 	}
 	if (button->id == bContinue->id) {
 		minecraft->setScreen(NULL);

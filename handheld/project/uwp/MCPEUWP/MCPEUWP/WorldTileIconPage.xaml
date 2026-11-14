@@ -19,11 +19,14 @@
                        FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                        FontSize="28"
                        HorizontalAlignment="Center" />
-            <TextBlock Text="Icon is only available on Win10"
+            <TextBlock Text="Icon may not function on Win11, just randomly choose one"
                        Foreground="#FFFFD080"
                        FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
                        FontSize="12"
                        HorizontalAlignment="Center"
+                       MaxWidth="620"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center"
                        Margin="0,4,0,0" />
         </StackPanel>
 

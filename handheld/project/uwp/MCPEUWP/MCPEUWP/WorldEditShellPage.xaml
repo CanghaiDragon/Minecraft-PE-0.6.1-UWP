@@ -43,7 +43,7 @@
                     <RowDefinition Height="64" />
                     <RowDefinition Height="64" />
                     <RowDefinition Height="64" />
-                    <RowDefinition Height="64" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <TextBlock Grid.Row="0"
@@ -229,35 +229,19 @@
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis" />
 
-                <TextBlock Grid.Row="9"
-                           Grid.Column="0"
-                           Text="PIN to start menu"
-                           Foreground="White"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
-                           FontSize="16"
-                           VerticalAlignment="Center"
-                           TextWrapping="Wrap"
-                           Margin="0,0,10,0" />
-                <TextBlock x:Name="StartMenuIconValueText"
-                           Grid.Row="9"
-                           Grid.Column="1"
-                           Text="Not configured"
-                           Foreground="#FFB0E0FF"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
-                           FontSize="16"
-                           VerticalAlignment="Center"
-                           TextTrimming="CharacterEllipsis"
-                           Margin="0,0,10,0" />
                 <Button Grid.Row="9"
-                        Grid.Column="2"
-                        Content="PIN"
+                        Grid.Column="0"
+                        Grid.ColumnSpan="3"
+                        x:Name="PinToStartButton"
+                        Content="PIN to start menu"
                         Click="OnChooseStartIconClick"
                         FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
-                        FontSize="16"
+                        FontSize="18"
                         Foreground="White"
-                        Height="52"
+                        Height="60"
                         VerticalAlignment="Center"
-                        HorizontalAlignment="Stretch" />
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center" />
 
             </Grid>
 
@@ -270,6 +254,36 @@
                        TextWrapping="Wrap"
                        TextAlignment="Center"
                        Visibility="Collapsed" />
+            <Button x:Name="ConvertTo09Button"
+                    Content="Convert to PE 0.9+"
+                    Click="OnConvertTo09Click"
+                    Visibility="Collapsed"
+                    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                    FontSize="18"
+                    Foreground="White"
+                    Height="60"
+                    HorizontalAlignment="Stretch"
+                    Margin="0,12,0,0" />
+            <Button x:Name="UpgradeToInfiniteButton"
+                    Content="Upgrade to Infinite"
+                    Click="OnUpgradeToInfiniteClick"
+                    Visibility="Collapsed"
+                    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                    FontSize="18"
+                    Foreground="White"
+                    Height="60"
+                    HorizontalAlignment="Stretch"
+                    Margin="0,12,0,0" />
+            <Button x:Name="ConvertToNewFormatButton"
+                    Content="Convert to new format"
+                    Click="OnConvertToNewFormatClick"
+                    Visibility="Collapsed"
+                    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                    FontSize="18"
+                    Foreground="White"
+                    Height="60"
+                    HorizontalAlignment="Stretch"
+                    Margin="0,12,0,0" />
             <TextBlock x:Name="StatusText"
                        Text="Editor shell loaded."
                        Foreground="#FFFFD080"
@@ -420,6 +434,28 @@
                     BorderThickness="2"
                     Padding="8">
                 <Frame x:Name="WorldTileIconFrame"
+                       HorizontalAlignment="Stretch"
+                       VerticalAlignment="Stretch" />
+            </Border>
+        </Grid>
+
+        <Grid x:Name="WorldConvertOverlay"
+              Grid.Row="0"
+              Grid.RowSpan="3"
+              Margin="-24,-18,-24,-18"
+              Visibility="Collapsed"
+              Background="#EE2B1B10"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch">
+            <Border MaxWidth="760"
+                    Margin="10"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="#FF3A281D"
+                    BorderBrush="#FF8A6A4A"
+                    BorderThickness="2"
+                    Padding="8">
+                <Frame x:Name="WorldConvertFrame"
                        HorizontalAlignment="Stretch"
                        VerticalAlignment="Stretch" />
             </Border>

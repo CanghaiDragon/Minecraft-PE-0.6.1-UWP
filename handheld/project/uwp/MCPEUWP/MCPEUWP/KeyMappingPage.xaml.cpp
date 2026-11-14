@@ -64,7 +64,7 @@ namespace
 		{ L"Drop Item", DropItem },
 		{ L"Crafting (Survival)", Craft },
 		{ L"Toggle Hide HUD", HideHud },
-		{ L"Toggle Debug Screen", DebugScreen },
+		{ L"Toggle Debug Function", DebugScreen },
 		{ L"Toggle Third-person View", ThirdPerson },
 		{ L"Pause / Back", Pause },
 		{ L"Hotbar Slot 1", Hotbar1 },

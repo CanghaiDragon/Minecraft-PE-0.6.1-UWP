@@ -149,6 +149,11 @@
          including non-diagnostic builds, must use the UWP-compatible copy. -->
     <ZlibLibDir Condition="'$(Platform)' == 'ARM'">$(ZlibRoot)\lib\arm-uwp</ZlibLibDir>
     <ZlibBinDir Condition="'$(Platform)' == 'ARM'">$(ZlibRoot)\bin\arm</ZlibBinDir>
+    <!-- The PE 0.9+ exporter is kept inside the UWP tree so this project no
+         longer depends on the sibling standalone Converter directory. -->
+    <ConverterRoot>$(ProjectDir)..\..\..\..\..\Converter</ConverterRoot>
+    <ConverterSourceRoot>$(ConverterRoot)\src</ConverterSourceRoot>
+    <LevelDbRoot>$(ConverterRoot)\third_party\leveldb</LevelDbRoot>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-ANGLE-Test|ARM'">
     <AngleTestRoot>$(AngleArm32Root)</AngleTestRoot>
@@ -354,6 +359,7 @@
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpOriginalClientBridge.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpLiveTile.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpStoragePaths.h" />
+    <ClInclude Include="..\..\..\..\src\platform\uwp\UwpZip.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpUiRenderer.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpWorldRenderer.h" />
     <ClInclude Include="..\..\..\..\src\platform\uwp\UwpSettingsModel.h" />
@@ -367,6 +373,10 @@
     <ClInclude Include="..\..\..\..\src\client\renderer\Chunk.h" />
     <ClInclude Include="..\..\..\..\src\client\renderer\RenderList.h" />
     <ClInclude Include="..\..\..\..\src\client\renderer\TileRenderer.h" />
+    <ClInclude Include="..\..\..\..\src\world\level\storage\Legacy09WorldExporter.h" />
+    <ClInclude Include="..\..\..\..\src\world\level\storage\Legacy17WorldExporter.h" />
+    <ClInclude Include="$(ConverterSourceRoot)\converter.h" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'" />
+    <ClInclude Include="$(ConverterSourceRoot)\legacy_biome.h" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'" />
     <ClInclude Include="App.xaml.h">
       <DependentUpon>App.xaml</DependentUpon>
     </ClInclude>
@@ -384,6 +394,9 @@
     </ClInclude>
     <ClInclude Include="WorldTileIconPage.xaml.h" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
       <DependentUpon>WorldTileIconPage.xaml</DependentUpon>
+    </ClInclude>
+    <ClInclude Include="WorldConvertPage.xaml.h" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
+      <DependentUpon>WorldConvertPage.xaml</DependentUpon>
     </ClInclude>
     <ClInclude Include="WorldImportPage.xaml.h" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
       <DependentUpon>WorldImportPage.xaml</DependentUpon>
@@ -410,6 +423,10 @@
       <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
     </Page>
     <Page Include="WorldTileIconPage.xaml" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
+      <SubType>Designer</SubType>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
+    </Page>
+    <Page Include="WorldConvertPage.xaml" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
       <SubType>Designer</SubType>
       <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
     </Page>
@@ -526,8 +543,48 @@
       <DependentUpon>WorldTileIconPage.xaml</DependentUpon>
       <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="WorldConvertPage.xaml.cpp" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
+      <DependentUpon>WorldConvertPage.xaml</DependentUpon>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="WorldImportPage.xaml.cpp" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
       <DependentUpon>WorldImportPage.xaml</DependentUpon>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
+    </ClCompile>
+    <!-- GUI-free conversion core.  main.cpp is intentionally excluded: the
+         UWP-facing Legacy09WorldExporter adapter owns the call boundary. -->
+    <ClCompile Include="$(ConverterSourceRoot)\converter.cpp;$(ConverterSourceRoot)\legacy_biome.cpp" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;LEVELDB_PLATFORM_WINDOWS=1;LEVELDB_COMPILE_LIBRARY;HAVE_ZLIB=1;HAVE_ZSTD=0;HAVE_CRC32C=0;HAVE_SNAPPY=0;HAVE_FDATASYNC=0;HAVE_FULLFSYNC=0;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ConverterSourceRoot);$(LevelDbRoot)\include;$(LevelDbRoot);$(ZlibRoot)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
+    </ClCompile>
+    <!-- LevelDB 1.23 core used by converter.cpp.  It is compiled into the
+         UWP target so no desktop-only LevelDB DLL or import library is needed.
+         The upstream env_windows.cc is intentionally excluded because it
+         depends on desktop-only ANSI Win32 file APIs. -->
+    <ClCompile Include="$(LevelDbRoot)\db\builder.cc;$(LevelDbRoot)\db\c.cc;$(LevelDbRoot)\db\db_impl.cc;$(LevelDbRoot)\db\db_iter.cc;$(LevelDbRoot)\db\dbformat.cc;$(LevelDbRoot)\db\dumpfile.cc;$(LevelDbRoot)\db\filename.cc;$(LevelDbRoot)\db\log_reader.cc;$(LevelDbRoot)\db\log_writer.cc;$(LevelDbRoot)\db\memtable.cc;$(LevelDbRoot)\db\repair.cc;$(LevelDbRoot)\db\table_cache.cc;$(LevelDbRoot)\db\version_edit.cc;$(LevelDbRoot)\db\version_set.cc;$(LevelDbRoot)\db\write_batch.cc;$(LevelDbRoot)\table\block_builder.cc;$(LevelDbRoot)\table\block.cc;$(LevelDbRoot)\table\filter_block.cc;$(LevelDbRoot)\table\format.cc;$(LevelDbRoot)\table\iterator.cc;$(LevelDbRoot)\table\merger.cc;$(LevelDbRoot)\table\table_builder.cc;$(LevelDbRoot)\table\table.cc;$(LevelDbRoot)\table\two_level_iterator.cc;$(LevelDbRoot)\util\arena.cc;$(LevelDbRoot)\util\bloom.cc;$(LevelDbRoot)\util\cache.cc;$(LevelDbRoot)\util\coding.cc;$(LevelDbRoot)\util\comparator.cc;$(LevelDbRoot)\util\crc32c.cc;$(LevelDbRoot)\util\env.cc;$(LevelDbRoot)\util\filter_policy.cc;$(LevelDbRoot)\util\hash.cc;$(LevelDbRoot)\util\logging.cc;$(LevelDbRoot)\util\status.cc;$(LevelDbRoot)\helpers\memenv\memenv.cc" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;LEVELDB_PLATFORM_WINDOWS=1;LEVELDB_COMPILE_LIBRARY;HAVE_ZLIB=1;HAVE_ZSTD=0;HAVE_CRC32C=0;HAVE_SNAPPY=0;HAVE_FDATASYNC=0;HAVE_FULLFSYNC=0;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(LevelDbRoot)\include;$(LevelDbRoot);$(ZlibRoot)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="$(LevelDbRoot)\util\options.cc" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <!-- Avoid colliding with handheld/src/client/Options.cpp, which also
+           produces Options.obj in the default intermediate directory. -->
+      <ObjectFileName>$(IntDir)LevelDbOptions.obj</ObjectFileName>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;LEVELDB_PLATFORM_WINDOWS=1;LEVELDB_COMPILE_LIBRARY;HAVE_ZLIB=1;HAVE_ZSTD=0;HAVE_CRC32C=0;HAVE_SNAPPY=0;HAVE_FDATASYNC=0;HAVE_FULLFSYNC=0;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(LevelDbRoot)\include;$(LevelDbRoot);$(ZlibRoot)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\platform\uwp\LevelDbEnvUwp.cc" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>WIN32;MCPE_UWP;LEVELDB_PLATFORM_WINDOWS=1;LEVELDB_COMPILE_LIBRARY;HAVE_ZLIB=1;HAVE_ZSTD=0;HAVE_CRC32C=0;HAVE_SNAPPY=0;HAVE_FDATASYNC=0;HAVE_FULLFSYNC=0;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(LevelDbRoot)\include;$(LevelDbRoot);$(ZlibRoot)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\..\..\..\src\AppPlatform_uwp.cpp">
@@ -563,6 +620,10 @@
       <PreprocessorDefinitions>WIN32;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;MCPE_UWP_ORIGINAL_CLIENT_LOOP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Include="..\..\..\..\src\platform\uwp\UwpStoragePaths.cpp" />
+    <ClCompile Include="..\..\..\..\src\platform\uwp\UwpZip.cpp" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <ExcludedFromBuild Condition="'$(Platform)' == 'ARM' And '$(MCPE_ARM32_MINIMAL_SOURCES)' == 'true'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\..\..\..\src\platform\uwp\UwpUiRenderer.cpp" />
     <ClCompile Include="..\..\..\..\src\platform\uwp\UwpWorldRenderer.cpp" />
     <ClCompile Include="..\..\..\..\src\platform\uwp\UwpSettingsModel.cpp" />
@@ -827,6 +888,18 @@
       <PreprocessorDefinitions>WIN32;NO_NETWORK;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableSpecificWarnings>4703;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
+    <ClCompile Include="..\..\..\..\src\world\level\storage\Legacy09WorldExporter.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>WIN32;STANDALONE_SERVER;NO_NETWORK;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ConverterSourceRoot);$(LevelDbRoot)\include;$(LevelDbRoot);$(ZlibRoot)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\world\level\storage\Legacy17WorldExporter.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>WIN32;STANDALONE_SERVER;NO_NETWORK;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ConverterSourceRoot);$(LevelDbRoot)\include;$(LevelDbRoot);$(ZlibRoot)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Include="..\..\..\..\src\network\Packet.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PreprocessorDefinitions>WIN32;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;MCPE_UWP_ORIGINAL_CLIENT_LOOP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -850,7 +923,7 @@
       <PreprocessorDefinitions>WIN32;MCPE_UWP;MCPE_UWP_CLIENT_LIFECYCLE_ONLY;MCPE_UWP_ORIGINAL_CLIENT_LOOP;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableSpecificWarnings>4703;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\src\world\**\*.cpp" Exclude="..\..\..\..\src\world\level\storage\ExternalFileLevelStorage.cpp;..\..\..\..\src\world\level\storage\ExternalFileLevelStorageSource.cpp">
+    <ClCompile Include="..\..\..\..\src\world\**\*.cpp" Exclude="..\..\..\..\src\world\level\storage\ExternalFileLevelStorage.cpp;..\..\..\..\src\world\level\storage\ExternalFileLevelStorageSource.cpp;..\..\..\..\src\world\level\storage\Legacy09WorldExporter.cpp;..\..\..\..\src\world\level\storage\Legacy17WorldExporter.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PreprocessorDefinitions>WIN32;STANDALONE_SERVER;NO_NETWORK;MCPE_UWP;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableSpecificWarnings>4703;%(DisableSpecificWarnings)</DisableSpecificWarnings>
