@@ -108,7 +108,8 @@ void PauseScreen::init() {
 	bEntityButton.visible = minecraft->options.debugScreenEnabled;
 	if (bEntityButton.visible)
 		buttons.push_back(&bEntityButton);
-	bSpectatorButton.visible = minecraft->options.debugScreenEnabled;
+	bSpectatorButton.visible = minecraft->options.debugScreenEnabled &&
+		minecraft->isCreativeMode();
 	if (bSpectatorButton.visible)
 		buttons.push_back(&bSpectatorButton);
     //buttons.push_back(&bHideGui);
@@ -208,7 +209,8 @@ void PauseScreen::render(int xm, int ym, float a) {
 		bEntityButton.setImageDef(entityButtonState ? entityButtonOn : entityButtonOff, false);
 	}
 	bool spectatorEnabled = minecraft->isSpectatorMode();
-	bSpectatorButton.visible = minecraft->options.debugScreenEnabled;
+	bSpectatorButton.visible = minecraft->options.debugScreenEnabled &&
+		minecraft->isCreativeMode();
 	if (spectatorButtonState != spectatorEnabled) {
 		spectatorButtonState = spectatorEnabled;
 		bSpectatorButton.setImageDef(

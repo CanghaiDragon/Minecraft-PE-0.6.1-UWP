@@ -81,13 +81,13 @@ The additional features below can be experienced after opening the corresponding
 
 - Touch sneak option
 
-- F3 Debug Screen
+- Debug Function
 
 - Java Edition style UI
 
-![F3 toggle](docs/F3_enter.png)
+![Debug](docs/debug.png)
 
-<div align="center">F3 Debug Screen</div>
+<div align="center"> Debug Function</div>
 
 ### Improvements
 
@@ -114,7 +114,7 @@ The additional features below can be experienced after opening the corresponding
 
 <h2 align="center">World types</h2>
 
-**IMPORTANT**: Infinite, Sky and Alpha world have a level saving format different from both the original MCPE 0.6.1 and later MCPE infinite versions like 0.9. Therefore, these three world types **CANNOT** be converted and opened in any versions of original MCPE at the moment. Future plans include Infinite/Sky world conversion tools for later MCPE versions. Meanwhile, classic finite worlds retain the original MCPE 0.6.1 save format. saves from 0.1-0.8 original PE are supported.
+**IMPORTANT**: Infinite, Sky and Alpha world have a level saving format different from both the original MCPE 0.6.1 and later MCPE infinite versions like 0.9. Please use "Convert to PE 0.9+" in world edit page to convert these saves. I **STRONGLY RECOMMEND** first open the converted world in a middle version (1.18 is tested and works well), as directly open it in 1.26 may cause compatibility issues. Meanwhile, classic finite worlds retain the original MCPE 0.6.1 save format. saves from 0.1-0.8 original PE are supported.
 
 ### Old (finite) world
 
@@ -160,7 +160,7 @@ The world type based on Java Edition Alpha v1.1.2_01. Only the biome "Alpha" or 
 
 To adapt UWP app style, several functions with native XAML interfaces are added, including optimized skins, saves editing, importing and exporting, and key mapping. Players can import and export their worlds within the game, without visiting UWP data folder.
 
-Dynamic Live Tiles and adaptation to UWP navigation bar are also added.
+Dynamic Live Tiles and adaptation to UWP navigation bar are also added. You can also pin a world to the start menu and open it directly.
 
 
 
@@ -299,7 +299,7 @@ Below are the default keyboard controls for keyboard input. They can be revised 
 
 - Chinese localization
 
-- Infinite/Sky world conversion tools for later MCPE versions (Already in Progress!)
+- 
 
 - Possible achievement system
 
