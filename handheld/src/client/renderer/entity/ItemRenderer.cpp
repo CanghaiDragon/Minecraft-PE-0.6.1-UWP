@@ -181,17 +181,17 @@ void ItemRenderer::renderGuiItem(Font* font, Textures* textures, const ItemInsta
 	const bool alphaCobblestone = Tile::stoneBrick
 		&& id == Tile::stoneBrick->id
 		&& Tile::useAlphaTextures();
-	// These blocks do not have entries in gui_blocks.png. Force the normal
-	// fallback path so the inventory uses their terrain textures. Solid blocks
-	// such as Alpha cobblestone/snow/ice are rendered as 3D tiles there, while
-	// water and lava use their 2D terrain icons. When the GUI is being batched,
-	// the fallback would otherwise draw the red missing-icon rectangle first.
-	const bool specialTileItem = alphaCobblestone
+	// Alpha cobblestone has its own pre-rendered cube in gui_blocks.png, so it
+	// follows the same 2D atlas path as ordinary block icons. Other listed
+	// blocks still use the terrain-tile fallback because they have no GUI icon.
+	const bool specialTileItem = (Tile::unbreakable && id == Tile::unbreakable->id)
 		|| (Tile::topSnow && id == Tile::topSnow->id)
 		|| (Tile::ice && id == Tile::ice->id)
 		|| (Tile::water && id == Tile::water->id)
 		|| (Tile::lava && id == Tile::lava->id);
-	int i = specialTileItem ? -1 : getAtlasPos(item);
+	const int alphaCobblestoneAtlasIndex = 82;
+	int i = alphaCobblestone ? alphaCobblestoneAtlasIndex
+		: (specialTileItem ? -1 : getAtlasPos(item));
 
 	if (i < 0) {
 		Tesselator& t = Tesselator::instance;
@@ -290,6 +290,18 @@ void ItemRenderer::renderGuiItemCorrect(Font* font, Textures* textures, const It
 		static float gg = 0;// gg += 0.01f;
 
 		Tile* tile = Tile::tiles[paint];
+		// GUI block icons use the same face geometry as world blocks.  On UWP,
+		// the chest/inventory screen can inherit a stale winding or depth state
+		// from the preceding world pass, which makes the Alpha cobblestone
+		// texture look transparent when back-face culling removes its faces.
+#if defined(MCPE_UWP)
+		glFrontFace(GL_CCW);
+		glCullFace(GL_BACK);
+		glEnable(GL_CULL_FACE);
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
+		glDepthMask(GL_TRUE);
+#endif
 		glPushMatrix2();
 		glTranslatef2((GLfloat)(x - 2), (GLfloat)(y + 3), -8);
 		glScalef2(10.0f, 10.0f, 10.0f);
@@ -301,6 +313,16 @@ void ItemRenderer::renderGuiItemCorrect(Font* font, Textures* textures, const It
 		glScalef2(1, 1, 1);
 		tileRenderer->renderGuiTile(tile, item->getAuxValue());
 		glPopMatrix2();
+#if defined(MCPE_UWP)
+		// Leave the renderer in its canonical opaque-world state for the next
+		// GUI element or frame.
+		glFrontFace(GL_CCW);
+		glCullFace(GL_BACK);
+		glEnable(GL_CULL_FACE);
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
+		glDepthMask(GL_TRUE);
+#endif
 	}
 	else if (item->getIcon() >= 0)
 	{

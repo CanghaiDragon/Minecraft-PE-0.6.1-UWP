@@ -1,4 +1,7 @@
 #include "Inventory.h"
+#include "Player.h"
+#include "../../level/storage/AchievementIds.h"
+#include "../../item/Item.h"
 #include "../../level/material/Material.h"
 #include "../../level/tile/QuartzBlockTile.h"
 #include "../../level/tile/TreeTile.h"
@@ -177,6 +180,7 @@ void Inventory::setupDefault() {
 		addItem(new ItemInstance(Tile::emeraldBlock));
 		addItem(new ItemInstance(Tile::lapisBlock));
 		addItem(new ItemInstance(Tile::obsidian));
+		addItem(new ItemInstance(Tile::unbreakable));
 		// Add the source liquid blocks themselves, not the bucket items.
 		// Their inventory representation uses the existing 2D terrain icon.
 		addItem(new ItemInstance(Tile::water));
@@ -336,8 +340,16 @@ bool Inventory::stillValid(Player* player) {
 bool Inventory::add( ItemInstance* item ){
 	if (_isCreative || player->hasFakeInventory)
 		return true;
-
-	return super::add(item);
+	const bool added = super::add(item);
+	if (added && item != NULL && Item::ironIngot != NULL && item->id == Item::ironIngot->id)
+		player->awardAchievement(AchievementIds::AcquireHardware);
+	if (added && item != NULL && Item::bread != NULL && item->id == Item::bread->id)
+		player->awardAchievement(AchievementIds::BakeBread);
+	if (added && item != NULL && Item::seeds_wheat != NULL && item->id == Item::seeds_wheat->id)
+		player->awardAchievement(AchievementIds::Farming);
+	if (added && item != NULL && Item::emerald != NULL && item->id == Item::emerald->id)
+		player->awardAchievement(AchievementIds::Diamond);
+	return added;
 }
 
 bool Inventory::removeItem( const ItemInstance* samePtr ) {

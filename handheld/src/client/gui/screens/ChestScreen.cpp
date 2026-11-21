@@ -116,8 +116,8 @@ ChestScreen::ChestScreen(Player* player, ChestTileEntity* chest, int containerId
 	inventoryPane(NULL),
 	chestPane(NULL),
 	btnClose(4, ""),
-	bHeader (5, "Inventory"),
-	bHeaderChest (6, "Chest"),
+	bHeader (5, I18n::get("container.inventory")),
+	bHeaderChest (6, I18n::get("container.chest")),
 	guiBackground(NULL),
 	guiSlot(NULL),
 	guiSlotMarked(NULL),
@@ -262,6 +262,15 @@ void ChestScreen::render(int xm, int ym, float a) {
 
 	// Buttons (Left side + crafting)
 	super::render(xm, ym, a);
+	// The chest is drawn over the live world. Discard the world's depth values
+	// before 3D inventory icons render, or old terrain depth can hide their
+	// faces even though the icons are in front of the GUI.
+#if defined(MCPE_UWP)
+	glDisable2(GL_SCISSOR_TEST);
+	glDepthMask(GL_TRUE);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glEnable2(GL_SCISSOR_TEST);
+#endif
 
 	heldMs = -1;
 

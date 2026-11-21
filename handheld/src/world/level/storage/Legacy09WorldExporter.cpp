@@ -18,6 +18,7 @@ bool Export(const ExportOptions& options, const Log& log, std::wstring& error) {
     coreOptions.lowerSeaLevel = options.lowerSeaLevel;
     coreOptions.freezeWinterWater = options.freezeWinterWater;
     coreOptions.skyBedrockFloor = options.skyBedrockFloor;
+    coreOptions.floatingBedrockFloor = options.floatingBedrockFloor;
 
     // The converter emits progress messages after it has written the output.
     // Keep the callback non-empty even when the UWP caller does not request

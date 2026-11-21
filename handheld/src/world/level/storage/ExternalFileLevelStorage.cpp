@@ -10,6 +10,7 @@
 #endif
 #include "../Level.h"
 #include "../LevelConstants.h"
+#include "../../entity/EntityTypes.h"
 #include "../../entity/player/Player.h"
 #include "../tile/TreeTile.h"
 #include "../../entity/EntityFactory.h"
@@ -21,8 +22,9 @@
 #include "../tile/entity/TileEntity.h"
 
 #include <algorithm>
-#include <cstring>
 #include <stdexcept>
+#include <cstdio>
+#include <cstring>
 
 static const int ChunkVersion_Light = 1;
 static const int ChunkVersion_Entity = 2;
@@ -47,6 +49,9 @@ const char* const fnLevelDatOld = "level.dat_old";
 const char* const fnLevelDatNew = "level.dat_new";
 const char* const fnLevelDat    = "level.dat";
 const char* const fnPlayerDat   = "player.dat";
+static const char* const fnAchievements = "achievements.dat";
+static const char AchievementStateHeaderV1[] = "MCPEUWP_ACHIEVEMENTS_V1\nbenchmarking=1\n";
+static const char AchievementStateHeaderV2[] = "MCPEUWP_ACHIEVEMENTS_V2\nunlocked=";
 
 #if defined(MCPE_UWP)
 // V2 is the compressed UWP infinite/Sky storage contract. V1 is retained as
@@ -188,7 +193,9 @@ ExternalFileLevelStorage::ExternalFileLevelStorage(const std::string& levelId, c
 	tickCount(0),
 	lastSavedEntitiesTick(-999999),
 	level(NULL),
-	loadedStorageVersion(SharedConstants::StorageVersion)
+	loadedStorageVersion(SharedConstants::StorageVersion),
+	achievementMask(0),
+	achievementStateLoaded(false)
 {
 	createFolderIfNotExists(levelPath.c_str());
 
@@ -216,6 +223,116 @@ ExternalFileLevelStorage::ExternalFileLevelStorage(const std::string& levelId, c
 		delete loadedLevelData;
 		loadedLevelData = NULL;
 	}
+}
+
+unsigned int ExternalFileLevelStorage::readAchievementState() const
+{
+	const std::string filename = levelPath + "/" + fnAchievements;
+	FILE* file = fopen(filename.c_str(), "rb");
+	if (!file) return 0;
+	char contents[128] = {};
+	const size_t bytesRead = fread(contents, 1, sizeof(contents) - 1, file);
+	fclose(file);
+	if (bytesRead == sizeof(AchievementStateHeaderV1) - 1 &&
+		memcmp(contents, AchievementStateHeaderV1, sizeof(AchievementStateHeaderV1) - 1) == 0)
+		return 1u << AchievementIds::Benchmarking;
+	if (strncmp(contents, AchievementStateHeaderV2, sizeof(AchievementStateHeaderV2) - 1) != 0)
+		return 0;
+	unsigned int mask = 0;
+	if (sscanf(contents + sizeof(AchievementStateHeaderV2) - 1, "%u", &mask) != 1)
+		return 0;
+	// Preserve four hidden mob-progress bits alongside the visible achievements.
+	return mask & (((1u << AchievementIds::Count) - 1u) | (0x0fu << 16));
+}
+
+bool ExternalFileLevelStorage::writeAchievementState() const
+{
+	const std::string filename = levelPath + "/" + fnAchievements;
+	const std::string temporaryFilename = filename + ".tmp";
+	FILE* file = fopen(temporaryFilename.c_str(), "wb");
+	if (!file) return false;
+	char contents[128] = {};
+	const int size = snprintf(contents, sizeof(contents), "%sunlocked=%u\n",
+		"MCPEUWP_ACHIEVEMENTS_V2\n", achievementMask);
+	const bool written = size > 0 && static_cast<size_t>(size) < sizeof(contents) &&
+		fwrite(contents, 1, static_cast<size_t>(size), file) == static_cast<size_t>(size);
+	const bool closed = fclose(file) == 0;
+	if (!written || !closed) {
+		remove(temporaryFilename.c_str());
+		return false;
+	}
+	remove(filename.c_str());
+	if (rename(temporaryFilename.c_str(), filename.c_str()) != 0) {
+		remove(temporaryFilename.c_str());
+		return false;
+	}
+	return true;
+}
+
+bool ExternalFileLevelStorage::unlockAchievement(int id)
+{
+	if (id < 0 || id >= AchievementIds::Count) return false;
+	if (!achievementStateLoaded) {
+		achievementMask = readAchievementState();
+		achievementStateLoaded = true;
+	}
+	const unsigned int bit = 1u << id;
+	if (achievementMask & bit) return false;
+	achievementMask |= bit;
+	if (!writeAchievementState()) {
+		achievementMask &= ~bit;
+		return false;
+	}
+	return true;
+}
+
+bool ExternalFileLevelStorage::hasAchievement(int id)
+{
+	if (id < 0 || id >= AchievementIds::Count) return false;
+	if (!achievementStateLoaded) {
+		achievementMask = readAchievementState();
+		achievementStateLoaded = true;
+	}
+	return (achievementMask & (1u << id)) != 0;
+}
+
+bool ExternalFileLevelStorage::markOverkillMob(int mobType)
+{
+	int progressIndex = -1;
+	switch (mobType) {
+	case MobTypes::Zombie: progressIndex = 0; break;
+	case MobTypes::Skeleton: progressIndex = 1; break;
+	case MobTypes::Spider: progressIndex = 2; break;
+	case MobTypes::Creeper: progressIndex = 3; break;
+	default: return false;
+	}
+	if (!achievementStateLoaded) {
+		achievementMask = readAchievementState();
+		achievementStateLoaded = true;
+	}
+	const unsigned int oldMask = achievementMask;
+	achievementMask |= 1u << (16 + progressIndex);
+	if (achievementMask == oldMask)
+		return (achievementMask & (0x0fu << 16)) == (0x0fu << 16);
+	if (!writeAchievementState()) {
+		achievementMask = oldMask;
+		return false;
+	}
+	return (achievementMask & (0x0fu << 16)) == (0x0fu << 16);
+}
+
+int ExternalFileLevelStorage::getOverkillMobCount()
+{
+	if (!achievementStateLoaded) {
+		achievementMask = readAchievementState();
+		achievementStateLoaded = true;
+	}
+	int count = 0;
+	for (int i = 0; i < 4; ++i) {
+		if (achievementMask & (1u << (16 + i)))
+			++count;
+	}
+	return count;
 }
 
 ExternalFileLevelStorage::~ExternalFileLevelStorage()
@@ -701,8 +818,10 @@ void ExternalFileLevelStorage::save(Level* level, LevelChunk* levelChunk)
 
 	const bool writeSucceeded = rf->writeChunk(lx, lz, chunkData);
 	#if defined(_DEBUG)
-	if (chunkHasChest(levelChunk))
-		LOGI("[CHUNK_WRITE] chunk=%d,%d region=%d,%d local=%d,%d result=%s bytes=%d\n",
+	if (!writeSucceeded || (level != NULL && level->isClientSide) ||
+		chunkHasChest(levelChunk))
+		LOGI("[CHUNK_WRITE] path=%s chunk=%d,%d region=%d,%d local=%d,%d result=%s bytes=%d\n",
+			levelPath.c_str(),
 			cx, cz, floorDivBy32(cx), floorDivBy32(cz), lx, lz,
 			writeSucceeded ? "success" : "fail",
 			chunkData.GetNumberOfBytesUsed());
@@ -1215,10 +1334,16 @@ int ExternalFileLevelStorage::savePendingUnsavedChunks( int maxCount ) {
 }
 
 void ExternalFileLevelStorage::saveAll( Level* level, std::vector<LevelChunk*>& levelChunks ) {
+	LOGI("[COPY_MAP] storage saveAll begin path=%s clientSide=%d loadedChunks=%u queuedChunks=%u\n",
+		levelPath.c_str(), level != NULL && level->isClientSide ? 1 : 0,
+		static_cast<unsigned int>(levelChunks.size()),
+		static_cast<unsigned int>(unsavedChunkList.size()));
     ChunkStorage::saveAll(level, levelChunks);
 	int numChunks = savePendingUnsavedChunks(-1);
 	flush();
-    LOGI("Saving %d additional chunks.\n", numChunks);
+	LOGI("[COPY_MAP] storage saveAll end path=%s pendingProcessed=%d queuedAfter=%u\n",
+		levelPath.c_str(), numChunks,
+		static_cast<unsigned int>(unsavedChunkList.size()));
 }
 
 void ExternalFileLevelStorage::flush()

@@ -235,11 +235,11 @@
     <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
     <PackageCertificateThumbprint>454A3461584CC671165F8430913FD684E4324B69</PackageCertificateThumbprint>
     <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
-    <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
+    <AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
     <AppxPackageDir>$(SolutionDir)..\..\..\AppPackages\</AppxPackageDir>
     <GenerateTestArtifacts>True</GenerateTestArtifacts>
     <AppxBundle>Always</AppxBundle>
-    <AppxBundlePlatforms>x86|x64|arm|arm64</AppxBundlePlatforms>
+    <AppxBundlePlatforms>arm64</AppxBundlePlatforms>
     <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
@@ -377,6 +377,7 @@
     <ClInclude Include="..\..\..\..\src\world\level\storage\Legacy17WorldExporter.h" />
     <ClInclude Include="$(ConverterSourceRoot)\converter.h" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'" />
     <ClInclude Include="$(ConverterSourceRoot)\legacy_biome.h" Condition="'$(Platform)' != 'ARM' Or '$(MCPE_ARM32_MINIMAL_SOURCES)' != 'true'" />
+    <ClInclude Include="XamlLocalization.h" />
     <ClInclude Include="App.xaml.h">
       <DependentUpon>App.xaml</DependentUpon>
     </ClInclude>
@@ -485,12 +486,22 @@
       <DeploymentContent>true</DeploymentContent>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\..\..\data\images\font\unifont\**\*">
+      <Link>data\images\font\unifont\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <DeploymentContent>true</DeploymentContent>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="data\fonts\**\*">
       <DeploymentContent>true</DeploymentContent>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="..\..\..\..\data\lang\en_US.lang">
       <Link>data\lang\en_US.lang</Link>
+      <DeploymentContent>true</DeploymentContent>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\..\data\lang\zh_CN.lang">
+      <Link>data\lang\zh_CN.lang</Link>
       <DeploymentContent>true</DeploymentContent>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

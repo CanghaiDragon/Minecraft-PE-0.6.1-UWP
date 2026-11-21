@@ -29,6 +29,7 @@ public:
 	void tick();
 
 	int getEntityTypeId() const;
+	virtual void awardKillScore(Entity* victim, int score);
 
     void addAdditonalSaveData(CompoundTag* tag);
     void readAdditionalSaveData(CompoundTag* tag);

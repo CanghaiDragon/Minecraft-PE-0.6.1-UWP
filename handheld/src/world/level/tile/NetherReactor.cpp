@@ -1,4 +1,5 @@
 #include "NetherReactor.h"
+#include "../storage/AchievementIds.h"
 #include "../../entity/player/Player.h"
 #include "../Level.h"
 #include "entity/NetherReactorTileEntity.h"
@@ -15,17 +16,18 @@ bool NetherReactor::use( Level* level, int x, int y, int z, Player* player ) {
 		for(int checkX = -1; checkX <= 1; ++checkX) {
 			for(int checkZ = -1; checkZ <= 1; ++checkZ) {
 				if(level->getTile(x + checkX, y + checkLevel  - 1, z + checkZ) != pattern.getTileAt(checkLevel, checkX + 1, checkZ + 1)) {
-					player->displayClientMessage("Not the correct pattern!");
+					player->displayClientMessage("message.reactor.pattern");
 					return false;
 				}
 			}
 		}
 	}
 	if(!canSpawnStartNetherReactor(level, x, y, z, player)) return false;
-	player->displayClientMessage("Active!");
+	player->displayClientMessage("message.reactor.active");
 	NetherReactorTileEntity* reactor = static_cast<NetherReactorTileEntity*>(level->getTileEntity(x, y, z));
 	if (reactor != NULL) {
 		reactor->lightItUp(x, y, z);
+		player->awardAchievement(AchievementIds::TheEnd);
 	}
 	return true;
 }
@@ -51,13 +53,13 @@ int NetherReactor::getTexture( int face, int data ) {
 
 bool NetherReactor::canSpawnStartNetherReactor( Level* level, int x, int y, int z, Player* player ) {
 	if(!allPlayersCloseToReactor(level, x, y, z)) {
-		player->displayClientMessage("All players need to be close to the reactor.");
+		player->displayClientMessage("message.reactor.playersNearby");
 		return false;
 	} else if(y > LEVEL_HEIGHT - 28) {
-		player->displayClientMessage("The nether reactor needs to be built lower down.");
+		player->displayClientMessage("message.reactor.lower");
 		return false;
 	} else if(y < 2) {
-		player->displayClientMessage("The nether reactor needs to be built higher up.");
+		player->displayClientMessage("message.reactor.higher");
 		return false;
 	}
 	return true;

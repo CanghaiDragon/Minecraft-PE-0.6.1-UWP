@@ -8,6 +8,7 @@
 #include "../../../world/level/LevelSettings.h"
 #include "../../../platform/time.h"
 #include "../../../util/StringUtils.h"
+#include "../../../locale/I18n.h"
 #include <cmath>
 #include <cstdio>
 
@@ -20,10 +21,12 @@ SimpleChooseLevelScreen::SimpleChooseLevelScreen(const std::string& levelName)
 	bInfiniteWorld(0),
 	bSkyWorld(0),
 	bAlphaWorld(0),
+	bIndevWorld(0), bIndevInland(0), bIndevIsland(0), bIndevFloating(0), bIndevFlat(0),
 	hasChosen(false),
 	chosenGameType(-1),
-	worldNameBox(0, "World name"),
-	seedBox(1, "World seed"),
+	indevPage(0),
+	worldNameBox(0, I18n::get("selectWorld.enterName")),
+	seedBox(1, I18n::get("selectWorld.seed")),
 	contentTop(0),
 	visibleBottom(0),
 	visibleHeight(0),
@@ -36,6 +39,7 @@ SimpleChooseLevelScreen::SimpleChooseLevelScreen(const std::string& levelName)
 	baseInfiniteWorldY(0),
 	baseSkyWorldY(0),
 	baseAlphaWorldY(0),
+	baseIndevWorldY(0), baseIndevInlandY(0), baseIndevIslandY(0), baseIndevFloatingY(0), baseIndevFlatY(0),
 	scrollY(0),
 	scrollVelocity(0),
 	scrollDragging(false),
@@ -57,37 +61,50 @@ SimpleChooseLevelScreen::~SimpleChooseLevelScreen()
 	delete bInfiniteWorld;
 	delete bSkyWorld;
 	delete bAlphaWorld;
+	delete bIndevWorld; delete bIndevInland; delete bIndevIsland; delete bIndevFloating; delete bIndevFlat;
 }
 
 void SimpleChooseLevelScreen::init()
 {
 	ChooseLevelScreen::init();
 	const bool useJavaUi = minecraft->options.javaUi;
-	bTitle        = new Touch::THeader(0, "Game Mode");
+	bTitle        = new Touch::THeader(0, I18n::get("selectWorld.gameMode"));
 	if (!useJavaUi) {
-		bBack         = new Touch::TButton(3, "Back");
-		bCreative     = new Touch::TButton(1, "Creative");
-		bSurvival     = new Touch::TButton(2, "Survival");
-		bOldWorld     = new Touch::TButton(4, "Old World");
-		bInfiniteWorld= new Touch::TButton(5, "Infinite");
-		bSkyWorld     = new Touch::TButton(8, "Sky");
-		bAlphaWorld   = new Touch::TButton(9, "Alpha");
+		bBack         = new Touch::TButton(3, I18n::get("gui.back"));
+		bCreative     = new Touch::TButton(1, I18n::get("selectWorld.gameMode.creative"));
+		bSurvival     = new Touch::TButton(2, I18n::get("selectWorld.gameMode.survival"));
+		bOldWorld     = new Touch::TButton(4, I18n::get("generator.old"));
+		bInfiniteWorld= new Touch::TButton(5, I18n::get("generator.infinite"));
+		bSkyWorld     = new Touch::TButton(8, I18n::get("generator.sky"));
+		bAlphaWorld   = new Touch::TButton(9, I18n::get("generator.alpha"));
+		bIndevWorld   = new Touch::TButton(10, I18n::get("generator.indev"));
+		bIndevInland  = new Touch::TButton(11, I18n::get("generator.indev.inland"));
+		bIndevIsland  = new Touch::TButton(12, I18n::get("generator.indev.island"));
+		bIndevFloating= new Touch::TButton(13, I18n::get("generator.indev.floating"));
+		bIndevFlat    = new Touch::TButton(14, I18n::get("generator.indev.flat"));
 	} else {
 		// The desktop flow keeps the PE page layout, but uses the same classic
 		// Java button skin as the keyboard-and-mouse title and pause menus.
-		bBack         = new Button(3, "Back");
-		bCreative     = new Button(1, "Creative");
-		bSurvival     = new Button(2, "Survival");
-		bOldWorld     = new Button(4, "Old World");
-		bInfiniteWorld= new Button(5, "Infinite");
-		bSkyWorld     = new Button(8, "Sky");
-		bAlphaWorld   = new Button(9, "Alpha");
+		bBack         = new Button(3, I18n::get("gui.back"));
+		bCreative     = new Button(1, I18n::get("selectWorld.gameMode.creative"));
+		bSurvival     = new Button(2, I18n::get("selectWorld.gameMode.survival"));
+		bOldWorld     = new Button(4, I18n::get("generator.old"));
+		bInfiniteWorld= new Button(5, I18n::get("generator.infinite"));
+		bSkyWorld     = new Button(8, I18n::get("generator.sky"));
+		bAlphaWorld   = new Button(9, I18n::get("generator.alpha"));
+		bIndevWorld   = new Button(10, I18n::get("generator.indev"));
+		bIndevInland  = new Button(11, I18n::get("generator.indev.inland"));
+		bIndevIsland  = new Button(12, I18n::get("generator.indev.island"));
+		bIndevFloating= new Button(13, I18n::get("generator.indev.floating"));
+		bIndevFlat    = new Button(14, I18n::get("generator.indev.flat"));
 	}
 
 	bOldWorld->visible      = false;  bOldWorld->active      = false;
 	bInfiniteWorld->visible = false;  bInfiniteWorld->active = false;
 	bSkyWorld->visible = false; bSkyWorld->active = false;
 	bAlphaWorld->visible = false; bAlphaWorld->active = false;
+	Button* indevButtons[] = { bIndevWorld, bIndevInland, bIndevIsland, bIndevFloating, bIndevFlat };
+	for (int i=0;i<5;++i) { indevButtons[i]->visible=false; indevButtons[i]->active=false; }
 
 	buttons.push_back(bTitle);
 	buttons.push_back(bBack);
@@ -97,6 +114,7 @@ void SimpleChooseLevelScreen::init()
 	buttons.push_back(bInfiniteWorld);
 	buttons.push_back(bSkyWorld);
 	buttons.push_back(bAlphaWorld);
+	for (int i=0;i<5;++i) buttons.push_back(indevButtons[i]);
 
 	tabButtons.push_back(bBack);
 	tabButtons.push_back(bCreative);
@@ -105,6 +123,7 @@ void SimpleChooseLevelScreen::init()
 	tabButtons.push_back(bInfiniteWorld);
 	tabButtons.push_back(bSkyWorld);
 	tabButtons.push_back(bAlphaWorld);
+	for (int i=0;i<5;++i) tabButtons.push_back(indevButtons[i]);
 	textBoxes.push_back(&worldNameBox);
 	textBoxes.push_back(&seedBox);
 	worldNameBox.text = levelName;
@@ -172,11 +191,23 @@ void SimpleChooseLevelScreen::setupPositions()
 	bOldWorld->width = bInfiniteWorld->width = bSkyWorld->width = bAlphaWorld->width = worldTypeWidth;
 	bSkyWorld->height = btnH;
 	bAlphaWorld->height = btnH;
+	Button* allIndev[] = { bIndevWorld, bIndevInland, bIndevIsland, bIndevFloating, bIndevFlat };
+	for (int i=0;i<5;++i) { allIndev[i]->width=worldTypeWidth; allIndev[i]->height=btnH; allIndev[i]->x=(width-worldTypeWidth)/2; }
 	bOldWorld->x = bInfiniteWorld->x = bSkyWorld->x = bAlphaWorld->x = (width - worldTypeWidth) / 2;
 	baseSkyWorldY = baseInfiniteWorldY + btnH + 8;
 	baseAlphaWorldY = baseSkyWorldY + btnH + 8;
 	bSkyWorld->y = baseSkyWorldY;
 	bAlphaWorld->y = baseAlphaWorldY;
+	baseIndevWorldY = baseAlphaWorldY + btnH + 8;
+	baseIndevIslandY = contentTop + 12;
+	baseIndevFloatingY = baseIndevIslandY + btnH + 8;
+	baseIndevFlatY = baseIndevFloatingY + btnH + 8;
+	baseIndevInlandY = baseIndevFlatY + btnH + 8;
+	bIndevWorld->y = baseIndevWorldY;
+	bIndevIsland->y = baseIndevIslandY;
+	bIndevFloating->y = baseIndevFloatingY;
+	bIndevFlat->y = baseIndevFlatY;
+	bIndevInland->y = baseIndevInlandY;
 
 	updateScrollBounds();
 	applyScrollOffset();
@@ -203,12 +234,12 @@ void SimpleChooseLevelScreen::render( int xm, int ym, float a )
 		glScissor(sx, sy, sw, sh);
 
 		if (chosenGameType == -1) {
-			drawString(minecraft->font, "World name:", worldNameBox.x,
+			drawString(minecraft->font, I18n::get("selectWorld.enterName") + ":", worldNameBox.x,
 				worldNameBox.y - Font::DefaultLineHeight - 2, 0xffcccccc);
-			drawString(minecraft->font, "World seed:", seedBox.x,
+			drawString(minecraft->font, I18n::get("selectWorld.seed") + ":", seedBox.x,
 				seedBox.y - Font::DefaultLineHeight - 2, 0xffcccccc);
 		} else {
-			drawCenteredString(minecraft->font, "Sky: floating islands", width / 2,
+			drawCenteredString(minecraft->font, I18n::get("generator.sky.floatingIslands"), width / 2,
 				bSkyWorld->y + bSkyWorld->height + 8, 0xffaaaaaa);
 		}
 
@@ -254,7 +285,10 @@ void SimpleChooseLevelScreen::updateScrollBounds()
 		if (baseSeedY + seedBox.height > baseBottom)
 			baseBottom = baseSeedY + seedBox.height;
 	} else {
-		baseBottom = baseAlphaWorldY + bAlphaWorld->height;
+		if (indevPage)
+			baseBottom = baseIndevInlandY + bIndevInland->height;
+		else
+			baseBottom = baseIndevWorldY + bIndevWorld->height;
 	}
 	contentHeight = baseBottom + 12 - contentTop;
 	if (contentHeight < visibleHeight)
@@ -278,6 +312,9 @@ void SimpleChooseLevelScreen::applyScrollOffset()
 	bInfiniteWorld->y = baseInfiniteWorldY - offset;
 	bSkyWorld->y = baseSkyWorldY - offset;
 	bAlphaWorld->y = baseAlphaWorldY - offset;
+	bIndevWorld->y=baseIndevWorldY-offset; bIndevInland->y=baseIndevInlandY-offset;
+	bIndevIsland->y=baseIndevIslandY-offset; bIndevFloating->y=baseIndevFloatingY-offset;
+	bIndevFlat->y=baseIndevFlatY-offset;
 }
 
 void SimpleChooseLevelScreen::resetScroll()
@@ -336,13 +373,16 @@ void SimpleChooseLevelScreen::buttonClicked( Button* button )
 		if (chosenGameType != -1) {
 			// Go back to step 1
 			chosenGameType = -1;
-			bTitle->msg     = "Game Mode";
+			bTitle->msg     = I18n::get("selectWorld.gameMode");
 			bCreative->visible = true;   bCreative->active = true;
 			bSurvival->visible = true;   bSurvival->active = true;
 			bOldWorld->visible = false;  bOldWorld->active = false;
 			bInfiniteWorld->visible = false; bInfiniteWorld->active = false;
 			bSkyWorld->visible = false; bSkyWorld->active = false;
 			bAlphaWorld->visible = false; bAlphaWorld->active = false;
+			Button* extra[] = { bIndevWorld,bIndevInland,bIndevIsland,bIndevFloating,bIndevFlat };
+			for (int i=0;i<5;++i) { extra[i]->visible=false; extra[i]->active=false; }
+			indevPage=0;
 			setSeedControlsVisible(true);
 			resetScroll();
 		} else {
@@ -360,27 +400,42 @@ void SimpleChooseLevelScreen::buttonClicked( Button* button )
 		else
 			return;
 
-		// PE 0.6.1 only creates Old worlds.  The optional switch exposes all
-		// additional generators as a separate world-type step.
+		// The optional switch exposes the additional world generators.
 		if (!minecraft->options.infiniteWorlds) {
-			startLevel(WorldType::Old);
+		bTitle->msg = I18n::get("selectWorld.mapType");
+			bCreative->visible = false; bCreative->active = false;
+			bSurvival->visible = false; bSurvival->active = false;
+			bOldWorld->visible = true; bOldWorld->active = true;
+			bIndevWorld->visible = true; bIndevWorld->active = true;
+			setSeedControlsVisible(false);
+			resetScroll();
 			return;
 		}
 
-		bTitle->msg     = "World Type";
+		bTitle->msg     = I18n::get("selectWorld.mapType");
 		bCreative->visible = false;  bCreative->active = false;
 		bSurvival->visible = false;  bSurvival->active = false;
 		bOldWorld->visible = true;   bOldWorld->active = true;
 		bInfiniteWorld->visible = true;  bInfiniteWorld->active = true;
 		bSkyWorld->visible = true; bSkyWorld->active = true;
 		bAlphaWorld->visible = true; bAlphaWorld->active = true;
+		bIndevWorld->visible=true; bIndevWorld->active=true;
 		setSeedControlsVisible(false);
 		resetScroll();
 		return;
 	}
 
-	// Step 2: pick world type
+	// Indev has a separate page for its terrain subtype.
 	if (hasChosen) return;
+	if (indevPage) {
+		int indevType=-1;
+		if(button==bIndevInland) indevType=IndevType::Inland;
+		else if(button==bIndevIsland) indevType=IndevType::Island;
+		else if(button==bIndevFloating) indevType=IndevType::Floating;
+		else if(button==bIndevFlat) indevType=IndevType::Flat;
+		if(indevType>=0) startLevel(WorldType::Indev, indevType);
+		return;
+	}
 
 	int worldType = -1;
 	if (button == bOldWorld)
@@ -391,13 +446,23 @@ void SimpleChooseLevelScreen::buttonClicked( Button* button )
 		worldType = WorldType::Sky;
 	else if (button == bAlphaWorld)
 		worldType = WorldType::Alpha;
+	else if (button == bIndevWorld) {
+		indevPage=1;
+		bTitle->msg=I18n::get("generator.indev.mapType");
+		Button* worlds[]={bOldWorld,bInfiniteWorld,bSkyWorld,bAlphaWorld,bIndevWorld};
+		for(int i=0;i<5;++i){worlds[i]->visible=false;worlds[i]->active=false;}
+		Button* types[]={bIndevInland,bIndevIsland,bIndevFloating,bIndevFlat};
+		for(int i=0;i<4;++i){types[i]->visible=true;types[i]->active=true;}
+		resetScroll();
+		return;
+	}
 	else
 		return;
 
 	startLevel(worldType);
 }
 
-void SimpleChooseLevelScreen::startLevel(int worldType) {
+void SimpleChooseLevelScreen::startLevel(int worldType, int indevType) {
 	long seed = getEpochTimeS();
 	if (!seedBox.text.empty()) {
 		long parsed;
@@ -416,7 +481,7 @@ void SimpleChooseLevelScreen::startLevel(int worldType) {
 	}
 	if (safeName.empty()) safeName = "world";
 	std::string levelId = getUniqueLevelName(safeName);
-	LevelSettings settings(seed, chosenGameType, worldType);
+	LevelSettings settings(seed, chosenGameType, worldType, indevType);
 	minecraft->selectLevel(levelId, levelId, settings);
 	#if defined(MCPE_UWP)
 		// The UWP bridge consumes the original selection request and creates the
@@ -477,14 +542,30 @@ void SimpleChooseLevelScreen::tick() {
 bool SimpleChooseLevelScreen::handleBackEvent(bool isDown) {
 	if (!isDown) {
 		if (chosenGameType != -1) {
+			if (indevPage) {
+				indevPage=0;
+				bTitle->msg=I18n::get("selectWorld.mapType");
+				Button* types[]={bIndevInland,bIndevIsland,bIndevFloating,bIndevFlat};
+				for(int i=0;i<4;++i){types[i]->visible=false;types[i]->active=false;}
+				bOldWorld->visible=true;bOldWorld->active=true;
+				bInfiniteWorld->visible=true;bInfiniteWorld->active=true;
+				bSkyWorld->visible=true;bSkyWorld->active=true;
+				bAlphaWorld->visible=true;bAlphaWorld->active=true;
+				bIndevWorld->visible=true;bIndevWorld->active=true;
+				resetScroll();
+				return true;
+			}
 			chosenGameType = -1;
-			bTitle->msg     = "Game Mode";
+			bTitle->msg     = I18n::get("selectWorld.gameMode");
 			bCreative->visible = true;   bCreative->active = true;
 			bSurvival->visible = true;   bSurvival->active = true;
 			bOldWorld->visible = false;  bOldWorld->active = false;
 			bInfiniteWorld->visible = false; bInfiniteWorld->active = false;
 			bSkyWorld->visible = false; bSkyWorld->active = false;
 			bAlphaWorld->visible = false; bAlphaWorld->active = false;
+			Button* extra[] = { bIndevWorld,bIndevInland,bIndevIsland,bIndevFloating,bIndevFlat };
+			for (int i=0;i<5;++i) { extra[i]->visible=false; extra[i]->active=false; }
+			indevPage=0;
 			setSeedControlsVisible(true);
 			resetScroll();
 		} else {

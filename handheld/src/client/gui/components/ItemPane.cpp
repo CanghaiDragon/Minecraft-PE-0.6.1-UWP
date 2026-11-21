@@ -83,7 +83,6 @@ void ItemPane::renderBatch( std::vector<GridItem>& items, float alpha )
 	}
 	t.endOverrideAndDraw();
 
-	t.beginOverride();
 	for (unsigned int i = 0; i < items.size(); ++i) {
 		GridItem& item = items[i];
 		if (item.id < 0 || item.id >= (int)cat.size() || cat[item.id] == NULL)
@@ -117,7 +116,6 @@ void ItemPane::renderBatch( std::vector<GridItem>& items, float alpha )
 			t.resetScale();
 		}
 	}
-	t.endOverrideAndDraw();
 
 	//fillGradient(bbox.x, bbox.y, bbox.x + bbox.w, 20, 0x00000000, 0x80ff0000)
 	if (isVertical) {

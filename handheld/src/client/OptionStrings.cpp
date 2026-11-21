@@ -7,6 +7,7 @@ const char* OptionStrings::Audio_Sound                = "audio_sound";
 
 const char* OptionStrings::Multiplayer_Username        = "mp_username";
 const char* OptionStrings::Multiplayer_ServerVisible   = "mp_server_visible_default";
+const char* OptionStrings::Language                    = "language";
 
 const char* OptionStrings::Graphics_Fancy              = "gfx_fancygraphics";
 const char* OptionStrings::Graphics_LowQuality         = "gfx_lowquality";
@@ -37,4 +38,5 @@ const char* OptionStrings::Skin_ArmType = "skin_arm_type";
 const char* OptionStrings::Skin_Menu = "skin_menu";
 const char* OptionStrings::Touch_Sneak = "touch_sneak";
 const char* OptionStrings::Extra_DebugScreen = "extra_debug_screen";
+const char* OptionStrings::Extra_Achievements = "extra_achievements";
 const char* OptionStrings::Extra_JavaUI = "extra_java_ui";

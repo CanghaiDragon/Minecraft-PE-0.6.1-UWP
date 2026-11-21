@@ -4,6 +4,7 @@
 #include "ChooseLevelScreen.h"
 #include "../components/Button.h"
 #include "../components/TextBox.h"
+#include "../../../world/level/LevelSettings.h"
 
 class SimpleChooseLevelScreen: public ChooseLevelScreen
 {
@@ -38,10 +39,16 @@ private:
 	Button* bInfiniteWorld;
 	Button* bSkyWorld;
 	Button* bAlphaWorld;
+	Button* bIndevWorld;
+	Button* bIndevInland;
+	Button* bIndevIsland;
+	Button* bIndevFloating;
+	Button* bIndevFlat;
 
 	bool hasChosen;
 	int chosenGameType; // -1 until chosen
-	void startLevel(int worldType);
+	int indevPage;
+	void startLevel(int worldType, int indevType = IndevType::Inland);
 	void setSeedControlsVisible(bool visible);
 	void updateScrollBounds();
 	void applyScrollOffset();
@@ -61,6 +68,11 @@ private:
 	int baseInfiniteWorldY;
 	int baseSkyWorldY;
 	int baseAlphaWorldY;
+	int baseIndevWorldY;
+	int baseIndevInlandY;
+	int baseIndevIslandY;
+	int baseIndevFloatingY;
+	int baseIndevFlatY;
 	float scrollY;
 	float scrollVelocity;
 	bool scrollDragging;

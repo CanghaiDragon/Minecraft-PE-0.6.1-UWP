@@ -11,15 +11,18 @@ public:
 	int x, z;
 	RakNet::BitStream chunkData;
 	LevelChunk* chunk;
+	bool fullChunk;
 
 	ChunkDataPacket()
+	: chunk(NULL), fullChunk(false)
 	{
 	}
 
-	ChunkDataPacket(int x, int z, LevelChunk* chunk)
+	ChunkDataPacket(int x, int z, LevelChunk* chunk, bool fullChunk = false)
 	:	x(x),
 		z(z),
-		chunk(chunk)
+		chunk(chunk),
+		fullChunk(fullChunk)
 	{
 	}
 
@@ -39,7 +42,9 @@ public:
 		chunkData.Reset();
 		for (int i = 0; i < CHUNK_COLUMNS; i++)
 		{
-			unsigned char updateBits = chunk->updateMap[i];
+			// Extended clients receive an authoritative snapshot. Dirty-section
+			// tracking can omit edits whose flags were cleared after generation.
+			unsigned char updateBits = fullChunk ? 0xff : chunk->updateMap[i];
 			chunkData.Write(updateBits);
 
 			if (updateBits > 0)

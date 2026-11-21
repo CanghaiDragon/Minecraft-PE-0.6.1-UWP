@@ -31,6 +31,8 @@ void RenameMPLevelScreen::render(int xm, int ym, float a)
 	#else
 		int status = minecraft->platform()->getUserInputStatus();
 		if (status > -1) {
+			LOGI("[COPY_MAP] rename dialog completed status=%d sourceId=%s\n",
+				status, _levelId.c_str());
 			if (status == 1) {
 				std::vector<std::string> v = minecraft->platform()->getUserInput();
 
@@ -44,6 +46,7 @@ void RenameMPLevelScreen::render(int xm, int ym, float a)
                     if ((int)levelId.length() == 0) {
                         levelId = "saved_world";
                     }
+					LOGI("[COPY_MAP] rename dialog accepted name=%s\n", levelId.c_str());
 
 					minecraft->getLevelSource()->renameLevel(_levelId, levelId);
                 }

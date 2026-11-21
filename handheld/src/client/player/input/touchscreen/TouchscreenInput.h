@@ -45,6 +45,7 @@ private:
 	void clear();
 
 	RectangleArea _boundingRectangle;
+	RectangleArea _pauseAndScreenshotArea;
 
 	bool _keys[NumKeys];
 	Options* _options;
@@ -61,6 +62,7 @@ private:
 	RectangleArea* aUp;
 	RectangleArea* aDown;
 	RectangleArea* aPause;
+	RectangleArea* aScreenshot;
 	//RectangleArea* aUpJump;
 	RectangleArea* aJump;
 	RectangleArea* aSneak;

@@ -88,7 +88,7 @@ namespace MCPEUWP
 		void SyncOriginalMouseCursor();
 		void BeginWorldLoad(const std::wstring& worldId,
 			const std::wstring& worldName, bool createNew, long seed,
-			int gameType, int worldType);
+			int gameType, int worldType, int indevType);
 		void TryOpenLaunchWorld();
 		void ShowOriginalWorldSelection();
 		bool AttachOriginalWorldForTick();

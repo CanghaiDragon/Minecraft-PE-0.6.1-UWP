@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "WorldConvertPage.xaml.h"
+#include "XamlLocalization.h"
 
 #include "../../../../src/platform/uwp/UwpStoragePaths.h"
 #include "../../../../src/platform/uwp/UwpZip.h"
@@ -39,6 +40,7 @@ namespace
 WorldConvertPage::WorldConvertPage()
 {
 	InitializeComponent();
+	UwpXamlLocalization::install(this);
 }
 
 void WorldConvertPage::SetWorldContext(
@@ -46,6 +48,7 @@ void WorldConvertPage::SetWorldContext(
 	String^ worldId,
 	String^ worldName,
 	int worldType,
+	int indevType,
 	bool alphaWinter,
 	bool currentStorageFormat)
 {
@@ -53,6 +56,7 @@ void WorldConvertPage::SetWorldContext(
 	m_worldId = worldId;
 	m_worldName = worldName;
 	m_worldType = worldType;
+	m_indevType = indevType;
 	m_alphaWinter = alphaWinter;
 	m_currentStorageFormat = currentStorageFormat;
 
@@ -60,13 +64,18 @@ void WorldConvertPage::SetWorldContext(
 		worldType == WorldType::Old ||
 		worldType == WorldType::Infinite ||
 		worldType == WorldType::Sky ||
-		worldType == WorldType::Alpha;
-	const bool showLowerSeaLevel =
-		worldType == WorldType::Old ||
-		worldType == WorldType::Infinite || worldType == WorldType::Alpha;
+		worldType == WorldType::Alpha ||
+		worldType == WorldType::Indev ||
+		worldType == WorldType::EarlyInfdev;
+	const bool showLowerSeaLevel = worldType != WorldType::Indev &&
+		(worldType == WorldType::Old ||
+		 worldType == WorldType::Infinite || worldType == WorldType::Alpha ||
+		 worldType == WorldType::EarlyInfdev);
 	const bool showWinterFreeze =
 		worldType == WorldType::Alpha && alphaWinter;
 	const bool showSkyBedrock = worldType == WorldType::Sky;
+	const bool showFloatingBedrock = worldType == WorldType::Indev &&
+		indevType == IndevType::Floating;
 	const bool showBedrock17Void = worldType == WorldType::Sky;
 	const bool showTestLimit = supportedWorldType &&
 		worldType != WorldType::Old;
@@ -98,6 +107,12 @@ void WorldConvertPage::SetWorldContext(
 	{
 		SkyBedrockFloorCheckBox->Visibility = showSkyBedrock ? visible : collapsed;
 		SkyBedrockFloorCheckBox->IsChecked = false;
+	}
+	if (FloatingBedrockFloorCheckBox != nullptr)
+	{
+		FloatingBedrockFloorCheckBox->Visibility =
+			showFloatingBedrock ? visible : collapsed;
+		FloatingBedrockFloorCheckBox->IsChecked = false;
 	}
 	if (StorageFormatWarningText != nullptr)
 		StorageFormatWarningText->Visibility =
@@ -161,6 +176,8 @@ void WorldConvertPage::UpdateConversionMode()
 		WinterFreezeWaterCheckBox->IsEnabled = legacyOptionsEnabled;
 	if (SkyBedrockFloorCheckBox != nullptr)
 		SkyBedrockFloorCheckBox->IsEnabled = legacyOptionsEnabled;
+	if (FloatingBedrockFloorCheckBox != nullptr)
+		FloatingBedrockFloorCheckBox->IsEnabled = legacyOptionsEnabled;
 }
 
 void WorldConvertPage::On17VoidWorldToggleClick(
@@ -186,7 +203,8 @@ void WorldConvertPage::OnConvertClick(
 	}
 	if (m_worldType != WorldType::Old &&
 		m_worldType != WorldType::Infinite &&
-		m_worldType != WorldType::Sky && m_worldType != WorldType::Alpha)
+		m_worldType != WorldType::Sky && m_worldType != WorldType::Alpha &&
+		m_worldType != WorldType::Indev && m_worldType != WorldType::EarlyInfdev)
 	{
 		SetStatus(L"This world type is not supported by the PE 0.9 converter.");
 		return;
@@ -224,6 +242,9 @@ void WorldConvertPage::OnConvertClick(
 	const bool skyBedrockFloor = SkyBedrockFloorCheckBox != nullptr &&
 		SkyBedrockFloorCheckBox->IsChecked != nullptr &&
 		SkyBedrockFloorCheckBox->IsChecked->Value;
+	const bool floatingBedrockFloor = FloatingBedrockFloorCheckBox != nullptr &&
+		FloatingBedrockFloorCheckBox->IsChecked != nullptr &&
+		FloatingBedrockFloorCheckBox->IsChecked->Value;
 	const bool convertTo17VoidWorld = m_convertTo17VoidWorld;
 	auto result = std::make_shared<ConversionResult>();
 	auto picker = ref new FileSavePicker();
@@ -236,7 +257,7 @@ void WorldConvertPage::OnConvertClick(
 
 	create_task(picker->PickSaveFileAsync())
 		.then([this, sourceDirectory, worldName, testLimit, lowerSeaLevel,
-			freezeWinterWater, skyBedrockFloor, convertTo17VoidWorld,
+			freezeWinterWater, skyBedrockFloor, floatingBedrockFloor, convertTo17VoidWorld,
 			result](StorageFile^ outputFile)
 			-> task<void>
 		{
@@ -261,14 +282,14 @@ void WorldConvertPage::OnConvertClick(
 				CreationCollisionOption::ReplaceExisting));
 			})
 			.then([sourceDirectory, worldName, testLimit, lowerSeaLevel,
-				freezeWinterWater, skyBedrockFloor, convertTo17VoidWorld,
+				freezeWinterWater, skyBedrockFloor, floatingBedrockFloor, convertTo17VoidWorld,
 				outputFile, result](StorageFolder^ destination)
 				-> task<void>
 		{
 			const std::wstring destinationDirectory(destination->Path->Data());
 			return create_task([sourceDirectory, worldName, destinationDirectory,
 				testLimit, lowerSeaLevel, freezeWinterWater,
-				skyBedrockFloor, convertTo17VoidWorld, result]()
+				skyBedrockFloor, floatingBedrockFloor, convertTo17VoidWorld, result]()
 			{
 				if (convertTo17VoidWorld)
 				{
@@ -291,6 +312,7 @@ void WorldConvertPage::OnConvertClick(
 					options.lowerSeaLevel = lowerSeaLevel;
 					options.freezeWinterWater = freezeWinterWater;
 					options.skyBedrockFloor = skyBedrockFloor;
+					options.floatingBedrockFloor = floatingBedrockFloor;
 					result->success = legacy09::Export(
 						options, legacy09::Log(), result->error);
 				}
@@ -362,8 +384,10 @@ void WorldConvertPage::OnConvertClick(
 				ConvertButton->IsEnabled = m_currentStorageFormat &&
 					(m_worldType == WorldType::Old ||
 						m_worldType == WorldType::Infinite ||
-					 m_worldType == WorldType::Sky ||
-					 m_worldType == WorldType::Alpha);
+						m_worldType == WorldType::Sky ||
+						m_worldType == WorldType::Alpha ||
+						m_worldType == WorldType::Indev ||
+						m_worldType == WorldType::EarlyInfdev);
 			if (BackButton != nullptr)
 				BackButton->IsEnabled = true;
 			if (ConversionProgressBar != nullptr)

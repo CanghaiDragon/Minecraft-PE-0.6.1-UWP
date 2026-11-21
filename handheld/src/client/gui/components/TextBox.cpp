@@ -9,7 +9,11 @@ TextBox::TextBox(int id, const std::string& msg)
  : TextBox(id, 0, 0, msg) {}
 
 TextBox::TextBox(int id, int x, int y, const std::string& msg)
+#if defined(MCPE_UWP)
+ : TextBox(id, x, y, 24, Font::DefaultLineHeight + 10, msg) {}
+#else
  : TextBox(id, x, y, 24, Font::DefaultLineHeight + 4, msg) {}
+#endif
 
 TextBox::TextBox(int id, int x, int y, int w, int h, const std::string& msg)
  : GuiElement(true, true, x, y, w, h), id(id), hint(msg), focused(false), blink(false), blinkTicks(0) {}
@@ -70,7 +74,7 @@ void TextBox::render( Minecraft* minecraft, int xm, int ym ) {
 	glScissor((int)(Gui::GuiScale * (x + 2)),
 		minecraft->height - (int)(Gui::GuiScale * (y + height - 2)),
 		(int)(Gui::GuiScale * (width - 4)), (int)(Gui::GuiScale * (height - 4)));
-	int textY = y + (height - Font::DefaultLineHeight) / 2;
+	int textY = y + (height - minecraft->font->lineHeightFor(text.empty() ? hint : text)) / 2;
 	if (text.empty() && !focused)
 		drawString(minecraft->font, hint, x + 2, textY, 0xff5e5e5e);
 	std::string displayed = text;

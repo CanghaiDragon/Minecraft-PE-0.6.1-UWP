@@ -11,6 +11,7 @@
 #include "feature/CactusFeature.h"
 #include "feature/SpringFeature.h"
 #include "feature/ClayFeature.h"
+#include "feature/LakeFeature.h"
 #include "feature/OreFeature.h"
 #include <cstdint>
 
@@ -245,9 +246,25 @@ void SkyLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
     // of its lowest stone blocks.
     int lowestRockY = getLowestRockY(level, xt, zt);
 
-    // Java Beta Sky uses the same vein counts and sizes as its Overworld.
-    // Lakes remain deliberately absent, so the Java clay pass is retained but
-    // only succeeds next to water supplied by already populated terrain.
+    // Java Beta Sky uses the same lake and vein generation rules as its Overworld.
+    if (random.nextInt(4) == 0) {
+        int x = xo + random.nextInt(16) + 8;
+        int y = random.nextInt(128);
+        int z = zo + random.nextInt(16) + 8;
+        LakeFeature feature(Tile::calmWater->id);
+        feature.place(level, &random, x, y, z);
+    }
+    if (random.nextInt(8) == 0) {
+        int x = xo + random.nextInt(16) + 8;
+        int y = random.nextInt(random.nextInt(120) + 8);
+        int z = zo + random.nextInt(16) + 8;
+        if (y < 64 || random.nextInt(10) == 0) {
+            LakeFeature feature(Tile::calmLava->id);
+            feature.place(level, &random, x, y, z);
+        }
+    }
+
+    // The Java clay pass can now also find water in newly generated lakes.
     for (int i = 0; i < 10; ++i) {
         ClayFeature feature(32);
         feature.place(level, &random, xo + random.nextInt(16), random.nextInt(128), zo + random.nextInt(16));

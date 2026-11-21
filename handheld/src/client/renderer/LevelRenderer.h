@@ -6,6 +6,7 @@
 #include "../../world/level/LevelListener.h"
 #include "../../world/phys/Vec3.h"
 #include "RenderList.h"
+#include "RenderChunk.h"
 #ifndef MCPE_LEVELRENDERER_NO_GLES_INCLUDE
 #include "gles.h"
 #endif
@@ -60,6 +61,8 @@ public:
 	void renderBetaSky(float alpha);
 	void renderClouds(float alpha);
 	void renderBetaClouds(float alpha);
+	void renderIndevGround(float alpha);
+	void renderIndevWater(float alpha);
 	bool isXrayRenderActive() const { return xrayRenderActive; }
 	bool isSnowWeatherActive(Mob* player) const;
 	void renderSnowWeather(Mob* player, float alpha);
@@ -92,6 +95,9 @@ public:
 	void onGraphicsReset();
 private:
 	void generateSky();
+	void buildIndevFloatingSurfaceCache();
+	void drawIndevFloatingSurface(const std::vector<RenderChunk>& meshes, RenderList& list,
+		float cameraX, float surfaceY, float cameraZ, float colorMultiplier = 1.0f);
 
 	int  renderChunks(int from, int to, int layer, float alpha);
 	void resortChunks(int xc, int yc, int zc);
@@ -137,6 +143,11 @@ private:
 	int starList, skyList, darkList;
 
 	bool xrayRenderActive;
+	bool indevFloatingSurfaceCacheReady;
+	std::vector<RenderChunk> indevFloatingGroundMeshes;
+	std::vector<RenderChunk> indevFloatingWaterMeshes;
+	RenderList indevFloatingGroundRenderList;
+	RenderList indevFloatingWaterRenderList;
 
 	int numListsOrBuffers;
 	unsigned int* chunkBuffers;

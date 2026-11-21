@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "WorldImportPage.xaml.h"
+#include "XamlLocalization.h"
 #include "../../../../src/platform/uwp/UwpOriginalClientBridge.h"
 #include "../../../../src/platform/uwp/UwpLiveTile.h"
 #include "../../../../src/platform/uwp/UwpStoragePaths.h"
@@ -446,6 +447,7 @@ namespace
 WorldImportPage::WorldImportPage()
 {
 	InitializeComponent();
+	UwpXamlLocalization::install(this);
 }
 
 void WorldImportPage::HandleEnterKey()

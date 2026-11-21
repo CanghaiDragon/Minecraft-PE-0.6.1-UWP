@@ -356,8 +356,10 @@ void GameRenderer::renderLevel(float a) {
 		mc->levelRenderer->cull(&frustum, a);
         mc->levelRenderer->updateDirtyChunks(cameraEntity, false);
 
+		// Alpha and Indev share this sky presentation: Fancy Graphics enables
+		// the sky/cloud pass, while Beta Visuals selects the Beta sun/moon path.
 		// PE's projection-reset helper is only suitable for its flat cloud
-		// layer.  Beta sky and fancy clouds are drawn at their original points
+		// layer. Beta sky and fancy clouds are drawn at their original points
 		// in the world render, below.
 		if(mc->options.fancyGraphics && !mc->options.betaVisuals) {
 			prepareAndRenderClouds(levelRenderer, a);
@@ -383,6 +385,22 @@ void GameRenderer::renderLevel(float a) {
 		else glDisable2(GL_ALPHA_TEST);
         glDisable2(GL_BLEND);
         glEnable2(GL_CULL_FACE);
+	if (mc->options.fancyGraphics &&
+		mc->level->getLevelData()->getWorldType() == WorldType::Indev &&
+		(mc->level->getLevelData()->getIndevType() == IndevType::Inland ||
+		 mc->level->getLevelData()->getIndevType() == IndevType::Flat ||
+		 mc->level->getLevelData()->getIndevType() == IndevType::Island ||
+		 mc->level->getLevelData()->getIndevType() == IndevType::Floating)) {
+			// Draw out-of-bounds ground with the main camera's near plane and
+			// depth testing. The PE cloud pass uses near=2 and clips the surface
+			// right around a player standing close to its Y=33 level.
+			glEnable2(GL_DEPTH_TEST);
+			glDepthMask(GL_TRUE);
+			levelRenderer->renderIndevGround(a);
+			if (mc->level->getLevelData()->getIndevType() == IndevType::Island ||
+				mc->level->getLevelData()->getIndevType() == IndevType::Floating)
+				levelRenderer->renderIndevWater(a);
+		}
 
 		TIMER_POP_PUSH("terrain-0");
         levelRenderer->render(cameraEntity, 0, a);
@@ -447,6 +465,22 @@ void GameRenderer::renderLevel(float a) {
         glEnable2(GL_CULL_FACE);
         glDisable2(GL_BLEND);
         glEnable2(GL_ALPHA_TEST);
+		// PE's flat cloud layer normally renders in the early sky pass. Floating
+		// Indev clouds sit above the low outer sea, so draw them after terrain
+		// and translucent water or the later sea pass will cover them.
+		if (mc->options.fancyGraphics && !mc->options.betaVisuals &&
+			mc->level->getLevelData()->getWorldType() == WorldType::Indev &&
+		mc->level->getLevelData()->getIndevType() == IndevType::Floating) {
+			glDepthMask(GL_FALSE);
+			glDisable2(GL_ALPHA_TEST);
+			glFogf2(GL_FOG_START, renderDistance * 4.2f * 0.6f);
+			glFogf2(GL_FOG_END, renderDistance * 4.2f);
+			levelRenderer->renderClouds(a);
+			glFogf2(GL_FOG_START, renderDistance * 0.6f);
+			glFogf2(GL_FOG_END, renderDistance);
+			glDepthMask(GL_TRUE);
+			glEnable2(GL_ALPHA_TEST);
+		}
 
 		if (/*!Minecraft::FLYBY_MODE &&*/ zoom == 1 && cameraEntity->isPlayer()) {
 			if (mc->hitResult.isHit() && !cameraEntity->isUnderLiquid(Material::water)) {
@@ -1126,7 +1160,10 @@ void GameRenderer::prepareAndRenderClouds( LevelRenderer* levelRenderer, float a
 	levelRenderer->renderSky(a);
 	glFogf2(GL_FOG_START, renderDistance * 4.2f * 0.6f);
 	glFogf2(GL_FOG_END, renderDistance * 4.2f);
-	levelRenderer->renderClouds(a);
+	const bool deferIndevFloatingClouds = mc->level->getLevelData()->getWorldType() == WorldType::Indev &&
+		mc->level->getLevelData()->getIndevType() == IndevType::Floating;
+	if (!deferIndevFloatingClouds)
+		levelRenderer->renderClouds(a);
 	glFogf2(GL_FOG_START, renderDistance  * 0.6f);
 	glFogf2(GL_FOG_END, renderDistance);
 	glDisable2(GL_FOG);

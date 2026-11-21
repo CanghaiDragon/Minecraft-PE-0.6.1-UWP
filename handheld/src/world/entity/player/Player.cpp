@@ -1,4 +1,7 @@
 #include "Player.h"
+#include "../EntityTypes.h"
+#include "../../item/Item.h"
+#include "../../level/storage/AchievementIds.h"
 #include "Inventory.h"
 #include "../item/ItemEntity.h"
 #include "../../level/Level.h"
@@ -494,6 +497,20 @@ float Player::getWalkingSpeedModifier() {
 
 void Player::awardKillScore(Entity* victim, int score) {
     this->score += score;
+	if (victim != NULL && victim->isMob() && victim->getCreatureBaseType() == MobTypes::BaseEnemy) {
+		awardAchievement(AchievementIds::MonsterHunter);
+		recordOverkillMob(victim->getEntityTypeId());
+		if (victim->getEntityTypeId() == MobTypes::PigZombie)
+			awardAchievement(AchievementIds::WarPig);
+	}
+}
+
+void Player::recordOverkillMob(int mobType) {
+	(void)mobType;
+}
+
+void Player::awardAchievement(int achievementId) {
+	(void)achievementId;
 }
 
 bool Player::isShootable() {
@@ -879,11 +896,22 @@ ItemInstance* Player::getArmor(int slot) {
 }
 
 void Player::setArmor(int slot, const ItemInstance* item) {
+	if (slot < 0 || slot >= NUM_ARMOR) return;
 	if (item == NULL)
 		armor[slot].setNull();
 	else {
 		armor[slot] = *item;
 	}
+	const int diamondArmor[NUM_ARMOR] = {
+		Item::helmet_diamond ? Item::helmet_diamond->id : -1,
+		Item::chestplate_diamond ? Item::chestplate_diamond->id : -1,
+		Item::leggings_diamond ? Item::leggings_diamond->id : -1,
+		Item::boots_diamond ? Item::boots_diamond->id : -1
+	};
+	for (int i = 0; i < NUM_ARMOR; ++i) {
+		if (armor[i].isNull() || armor[i].id != diamondArmor[i]) return;
+	}
+	awardAchievement(AchievementIds::FullOfDiamond);
 }
 
 void Player::hurtArmor( int dmg ) {

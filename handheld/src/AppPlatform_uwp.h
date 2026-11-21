@@ -4,6 +4,7 @@
 #include "AppPlatform.h"
 
 #include <map>
+#include <atomic>
 #include <vector>
 
 // UWP implementation of the original platform contract used by the first
@@ -15,6 +16,9 @@ public:
 	AppPlatform_uwp(int screenWidth, int screenHeight);
 
 	BinaryBlob readAssetFile(const std::string& filename) override;
+	std::string getLanguageCode() override;
+	bool saveDebugScreenshot(const std::string& filename, int glWidth, int glHeight) override;
+	int consumeDebugScreenshotResult() override;
 	TextureData loadTexture(const std::string& filename, bool textureFolder) override;
 	int getScreenWidth() override;
 	int getScreenHeight() override;
@@ -48,6 +52,8 @@ private:
 
 	int m_screenWidth;
 	int m_screenHeight;
+	std::atomic<int> m_debugScreenshotResult;
+	std::atomic<bool> m_debugScreenshotPending;
 	std::map<std::string, CachedTexture> m_textureCache;
 	std::map<std::string, std::string> m_texturePreloadFailures;
 	std::string m_lastTextureLoadError;

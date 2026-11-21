@@ -8,6 +8,7 @@
 #include "../world/entity/player/Player.h"
 #include "../world/entity/player/Inventory.h"
 #include "../client/Minecraft.h"
+#include "../client/renderer/Textures.h"
 #include "../client/gamemode/GameMode.h"
 #ifndef STANDALONE_SERVER
 #include "../client/gui/screens/DisconnectionScreen.h"
@@ -32,6 +33,7 @@
 #include "../client/player/RemotePlayer.h"
 #include "../world/level/tile/LevelEvent.h"
 #include "../world/entity/item/FallingTile.h"
+#include <cstring>
 
 static MultiPlayerLevel* mpcast(Level* l) { return (MultiPlayerLevel*) l; }
 
@@ -86,7 +88,20 @@ void ClientSideNetworkHandler::onConnect(const RakNet::RakNetGUID& hostGuid)
 	serverGuid = hostGuid;
 
 	clearChunksLoaded();
-	LoginPacket packet(minecraft->user->name.c_str(), SharedConstants::NetworkProtocolVersion);
+	const int protocolVersion = minecraft->isExtendedMultiplayer()
+		? SharedConstants::ExtendedNetworkProtocolVersion
+		: SharedConstants::NetworkProtocolVersion;
+	std::vector<unsigned char> skinPixels;
+	if (minecraft->isExtendedMultiplayer() && minecraft->textures != NULL) {
+		const TextureId skinId = minecraft->textures->loadTexture("skins/local.png");
+		const TextureData* skin = Textures::isTextureIdValid(skinId)
+			? minecraft->textures->getTemporaryTextureData(skinId) : NULL;
+		if (skin != NULL && skin->w == 64 && skin->h == 64 && skin->data != NULL &&
+			skin->format == TEXF_UNCOMPRESSED_8888 && skin->numBytes >= 64 * 64 * 4)
+			skinPixels.assign(skin->data, skin->data + 64 * 64 * 4);
+	}
+	LoginPacket packet(minecraft->user->name.c_str(), protocolVersion, skinPixels,
+		minecraft->isExtendedMultiplayer());
 	raknetInstance->send(packet);
 }
 
@@ -110,7 +125,7 @@ void ClientSideNetworkHandler::onDisconnect(const RakNet::RakNetGUID& guid)
 		}
 	}
 #ifndef STANDALONE_SERVER
-	minecraft->gui.addMessage("Disconnected from server");
+	minecraft->gui.displayClientMessage("message.connection.disconnected");
 #endif
 }
 
@@ -123,13 +138,19 @@ void ClientSideNetworkHandler::handle(const RakNet::RakNetGUID& source, LoginSta
 	if (packet->status == LoginStatus::Failed_ClientOld) {
 		LOGI("Disconnect! Client is outdated!\n");
 #ifndef STANDALONE_SERVER
-		minecraft->setScreen(new DisconnectionScreen("Could not connect: Outdated client!"));
+		minecraft->setScreen(new DisconnectionScreen(
+			!minecraft->isExtendedMultiplayer()
+				? "Could not connect: Server requires Extended multiplayer."
+				: "Could not connect: Outdated client!"));
 #endif
 	}
 	if (packet->status == LoginStatus::Failed_ServerOld) {
 		LOGI("Disconnect! Server is outdated!\n");
 #ifndef STANDALONE_SERVER
-		minecraft->setScreen(new DisconnectionScreen("Could not connect: Outdated server!"));
+		minecraft->setScreen(new DisconnectionScreen(
+			minecraft->isExtendedMultiplayer()
+				? "Could not connect: Server supports only PE-compatible multiplayer."
+				: "Could not connect: Outdated server!"));
 #endif
 	}
 }
@@ -150,11 +171,24 @@ void ClientSideNetworkHandler::handle(const RakNet::RakNetGUID& source, StartGam
 	LevelStorageSource* storageSource = minecraft->getLevelSource();
 	storageSource->deleteLevel(levelId);
 	//level = new Level(storageSource->selectLevel(levelId, true), "temp", packet->levelSeed, SharedConstants::StorageVersion);
+	int worldType = WorldType::Old;
+	int indevType = IndevType::Inland;
+	int levelVersion = SharedConstants::StorageVersion;
+	if (minecraft->isExtendedMultiplayer() && packet->hasExtendedWorldInfo) {
+		if (packet->worldType >= WorldType::Old && packet->worldType <= WorldType::EarlyInfdev)
+			worldType = packet->worldType;
+		if (packet->indevType >= IndevType::Inland && packet->indevType <= IndevType::Flat)
+			indevType = packet->indevType;
+		levelVersion = packet->levelGeneratorVersion;
+	}
 	MultiPlayerLevel* level = new MultiPlayerLevel(
 		storageSource->selectLevel(levelId, true),
 		"temp",
-		LevelSettings(packet->levelSeed, LevelSettings::validateGameType(packet->gameType)),
-		SharedConstants::StorageVersion);
+		// The server sends the resolved world type. Do not reroll Indev's
+		// hidden Infdev variant locally from the same seed.
+		LevelSettings(packet->levelSeed, LevelSettings::validateGameType(packet->gameType),
+			worldType, indevType, false),
+		levelVersion);
 	level->isClientSide = true;
 
 	bool isCreative = (packet->gameType == GameType::Creative);
@@ -173,7 +207,14 @@ void ClientSideNetworkHandler::handle(const RakNet::RakNetGUID& source, MessageP
 {
 	LOGI("MessagePacket\n");
 #ifndef STANDALONE_SERVER
-	minecraft->gui.addMessage(packet->message.C_String());
+	const std::string message = packet->message.C_String();
+	const std::string disconnectSuffix = " disconnected from the game";
+	if (message.size() >= disconnectSuffix.size() &&
+		message.compare(message.size() - disconnectSuffix.size(), disconnectSuffix.size(), disconnectSuffix) == 0) {
+		minecraft->gui.displayClientMessage("multiplayer.player.left", message.substr(0, message.size() - disconnectSuffix.size()));
+	} else {
+		minecraft->gui.addMessage(message);
+	}
 #endif
 }
 
@@ -278,6 +319,20 @@ void ClientSideNetworkHandler::handle(const RakNet::RakNetGUID& source, AddPlaye
 	player->moveTo(packet->x, packet->y, packet->z, packet->yRot, packet->xRot);
 	player->name = packet->name.C_String();
 	player->owner = packet->owner;
+	if (minecraft->isExtendedMultiplayer() && packet->hasExtendedSkin &&
+		packet->skinPixels.size() == 64 * 64 * 4 && minecraft->textures != NULL) {
+		player->multiplayerSkinPixels = packet->skinPixels;
+		const std::string textureName = "skins/network_" + std::to_string(packet->entityId) + ".png";
+		TextureData skinTexture;
+		skinTexture.w = 64;
+		skinTexture.h = 64;
+		skinTexture.numBytes = (int)player->multiplayerSkinPixels.size();
+		skinTexture.transparent = true;
+		skinTexture.data = new unsigned char[skinTexture.numBytes];
+		std::memcpy(skinTexture.data, &player->multiplayerSkinPixels[0], skinTexture.numBytes);
+		minecraft->textures->assignTexture(textureName, skinTexture);
+		player->setTextureName(textureName);
+	}
 	player->getEntityData()->assignValues(&packet->unpack);
     int slot = Inventory::MAX_SELECTION_SIZE;
     if (packet->carriedItemId == 0) {
@@ -289,10 +344,8 @@ void ClientSideNetworkHandler::handle(const RakNet::RakNetGUID& source, AddPlaye
     player->inventory->moveToSelectedSlot(slot, true);
 	//player->resetPos();
 
-	std::string message = packet->name.C_String();
-	message += " joined the game";
 #ifndef STANDALONE_SERVER
-	minecraft->gui.addMessage(message);
+	minecraft->gui.displayClientMessage("multiplayer.player.joined", packet->name.C_String());
 #endif
 }
 
@@ -383,6 +436,8 @@ void ClientSideNetworkHandler::handle(const RakNet::RakNetGUID& source, MovePlay
 	if (entity)
 	{
 		entity->lerpTo(packet->x, packet->y, packet->z, packet->yRot, packet->xRot, 3);
+		if (minecraft->isExtendedMultiplayer() && packet->hasExtendedState && entity->isPlayer())
+			((Player*)entity)->setSneaking(packet->sneaking);
 	}
 }
 
@@ -905,7 +960,7 @@ void ClientSideNetworkHandler::handle(const RakNet::RakNetGUID& source, Containe
 void ClientSideNetworkHandler::handle( const RakNet::RakNetGUID& source, ChatPacket* packet )
 {
 #ifndef STANDALONE_SERVER
-	minecraft->gui.displayClientMessage(packet->message);
+	minecraft->gui.addMessage(packet->message);
 #endif
 }
 

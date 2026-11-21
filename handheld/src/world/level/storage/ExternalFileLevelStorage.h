@@ -73,6 +73,10 @@ public:
 	static bool readPlayerData(const std::string& filename, LevelData& dest);
 	static bool writeLevelData(const std::string& datFileName, LevelData& dest, const std::vector<Player*>* players);
 	static void saveLevelData(const std::string& directory, LevelData& levelData, std::vector<Player*>* players);
+	virtual bool unlockAchievement(int id);
+	virtual bool hasAchievement(int id);
+	virtual bool markOverkillMob(int mobType);
+	virtual int getOverkillMobCount();
 
     int savePendingUnsavedChunks(int maxCount);
 
@@ -115,6 +119,10 @@ private:
 	std::unordered_map<int64_t, std::vector<CompoundTag*> > pendingChunkEntityTags;
 
 	void clearPendingChunkEntityTags();
+	unsigned int readAchievementState() const;
+	bool writeAchievementState() const;
+	unsigned int achievementMask;
+	bool achievementStateLoaded;
 };
 
 #endif /*NET_MINECRAFT_WORLD_LEVEL_STORAGE__ExternalFileLevelStorage_H__*/

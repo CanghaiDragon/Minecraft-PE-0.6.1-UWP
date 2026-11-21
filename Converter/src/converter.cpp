@@ -767,6 +767,20 @@ size_t addSkyBedrockFloor(Bytes& c) {
  return placed;
 }
 
+size_t addFloatingBedrockFloor(Bytes& c) {
+ if (c.size() < ChunkBytes) return 0;
+ for (int x = 0; x < 16; ++x) {
+  for (int z = 0; z < 16; ++z) {
+   const size_t pos = static_cast<size_t>(x << 11 | z << 7);
+   c[pos] = 7; // PE 0.9 bedrock
+   setNibble(c, BlockBytes, pos, 0);
+   setNibble(c, BlockBytes + NibbleBytes, pos, 0);
+   setNibble(c, BlockBytes + 2 * NibbleBytes, pos, 0);
+  }
+ }
+ return 16 * 16;
+}
+
 bool isSnowyTargetBiome(std::uint8_t id) {
  // 12 is Ice Plains and 30 is Snowy Taiga/Cold Taiga in the target biome
  // table. Both are cold biomes that can receive a persistent snow layer.
@@ -833,7 +847,7 @@ Bytes terrain09(const Bytes& c, int chunkX, int chunkZ, const converter::legacy:
     // The legacy generator applied an altitude correction when placing snow,
     // so a warm 2-D biome can still contain old snow. Newer versions validate
     // snow against the biome climate; preserve those columns as Snowy Plains.
-    if (hasSnow && id != 12 && id != 30) {
+    if (!biomes.isFixedPlainsWorld() && hasSnow && id != 12 && id != 30) {
      id = 12;
      if (forcedSnowBiomeColumns != nullptr) ++*forcedSnowBiomeColumns;
     }
@@ -1056,12 +1070,16 @@ bool Convert(const Options& o,const Log& log,std::wstring& error) try {
  Tag source=readLevel(sourceDir/"level.dat");
  const int sourceStorageVersion=intValue(child(source,"StorageVersion"));
  const int sourceWorldType=intValue(child(source,"WorldType"));
- const bool finiteWorld=sourceWorldType==0 && fs::is_regular_file(sourceDir/"chunks.dat");
+ const int sourceIndevType=intValue(child(source,"IndevType"));
+ // Old and Indev are finite world types. They use the shared chunks.dat
+ // storage and do not carry the infinite-world UWP marker file.
+ const bool finiteWorld=(sourceWorldType==0 || sourceWorldType==4) &&
+  fs::is_regular_file(sourceDir/"chunks.dat");
  if(finiteWorld) {
   if(sourceStorageVersion!=3)
    throw std::runtime_error("finite world conversion requires StorageVersion 3");
  } else if(!fs::exists(sourceDir/"uwp_storage.version")) {
-  throw std::runtime_error("selected folder is not a recognized UWP V2 infinite/Sky/Alpha world or StorageVersion 3 finite world");
+  throw std::runtime_error("selected folder is not a recognized UWP V2 world or StorageVersion 3 finite Old/Indev world");
  }
  if (fs::exists(o.destination)) {
    if (!fs::is_directory(o.destination))
@@ -1079,10 +1097,13 @@ bool Convert(const Options& o,const Log& log,std::wstring& error) try {
  const int64_t sourceSeed = longValue(child(source,"RandomSeed"));
  const bool skyWorld = sourceWorldType == 2;
  const bool alphaWorld = sourceWorldType == 3;
+ const bool plainsWorld = sourceWorldType == 4 || sourceWorldType == 5;
  const bool winterWorld = alphaWorld && ((static_cast<std::uint64_t>(sourceSeed) & 3ULL) == 0ULL);
- legacy::BiomeSource biomes(sourceSeed,skyWorld,alphaWorld);
+ legacy::BiomeSource biomes(sourceSeed,skyWorld,alphaWorld,plainsWorld);
  const bool freezeWinterWater = o.lowerSeaLevel && o.freezeWinterWater && winterWorld;
  const bool skyBedrockFloor = o.skyBedrockFloor && skyWorld;
+ const bool floatingIndevWorld = sourceWorldType == 4 && sourceIndevType == 2;
+ const bool floatingBedrockFloor = o.floatingBedrockFloor && floatingIndevWorld;
 
  GlobalTileEntities finiteTileEntities;
  if(finiteWorld && !loadFiniteTileEntities(sourceDir/"entities.dat",finiteTileEntities))
@@ -1129,22 +1150,26 @@ bool Convert(const Options& o,const Log& log,std::wstring& error) try {
    const bool winter = (static_cast<std::uint64_t>(sourceSeed) & 3ULL) == 0ULL;
    biomeSourceDescription = winter ? L"Alpha/Winter (fixed Ice Plains)" : L"Alpha (fixed Plains)";
   }
+  else if (plainsWorld) biomeSourceDescription = L"Indev/EarlyInfdev (fixed Plains)";
   log(L"Legacy biome source: "+biomeSourceDescription);
   if (o.maxChunks != 0)
    log(L"Test limit: converting up to "+std::to_wstring(o.maxChunks)+L" existing chunks nearest the saved player/spawn.");
   else
    log(L"Full conversion: all existing chunks will be copied.");
   if(finiteWorld)
-   log(L"Finite StorageVersion 3 source: reading chunks.dat (16x16 chunks) and global entities.dat tile entities.");
+   log(sourceWorldType == 4
+    ? L"Indev finite StorageVersion 3 source: reading chunks.dat (16x16 chunks) and global entities.dat tile entities."
+    : L"Finite StorageVersion 3 source: reading chunks.dat (16x16 chunks) and global entities.dat tile entities.");
   log(L"Selected "+std::to_wstring(candidates.size())+L" existing chunks.");
  }
 
- size_t converted=0,tileEntities=0,waterRemoved=0,iceRemoved=0,dirtToGrass=0,waterFrozen=0,winterSnowPlaced=0,stableSnowPlaced=0,bedrockPlaced=0,snowBiomeColumns=0;
+ size_t converted=0,tileEntities=0,waterRemoved=0,iceRemoved=0,dirtToGrass=0,waterFrozen=0,winterSnowPlaced=0,stableSnowPlaced=0,skyBedrockPlaced=0,floatingBedrockPlaced=0,snowBiomeColumns=0;
  for (const ChunkRef& ref : candidates) {
   const int lx = ((ref.x % 32) + 32) % 32;
   const int lz = ((ref.z % 32) + 32) % 32;
   auto c=regionChunk(ref.file,lx,lz);if(!c)continue;
-  if (skyBedrockFloor) bedrockPlaced += addSkyBedrockFloor(*c);
+  if (skyBedrockFloor) skyBedrockPlaced += addSkyBedrockFloor(*c);
+  if (floatingBedrockFloor) floatingBedrockPlaced += addFloatingBedrockFloor(*c);
    if (o.lowerSeaLevel) {
     const SeaLevelAdjustment adjustment = lowerLegacySeaLevel(
      *c, freezeWinterWater, o.lowerSeaLevel && winterWorld);
@@ -1173,8 +1198,9 @@ bool Convert(const Options& o,const Log& log,std::wstring& error) try {
   log(L"Converted "+std::to_wstring(converted)+L" chunks and "+std::to_wstring(tileEntities)+L" block entities using zlib-compressed LegacyTerrain. "+
       std::to_wstring(waterRemoved)+L" water and "+std::to_wstring(iceRemoved)+L" ice blocks at y=63 were cleared; "+
       std::to_wstring(dirtToGrass)+L" dirt blocks at y=62 became grass; "+std::to_wstring(waterFrozen)+
-      L" water blocks at y=62 were frozen for Winter; "+std::to_wstring(bedrockPlaced)+
-      L" air blocks at y=0..4 became bedrock for Sky; "+std::to_wstring(snowBiomeColumns)+
+      L" water blocks at y=62 were frozen for Winter; "+std::to_wstring(skyBedrockPlaced)+
+      L" Sky air blocks at y=0..4 became bedrock; "+std::to_wstring(floatingBedrockPlaced)+
+      L" Indev Floating blocks at y=0 were replaced with bedrock; "+std::to_wstring(snowBiomeColumns)+
       L" snow-bearing columns were mapped to cold biomes; "+std::to_wstring(winterSnowPlaced)+
       L" Winter surface snow layers were placed; "+std::to_wstring(stableSnowPlaced)+
       L" stable snow layers were written for cold-biome columns. Non-player entities were intentionally skipped.");return true;
@@ -1198,6 +1224,7 @@ bool Convert17(const Options17& o,const Log& log,std::wstring& error) try {
  const int sourceWorldType=intValue(child(source,"WorldType"));
  const bool skyWorld=sourceWorldType==2;
  const bool alphaWorld=sourceWorldType==3;
+ const bool plainsWorld=sourceWorldType==4 || sourceWorldType==5;
  const std::wstring display=o.name.empty()?L"Converted Bedrock 1.17.41 void world":o.name;
  writeLevel17(o.destination/"level.dat",source,display,skyWorld);
 
@@ -1221,7 +1248,7 @@ bool Convert17(const Options17& o,const Log& log,std::wstring& error) try {
   }
 
   const int64_t sourceSeed=longValue(child(source,"RandomSeed"));
-  legacy::BiomeSource biomes(sourceSeed,skyWorld,alphaWorld);
+  legacy::BiomeSource biomes(sourceSeed,skyWorld,alphaWorld,plainsWorld);
 
   if(skyWorld) {
    // Do not remap Sky to Plains: the existing snow/ice blocks must retain a

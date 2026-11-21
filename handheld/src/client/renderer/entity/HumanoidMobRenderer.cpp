@@ -16,6 +16,11 @@ HumanoidMobRenderer::HumanoidMobRenderer(HumanoidModel* humanoidModel, float sha
 {
 }
 
+void HumanoidMobRenderer::copyModelStateToArmor() {
+	super::copyModelStateToArmor();
+	((HumanoidModel*)getArmor())->sneaking = humanoidModel->sneaking;
+}
+
 void HumanoidMobRenderer::renderHand() {
 	humanoidModel->attackTime = 0;
 	humanoidModel->setupAnim(0, 0, 0, 0, 0, 1 / 16.0f);

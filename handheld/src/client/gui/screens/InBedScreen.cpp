@@ -5,6 +5,7 @@
 #include "../../player/LocalPlayer.h"
 #include "../../../platform/time.h"
 #include "../../../platform/input/Keyboard.h"
+#include "../../../locale/I18n.h"
 
 static const int WAIT_TICKS = 30;
 
@@ -21,9 +22,9 @@ void InBedScreen::init() {
 	// Button material follows the selected UI presentation, independently of
 	// whether the current input device is touch or keyboard/mouse.
 	if (!minecraft->options.javaUi) {
-		bWakeUp = new Touch::TButton(1, "Leave Bed");
+		bWakeUp = new Touch::TButton(1, I18n::get("multiplayer.stopSleeping"));
 	} else {
-		bWakeUp = new Button(1, "Leave Bed");
+		bWakeUp = new Button(1, I18n::get("multiplayer.stopSleeping"));
 	}
 	buttons.push_back(bWakeUp);
 

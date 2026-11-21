@@ -1,5 +1,6 @@
 #include "Gui.h"
 #include "Font.h"
+#include "../../locale/I18n.h"
 #include "screens/IngameBlockSelectionScreen.h"
 #include "../Minecraft.h"
 #include "../player/LocalPlayer.h"
@@ -119,7 +120,7 @@ void Gui::render(float a, bool mouseFree, int xMouse, int yMouse) {
 	//font->drawShadow(APP_NAME, 2, 2, 0xffffffff);
 	//font->drawShadow("This is a demo, not the finished product", 2, 10 + 2, 0xffffffff);
 	#ifdef APPLE_DEMO_PROMOTION
-		font->drawShadow("Demo version", 2, 0 + 2, 0xffffffff);
+		font->drawShadow(I18n::get("demo.version"), 2, 0 + 2, 0xffffffff);
 	#endif /*APPLE_DEMO_PROMOTION*/
 	glEnable2(GL_BLEND);
 	unsigned int max = 10;
@@ -209,6 +210,9 @@ void Gui::handleClick(int button, int x, int y) {
 
 void Gui::handleKeyPressed(int key)
 {
+	if (minecraft == NULL || minecraft->player == NULL || minecraft->player->inventory == NULL)
+		return;
+	const int previousSlot = minecraft->player->inventory->selected;
 	if (key == 99)
 	{
 		if (minecraft->player->inventory->selected > 0)
@@ -227,6 +231,13 @@ void Gui::handleKeyPressed(int key)
 	{
 		minecraft->screenChooser.setScreen(SCREEN_BLOCKSELECTION);
 	}
+	if (minecraft->player->inventory->selected != previousSlot)
+		showSelectedItemName();
+}
+
+void Gui::showSelectedItemName()
+{
+	itemNameOverlayTime = 0;
 }
 
 void Gui::tick() {
@@ -265,15 +276,18 @@ void Gui::addMessage(const std::string& _string) {
 }
 
 void Gui::setNowPlaying(const std::string& string) {
-	overlayMessageString = "Now playing: " + string;
+	overlayMessageString = I18n::get("gui.nowPlaying") + string;
 	overlayMessageTime = 20 * 3;
 	animateOverlayMessageColor = true;
 }
 
-void Gui::displayClientMessage(const std::string& messageId) {
-	//Language language = Language.getInstance();
-	//std::string languageString = language.getElement(messageId);
-	addMessage(std::string("Client message: ") + messageId);
+void Gui::displayClientMessage(const std::string& messageId, const std::string& argument) {
+	std::string message = I18n::get(messageId);
+	const std::string placeholder = "%s";
+	const std::string::size_type placeholderPosition = message.find(placeholder);
+	if (placeholderPosition != std::string::npos)
+		message.replace(placeholderPosition, placeholder.length(), argument);
+	addMessage(message);
 }
 
 void Gui::renderVignette(float br, int w, int h) {

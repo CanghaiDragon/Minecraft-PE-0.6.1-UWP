@@ -6,6 +6,9 @@
 #include "../../world/inventory/BaseContainerMenu.h"
 #include "../../world/item/BowItem.h"
 #include "../../world/level/Level.h"
+#include "../../world/level/storage/LevelStorage.h"
+#include "../../world/level/storage/AchievementIds.h"
+#include "../../world/entity/item/ItemEntity.h"
 #include "../../world/level/tile/Tile.h"
 #include "../../world/level/tile/entity/TileEntity.h"
 #include "../../world/level/material/Material.h"
@@ -18,6 +21,7 @@
 #include "../../network/packet/SendInventoryPacket.h"
 #include "../../network/packet/EntityEventPacket.h"
 #include "../../network/packet/PlayerActionPacket.h"
+#include "../../locale/I18n.h"
 #ifndef STANDALONE_SERVER
 #include "../gui/Screen.h"
 #include "../gui/screens/FurnaceScreen.h"
@@ -76,6 +80,7 @@ LocalPlayer::LocalPlayer(Minecraft* minecraft, Level* level, User* user, int dim
 	input(NULL),
 	sentInventoryItemId(-1),
 	sentInventoryItemData(-1),
+	sentSneaking(false),
 	autoJumpEnabled(true),
 	armorTypeHash(0),
 	sprinting(false),
@@ -94,6 +99,15 @@ LocalPlayer::LocalPlayer(Minecraft* minecraft, Level* level, User* user, int dim
 	if (hasImportedSkin(minecraft)) {
 		setTextureName("skins/local.png");
 	}
+}
+
+void LocalPlayer::recordOverkillMob(int mobType)
+{
+	if (minecraft == NULL || level == NULL || minecraft->isCreativeMode() ||
+		!minecraft->options.achievementsEnabled)
+		return;
+	if (level->getLevelStorage()->markOverkillMob(mobType))
+		awardAchievement(AchievementIds::Overkill);
 }
 
 LocalPlayer::~LocalPlayer() {
@@ -121,6 +135,11 @@ void LocalPlayer::calculateFlight(float xa, float ya, float za) {
     if (Keyboard::isKeyDown(minecraft->options.keyJump.key))  ya =  .2f * minecraft->options.flySpeed;
     if (Keyboard::isKeyDown(minecraft->options.keySneak.key)) ya = -.2f * minecraft->options.flySpeed;
 #endif
+	// Spectator mode uses noPhysics rather than abilities.flying, so its touch
+	// controls must feed this camera-flight path directly (yd is cleared before
+	// collision-free movement is applied).
+	if (minecraft->isSpectatorMode() && input != NULL && input->wantUp != input->wantDown)
+		ya = input->wantUp ? .2f * minecraft->options.flySpeed : -.2f * minecraft->options.flySpeed;
 
     flyX = 10 * smoothFlyX.getNewDeltaValue(xa, .35f * minecraft->options.sensitivity);
     flyY = 10 * smoothFlyY.getNewDeltaValue(ya, .35f * minecraft->options.sensitivity);
@@ -156,15 +175,21 @@ void LocalPlayer::tick() {
 	}
 	if (minecraft->isOnline())
 	{
-		if (std::abs(x - sentX) > .1f || std::abs(y - sentY) > .01f || std::abs(z - sentZ) > .1f || std::abs(sentRotX - xRot) > 1 || std::abs(sentRotY - yRot) > 1)
+		const bool extendedMultiplayer = minecraft->isExtendedMultiplayer();
+		const bool currentSneaking = isSneaking();
+		const bool sneakStateChanged = extendedMultiplayer && currentSneaking != sentSneaking;
+		if (std::abs(x - sentX) > .1f || std::abs(y - sentY) > .01f || std::abs(z - sentZ) > .1f ||
+			std::abs(sentRotX - xRot) > 1 || std::abs(sentRotY - yRot) > 1 || sneakStateChanged)
 		{
-			MovePlayerPacket packet(entityId, x, y - heightOffset, z, xRot, yRot);
+			MovePlayerPacket packet(entityId, x, y - heightOffset, z, xRot, yRot,
+				currentSneaking, extendedMultiplayer);
 			minecraft->raknetInstance->send(packet);
 			sentX = x;
 			sentY = y;
 			sentZ = z;
 			sentRotX = xRot;
 			sentRotY = yRot;
+			sentSneaking = currentSneaking;
 		}
 
 		ItemInstance* item = inventory->getSelected();
@@ -350,10 +375,54 @@ void LocalPlayer::updateAi() {
 
 void LocalPlayer::take( Entity* e, int orgCount )
 {
+	if (e != NULL && e->isItemEntity()) {
+		ItemEntity* itemEntity = (ItemEntity*)e;
+		if (itemEntity->item.id == Tile::workBench->id)
+			awardAchievement(AchievementIds::Benchmarking);
+	}
 #ifndef STANDALONE_SERVER
 	if (e->isItemEntity())
 		minecraft->particleEngine->add(new TakeAnimationParticle(minecraft->level, (ItemEntity*)e, this, -0.5f));
 #endif
+}
+
+void LocalPlayer::awardAchievement(int achievementId)
+{
+	if (minecraft == NULL || level == NULL || minecraft->isCreativeMode() ||
+		!minecraft->options.achievementsEnabled)
+		return;
+	super::awardAchievement(achievementId);
+	if (level->getLevelStorage()->unlockAchievement(achievementId)) {
+#ifndef STANDALONE_SERVER
+		static const char* achievementTitleKeys[AchievementIds::Count] = {
+			"achievement.pe.0.title", "achievement.pe.1.title", "achievement.pe.2.title",
+			"achievement.pe.3.title", "achievement.pe.4.title", "achievement.pe.5.title",
+			"achievement.pe.6.title", "achievement.pe.7.title", "achievement.pe.8.title",
+			"achievement.pe.9.title", "achievement.pe.10.title", "achievement.pe.11.title",
+			"achievement.pe.12.title", "achievement.pe.13.title", "achievement.pe.14.title"
+		};
+	const std::string name = achievementId >= 0 && achievementId < AchievementIds::Count
+		? I18n::get(achievementTitleKeys[achievementId]) : I18n::get("achievement.pe.unknown.title");
+		const bool purpleAchievement = achievementId == AchievementIds::TheEnd ||
+			achievementId == AchievementIds::FullOfDiamond ||
+			achievementId == AchievementIds::WarPig;
+		std::string achievementColor(1, static_cast<char>(0xA7));
+		achievementColor += (purpleAchievement ? "5" : "a");
+		minecraft->gui.displayClientMessage("achievement.get", achievementColor + name);
+		bool allAchievementsUnlocked = true;
+		for (int i = 0; i < AchievementIds::Count; ++i) {
+			if (!level->getLevelStorage()->hasAchievement(i)) {
+				allAchievementsUnlocked = false;
+				break;
+			}
+		}
+		if (allAchievementsUnlocked) {
+			std::string goldCode(1, static_cast<char>(0xA7));
+			goldCode += "6";
+			minecraft->gui.addMessage(goldCode + I18n::get("achievement.allComplete"));
+		}
+#endif
+	}
 }
 
 void LocalPlayer::setKey( int eventKey, bool eventKeyState )
@@ -572,6 +641,8 @@ void LocalPlayer::displayClientMessage( const std::string& messageId ) {
 
 int LocalPlayer::startSleepInBed( int x, int y, int z ) {
 	int startSleepInBedReturnValue = super::startSleepInBed(x, y, z);
+	if (startSleepInBedReturnValue == BedSleepingResult::OK)
+		awardAchievement(AchievementIds::SweetDream);
 #ifndef STANDALONE_SERVER
 	if(startSleepInBedReturnValue == BedSleepingResult::OK)
 		minecraft->setScreen(new InBedScreen());

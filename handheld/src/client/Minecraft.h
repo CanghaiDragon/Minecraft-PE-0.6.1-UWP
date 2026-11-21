@@ -88,6 +88,8 @@ public:
 	LevelStorageSource* getLevelSource();
 
 	bool isLookingForMultiplayer;
+	void setExtendedMultiplayer(bool enabled) { _extendedMultiplayer = enabled; }
+	bool isExtendedMultiplayer() const { return _extendedMultiplayer; }
 	void locateMultiplayer();
 	void cancelLocateMultiplayer();
 	bool joinMultiplayer(const PingedCompatibleServer& server);
@@ -107,6 +109,7 @@ public:
 	// frame's world draw through the original GameRenderer without advancing
 	// Level, Player, or any other simulation state.
 	void renderFrame(float alpha);
+	void requestDebugScreenshot();
 
 	// UWP's current world owner can lend a fully constructed Level and
 	// LocalPlayer to the original client loop for simulation.  The attachment
@@ -267,6 +270,10 @@ private:
 	bool _uwpBorrowedWorld;
 	bool _uwpSavedTouchscreen;
 	bool _uwpTouchscreenSaved;
+	bool _debugScreenshotRequested;
+	bool _debugScreenshotKeyHeld;
+	bool _debugScreenshotSaving;
+	bool _extendedMultiplayer;
 	bool _lightPriorityChunkValid;
 	int _lightPriorityChunkX;
 	int _lightPriorityChunkZ;

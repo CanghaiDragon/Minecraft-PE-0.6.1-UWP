@@ -27,6 +27,18 @@ TileRenderer::TileRenderer( LevelSource* level /* = NULL */ )
 {
 }
 
+namespace {
+// The finite-world invisible boundary is solid for collision and face culling,
+// but should not act like an ambient-occlusion wall on the last real block row.
+// Liquid tiles use their own tessellation path and do not sample this table.
+bool isAmbientOcclusionTransparent(LevelSource* level, int x, int y, int z) {
+	const int tileId = level->getTile(x, y, z);
+	if (Tile::invisible_bedrock != NULL && tileId == Tile::invisible_bedrock->id)
+		return true;
+	return Tile::translucent[tileId];
+}
+}
+
 bool TileRenderer::tesselateBlockInWorld(Tile* tt, int x, int y, int z) {
 	int col = tt->getColor(level, x, y, z);
 	float r = ((col >> 16) & 0xff) / 255.0f;
@@ -773,18 +785,18 @@ bool TileRenderer::tesselateBlockInWorldWithAmbienceOcclusion( Tile* tt, int pX,
 	ll0Y0 = tt->getBrightness(level, pX, pY + 1, pZ);
 	ll00Z = tt->getBrightness(level, pX, pY, pZ + 1);
 
-	llTransXY0 = Tile::translucent[level->getTile(pX + 1, pY + 1, pZ)];
-	llTransXy0 = Tile::translucent[level->getTile(pX + 1, pY - 1, pZ)];
-	llTransX0Z = Tile::translucent[level->getTile(pX + 1, pY, pZ + 1)];
-	llTransX0z = Tile::translucent[level->getTile(pX + 1, pY, pZ - 1)];
-	llTransxY0 = Tile::translucent[level->getTile(pX - 1, pY + 1, pZ)];
-	llTransxy0 = Tile::translucent[level->getTile(pX - 1, pY - 1, pZ)];
-	llTransx0z = Tile::translucent[level->getTile(pX - 1, pY, pZ - 1)];
-	llTransx0Z = Tile::translucent[level->getTile(pX - 1, pY, pZ + 1)];
-	llTrans0YZ = Tile::translucent[level->getTile(pX, pY + 1, pZ + 1)];
-	llTrans0Yz = Tile::translucent[level->getTile(pX, pY + 1, pZ - 1)];
-	llTrans0yZ = Tile::translucent[level->getTile(pX, pY - 1, pZ + 1)];
-	llTrans0yz = Tile::translucent[level->getTile(pX, pY - 1, pZ - 1)];
+	llTransXY0 = isAmbientOcclusionTransparent(level, pX + 1, pY + 1, pZ);
+	llTransXy0 = isAmbientOcclusionTransparent(level, pX + 1, pY - 1, pZ);
+	llTransX0Z = isAmbientOcclusionTransparent(level, pX + 1, pY, pZ + 1);
+	llTransX0z = isAmbientOcclusionTransparent(level, pX + 1, pY, pZ - 1);
+	llTransxY0 = isAmbientOcclusionTransparent(level, pX - 1, pY + 1, pZ);
+	llTransxy0 = isAmbientOcclusionTransparent(level, pX - 1, pY - 1, pZ);
+	llTransx0z = isAmbientOcclusionTransparent(level, pX - 1, pY, pZ - 1);
+	llTransx0Z = isAmbientOcclusionTransparent(level, pX - 1, pY, pZ + 1);
+	llTrans0YZ = isAmbientOcclusionTransparent(level, pX, pY + 1, pZ + 1);
+	llTrans0Yz = isAmbientOcclusionTransparent(level, pX, pY + 1, pZ - 1);
+	llTrans0yZ = isAmbientOcclusionTransparent(level, pX, pY - 1, pZ + 1);
+	llTrans0yz = isAmbientOcclusionTransparent(level, pX, pY - 1, pZ - 1);
 
 	if (tt->tex == 3) tint0 = tint2 = tint3 = tint4 = tint5 = false;
 

@@ -10,6 +10,7 @@ public:
 
     static const char* Multiplayer_Username;
     static const char* Multiplayer_ServerVisible;
+    static const char* Language;
     
     static const char* Graphics_Fancy;
     static const char* Graphics_LowQuality;
@@ -40,6 +41,7 @@ public:
 	static const char* Skin_Menu;
 	static const char* Touch_Sneak;
 	static const char* Extra_DebugScreen;
+	static const char* Extra_Achievements;
 	static const char* Extra_JavaUI;
 };
 

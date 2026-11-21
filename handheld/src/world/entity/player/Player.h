@@ -8,6 +8,7 @@
 #include "../../Pos.h"
 #include "../../food/SimpleFoodData.h"
 #include "../../item/crafting/Recipe.h"
+#include <vector>
 
 class Tile;
 class ItemEntity;
@@ -39,6 +40,10 @@ class Player: public Mob
 	static const int PLAYER_SLEEP_FLAG = 1;
 
 public:
+	// RGBA pixels received from an extended-multiplayer peer.  The legacy
+	// protocol does not populate or transmit this data.
+	std::vector<unsigned char> multiplayerSkinPixels;
+
 	static const int MAX_NAME_LENGTH = 16;
     static const int MAX_HEALTH = 20;
 	static const float DEFAULT_WALK_SPEED;
@@ -88,6 +93,8 @@ public:
 
     int getScore();
     void awardKillScore(Entity* victim, int score);
+	virtual void awardAchievement(int achievementId);
+	virtual void recordOverkillMob(int mobType);
 	void handleEntityEvent(char id);
 
 	virtual void take(Entity* e, int orgCount);

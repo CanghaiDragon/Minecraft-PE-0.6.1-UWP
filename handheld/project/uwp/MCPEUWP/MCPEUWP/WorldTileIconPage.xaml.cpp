@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "WorldTileIconPage.xaml.h"
+#include "XamlLocalization.h"
 
 using namespace MCPEUWP;
 using namespace Platform;
@@ -9,6 +10,7 @@ using namespace Windows::UI::Xaml::Controls;
 WorldTileIconPage::WorldTileIconPage()
 {
 	InitializeComponent();
+	UwpXamlLocalization::install(this);
 }
 
 void WorldTileIconPage::OnIconClick(

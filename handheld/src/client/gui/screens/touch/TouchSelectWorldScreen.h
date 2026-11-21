@@ -104,6 +104,7 @@ private:
 	std::string getUniqueLevelName(const std::string& level);
 
 	TButton bEdit;
+	TButton bCreate;
 	TButton bImport;
 	THeader bHeader;
 	TButton bBack;

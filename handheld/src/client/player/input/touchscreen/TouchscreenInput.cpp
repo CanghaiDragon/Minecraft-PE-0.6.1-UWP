@@ -21,6 +21,7 @@ static const int AREA_DPAD_J = 105;
 static const int AREA_PAUSE = 106;
 static const int AREA_FLIGHT_UP = 107;
 static const int AREA_FLIGHT_DOWN = 108;
+static const int AREA_SCREENSHOT = 109;
 
 static int cPressed = 0;
 static int cReleased = 0;
@@ -70,6 +71,7 @@ TouchscreenInput_TestFps::TouchscreenInput_TestFps( Minecraft* mc, Options* opti
 	_northJump(false),
 	_forward(false),
 	_boundingRectangle(0, 0, 1, 1),
+	_pauseAndScreenshotArea(0, 0, 0, 0),
 	_pressedJump(false),
 	_pauseIsDown(false),
 	_sneakTapTime(-999),
@@ -77,6 +79,8 @@ TouchscreenInput_TestFps::TouchscreenInput_TestFps( Minecraft* mc, Options* opti
 	aRight(0),
 	aUp(0),
 	aDown(0),
+	aPause(0),
+	aScreenshot(0),
 	aJump(0),
 	aSneak(0),
 	aJumpRight(0),
@@ -113,7 +117,7 @@ void TouchscreenInput_TestFps::clear() {
 	// These areas are owned by TouchAreaModel.  Clear the non-owning pointers
 	// immediately so a render that races a layout rebuild cannot use freed
 	// storage.
-	aLeft = aRight = aUp = aDown = aPause = NULL;
+	aLeft = aRight = aUp = aDown = aPause = aScreenshot = NULL;
 	aJump = aSneak = aJumpRight = NULL;
 
 	delete aUpLeft; aUpLeft = NULL; // @todo: SAFEDEL
@@ -223,6 +227,13 @@ void TouchscreenInput_TestFps::onConfigChanged(const Config& c) {
                                                           4,
                                                           w - 4,
 	                                                          4 + btnSize));
+	_model.addArea(AREA_SCREENSHOT, aScreenshot = new RectangleArea(
+		w - 6 - 2 * btnSize, 4, w - 6 - btnSize, 4 + btnSize));
+	// Reserve both top-right controls from camera turning even while the
+	// optional screenshot control is hidden, so toggling the debug option
+	// takes effect immediately without rebuilding the touch areas.
+	_pauseAndScreenshotArea = RectangleArea(w - 6 - 2 * btnSize,
+		4, w - 4, 4 + btnSize);
 	TOUCH_TRACE("touch-layout: screen=(%.0f,%.0f) sneak=%d dpad=(%.1f,%.1f,%.1f,%.1f) sneakArea=(%.1f,%.1f,%.1f,%.1f) jumpArea=(%.1f,%.1f,%.1f,%.1f) flightUp=(%.1f,%.1f,%.1f,%.1f) flightDown=(%.1f,%.1f,%.1f,%.1f)\n",
 		w, h, _options->touchSneak ? 1 : 0,
 		_boundingRectangle._x0, _boundingRectangle._y0, _boundingRectangle._x1, _boundingRectangle._y1,
@@ -277,6 +288,7 @@ void TouchscreenInput_TestFps::releaseAllKeys()
 
 void TouchscreenInput_TestFps::tick( Player* player )
 {
+	const bool flightControlsEnabled = player->abilities.flying || _minecraft->isSpectatorMode();
 	xa = 0;
 	ya = 0;
 	jumping = false;
@@ -351,7 +363,7 @@ void TouchscreenInput_TestFps::tick( Player* player )
 		if (Multitouch::isPressed(p) || Multitouch::isReleased(p))
 			TOUCH_TRACE("touch-area: pointer=%d event=%s pos=(%d,%d) area=%d flying=%d\n",
 				p, Multitouch::isPressed(p) ? "down" : "up", x, y, areaId,
-				player->abilities.flying ? 1 : 0);
+				flightControlsEnabled ? 1 : 0);
 		if (areaId < AREA_DPAD_FIRST)
 		{
 			continue;
@@ -360,8 +372,8 @@ void TouchscreenInput_TestFps::tick( Player* player )
 		// right-side jump contact, which must be accepted alongside the left
 		// movement contact even when the player is not flying.
 		const bool touchSneakJump = _options->touchSneak && areaId == AREA_DPAD_J;
-		if (areaId != AREA_PAUSE && p != _dpadPointerId &&
-			!player->abilities.flying && !touchSneakJump)
+		if (areaId != AREA_PAUSE && areaId != AREA_SCREENSHOT && p != _dpadPointerId &&
+			!flightControlsEnabled && !touchSneakJump)
 			continue;
 
 		bool setButton = false;
@@ -387,7 +399,7 @@ void TouchscreenInput_TestFps::tick( Player* player )
 				}
 			} else {
 				heldJump = true;
-				if (player->abilities.flying && !_options->touchSneak && Multitouch::isPressed(p)) {
+				if (flightControlsEnabled && !_options->touchSneak && Multitouch::isPressed(p)) {
 					_legacyFlightHeightMode = true;
 					_legacyFlightPointer = p;
 				}
@@ -408,7 +420,7 @@ void TouchscreenInput_TestFps::tick( Player* player )
 		}
 		if (areaId == AREA_FLIGHT_UP || areaId == AREA_FLIGHT_DOWN) {
 			setButton = true;
-			if (!player->abilities.flying) setButton = false;
+			if (!flightControlsEnabled) setButton = false;
 		}
 
 		if	(areaId == AREA_DPAD_N)
@@ -416,7 +428,7 @@ void TouchscreenInput_TestFps::tick( Player* player )
 			setButton = true;
 			// Legacy flight keeps forward/back movement on the normal D-pad.
 			// Holding the jump button acts as the height modifier.
-			if (player->abilities.flying && !_options->touchSneak && _legacyFlightHeightMode)
+			if (flightControlsEnabled && !_options->touchSneak && _legacyFlightHeightMode)
 				ya += 1;
 			else {
 				if (!isChangingFlightHeight) tmpForward = true;
@@ -424,7 +436,7 @@ void TouchscreenInput_TestFps::tick( Player* player )
 				// The legacy D-pad has no separate sneak key.  Match PE's
 				// water movement behavior by making forward input also provide
 				// the upward swimming impulse while the player is submerged.
-				if (!_options->touchSneak && !player->abilities.flying &&
+				if (!_options->touchSneak && !flightControlsEnabled &&
 					player->isInWater())
 					jumping = true;
 			}
@@ -469,11 +481,16 @@ void TouchscreenInput_TestFps::tick( Player* player )
 				_minecraft->screenChooser.setScreen(SCREEN_PAUSE);
             }
 		}
+		else if (areaId == AREA_SCREENSHOT && _options->debugScreenEnabled) {
+			setButton = true;
+			if (Multitouch::isReleased(p))
+				_minecraft->requestDebugScreenshot();
+		}
 		_buttons[areaId - AREA_DPAD_FIRST] = setButton;
 	}
 
 	_forward = tmpForward;
-	if (player->abilities.flying && !_options->touchSneak && _legacyFlightHeightMode)
+	if (flightControlsEnabled && !_options->touchSneak && _legacyFlightHeightMode)
 		_forward = false;
 
 	// Only jump once at a time
@@ -488,7 +505,7 @@ void TouchscreenInput_TestFps::tick( Player* player )
 	// In creative flight, hold the jump button as a modifier and use the
 	// vertical D-pad directions for ascent/descent.  Do not treat the same
 	// contacts as ordinary forward/back movement while changing height.
-	if (player->abilities.flying && _options->touchSneak) {
+	if (flightControlsEnabled && _options->touchSneak) {
 		// The jump key is the flight modifier.  Accept both a held contact and
 		// the immediately preceding tap so a second finger can select a height.
 		const bool flightModifier = heldJump || _pressedJump;
@@ -499,7 +516,7 @@ void TouchscreenInput_TestFps::tick( Player* player )
 		// contact may enable vertical movement.  Do not feed wantUp/wantDown
 		// back into their own calculation, otherwise the state sticks forever.
 		const bool jumpModifier = heldJump || _pressedJump;
-		if (player->abilities.flying && !_options->touchSneak) {
+		if (flightControlsEnabled && !_options->touchSneak) {
 			wantUp = _legacyFlightHeightMode && isButtonDown(AREA_DPAD_N);
 			wantDown = _legacyFlightHeightMode && isButtonDown(AREA_DPAD_S);
 		} else {
@@ -509,16 +526,16 @@ void TouchscreenInput_TestFps::tick( Player* player )
 	}
 	// Keep the flight controls functional even when the jump modifier is not
 	// held: the D-pad's up/down buttons are explicit ascent/descent controls.
-	if (player->abilities.flying && _options->touchSneak) {
+	if (flightControlsEnabled && _options->touchSneak) {
 		wantUp = isButtonDown(AREA_FLIGHT_UP);
 		wantDown = isButtonDown(AREA_FLIGHT_DOWN);
 	}
-	if (player->abilities.flying && (wantUp || wantDown || (heldJump && !_forward)))
+	if (flightControlsEnabled && (wantUp || wantDown || (heldJump && !_forward)))
 	{
 		isChangingFlightHeight = true;
 		ya = 0;
 	}
-	_renderFlightImage = player->abilities.flying;
+	_renderFlightImage = flightControlsEnabled;
 
 #ifdef WIN32
 	if (_keys[KEY_UP]) ya++;
@@ -538,7 +555,7 @@ void TouchscreenInput_TestFps::tick( Player* player )
 	}
 	static int lastFlying = -1, lastForward = -1, lastJump = -1, lastSneak = -1;
 	static int lastUp = -1, lastDown = -1, lastHeight = -1;
-	const int nowFlying = player->abilities.flying ? 1 : 0;
+	const int nowFlying = flightControlsEnabled ? 1 : 0;
 	const int nowForward = _forward ? 1 : 0;
 	const int nowJump = jumping ? 1 : 0;
 	const int nowSneak = sneaking ? 1 : 0;
@@ -635,7 +652,7 @@ const RectangleArea& TouchscreenInput_TestFps::getRectangleArea()
 }
 const RectangleArea& TouchscreenInput_TestFps::getPauseRectangleArea()
 {
-    return *aPause;
+	return _pauseAndScreenshotArea;
 }
 
 void TouchscreenInput_TestFps::rebuild() {
@@ -723,6 +740,11 @@ void TouchscreenInput_TestFps::rebuild() {
 	
 
 	if (!_minecraft->screen) {
+		if (_options->debugScreenEnabled) {
+			if (isButtonDown(AREA_SCREENSHOT)) t.colorABGR(cPressedPause);
+			else t.colorABGR(cReleasedPause);
+			drawRectangleArea(t, aScreenshot, 200, 82, 18.0f);
+		}
 		if (isButtonDown(AREA_PAUSE))  t.colorABGR(cPressedPause);
 		else						   t.colorABGR(cReleasedPause);
 		

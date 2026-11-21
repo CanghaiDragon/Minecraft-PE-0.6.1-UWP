@@ -16,6 +16,8 @@ namespace WorldType {
 	const int Infinite = 1; // infinite procedural world
 	const int Sky      = 2; // infinite floating-island terrain, normal dimension
 	const int Alpha    = 3; // infinite Java Alpha-style terrain, Alpha/Winter biome
+	const int Indev    = 4; // finite Java Indev-style terrain
+	const int EarlyInfdev = 5; // infinite world using the 20100227 generator
 
 	// Alpha's Winter Mode is selected once from the world seed.  Using the
 	// stable low two bits gives the requested 1/4 distribution while ensuring
@@ -23,15 +25,35 @@ namespace WorldType {
 	inline bool isAlphaWinter(long seed) {
 		return ((unsigned long long)seed & 3ULL) == 0ULL;
 	}
+
+	// Indev's hidden Infdev variant is selected once from the world seed.
+	inline bool isIndevInfdev(long seed) {
+		return ((unsigned long long)seed & 3ULL) == 0ULL;
+	}
+}
+
+namespace IndevType {
+	const int Inland = 0;
+	const int Island = 1;
+	const int Floating = 2;
+	const int Flat = 3;
+}
+
+namespace BiomeMapping {
+	const int None = 0;
+	const int Plains = 1;
 }
 
 class LevelSettings
 {
 public:
-    LevelSettings(long seed, int gameType, int worldType = WorldType::Old)
+    LevelSettings(long seed, int gameType, int worldType = WorldType::Old,
+		int indevType = IndevType::Inland, bool resolveIndevInfdev = true)
     :   seed(seed),
         gameType(gameType),
-        worldType(worldType)
+        worldType(worldType),
+		indevType(indevType),
+		resolveIndevInfdev(resolveIndevInfdev)
     {
     }
 	static LevelSettings None() {
@@ -49,6 +71,9 @@ public:
     int getWorldType() const {
         return worldType;
     }
+
+	int getIndevType() const { return indevType; }
+	bool shouldResolveIndevInfdev() const { return resolveIndevInfdev; }
 
 	//
 	// Those two should actually not be here
@@ -73,6 +98,8 @@ private:
     const long seed;
     const int gameType;
     const int worldType;
+	const int indevType;
+	const bool resolveIndevInfdev;
 };
 
 #endif /*NET_MINECRAFT_WORLD_LEVEL__LevelSettings_H__*/

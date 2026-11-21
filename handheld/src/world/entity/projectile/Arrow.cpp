@@ -341,6 +341,14 @@ int Arrow::getEntityTypeId() const {
 	return EntityTypes::IdArrow;
 }
 
+void Arrow::awardKillScore(Entity* victim, int score)
+{
+	if (!playerArrow || level == NULL) return;
+	Entity* owner = level->getEntity(ownerId);
+	if (owner != NULL && owner->isPlayer())
+		owner->awardKillScore(victim, score);
+}
+
 int Arrow::getAuxData() {
 	return ownerId;
 }

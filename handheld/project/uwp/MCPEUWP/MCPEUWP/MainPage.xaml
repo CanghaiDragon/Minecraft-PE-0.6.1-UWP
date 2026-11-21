@@ -21,40 +21,6 @@
         </Grid.Resources>
         <SwapChainPanel x:Name="AnglePanel" />
 
-        <!-- Temporary startup diagnostics.  The EGL surface can be completely
-             white when initialization stops before the first present, so keep
-             the state visible in XAML until the first frame is confirmed. -->
-        <Border x:Name="StartupDiagnostic"
-                Canvas.ZIndex="100"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Top"
-                Margin="16"
-                Padding="8"
-                Background="#DD000000"
-                IsHitTestVisible="True">
-            <ScrollViewer Height="600"
-                          Width="700"
-                          VerticalScrollMode="Enabled"
-                          HorizontalScrollMode="Disabled"
-                          IsScrollInertiaEnabled="True"
-                          ManipulationMode="TranslateY"
-                          MaxWidth="1100"
-                          VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled">
-                <StackPanel>
-                    <TextBlock x:Name="StartupStage"
-                               Foreground="White"
-                               FontSize="16"
-                               Text="Starting Minecraft PE 0.6.1..." />
-                    <TextBlock x:Name="StartupDetails"
-                               Foreground="#FFFFD080"
-                               FontSize="12"
-                               TextWrapping="Wrap"
-                               Text="DIAG 2026-10-02 | waiting for MainPage.OnLoaded" />
-                </StackPanel>
-            </ScrollViewer>
-        </Border>
-
         <!-- ARM32-only XAML reachability probe.  It is independent of the
              SwapChainPanel and remains above the game surface. -->
         <Border x:Name="Arm32XamlProbe"
@@ -113,7 +79,7 @@
                     <TextBlock Grid.Row="0"
                                Text="Skin"
                                Foreground="White"
-                               FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                               FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                                FontSize="28"
                                FontWeight="SemiBold"
                                HorizontalAlignment="Center"
@@ -147,29 +113,29 @@
                                             HorizontalAlignment="Stretch">
                                     <TextBlock Text="Arm Type"
                                                Foreground="White"
-                                               FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                               FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                                                FontSize="16"
                                                Margin="0,0,0,8" />
                                     <ComboBox x:Name="SkinArmTypeComboBox"
-                                              FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                              FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                                               SelectedIndex="0"
                                               HorizontalAlignment="Stretch"
                                               SelectionChanged="OnSkinArmTypeChanged">
                                         <ComboBoxItem Content="Classic"
-                                                      FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft" />
+                                                      FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont" />
                                         <ComboBoxItem Content="Slim"
-                                                      FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft" />
+                                                      FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont" />
                                     </ComboBox>
                                     <TextBlock Text="Use a 64x64 PNG skin."
                                                Foreground="#FFB0B0B0"
-                                               FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                               FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                                                TextWrapping="Wrap"
                                                Margin="0,14,0,0" />
                                 </StackPanel>
                             </Grid>
                             <TextBlock x:Name="SkinStatusText"
                                        Foreground="#FFFFD080"
-                                       FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                       FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                                        TextWrapping="Wrap"
                                        TextAlignment="Center"
                                        HorizontalAlignment="Stretch"
@@ -189,7 +155,7 @@
                         <Button Content="Import Skin"
                                 Grid.Column="0"
                                 Click="OnSkinImportClick"
-                                FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                                 Height="64"
                                 FontSize="16"
                                 Foreground="White"
@@ -198,7 +164,7 @@
                         <Button Content="Clear Skin"
                                 Grid.Column="1"
                                 Click="OnSkinClearClick"
-                                FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                                 Height="64"
                                 FontSize="16"
                                 Foreground="White"
@@ -207,7 +173,7 @@
                         <Button Content="Back"
                                 Grid.Column="2"
                                 Click="OnSkinBackClick"
-                                FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                                 Height="64"
                                 FontSize="16"
                                 Foreground="White"

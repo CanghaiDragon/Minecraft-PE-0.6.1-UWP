@@ -102,18 +102,41 @@ AlphaLevelSource::AlphaLevelSource(Level* level, long seed, bool spawnMobs)
 	perlinNoise3(&random, 4),
 	scaleNoise(&random, 10),
 	depthNoise(&random, 16),
-	forestNoise(&random, 8)
+	forestNoise(&random, 8),
+	indevType(IndevType::Inland)
 {
 }
 
 AlphaLevelSource::~AlphaLevelSource() {
 }
 
+void AlphaLevelSource::adjustDensity(float*, int, int, int, int, int) {}
+
+bool AlphaLevelSource::isFlatTerrain() const { return false; }
+
+bool AlphaLevelSource::isFiniteIndev() const { return false; }
+
+void AlphaLevelSource::setIndevType(int type) { indevType = type; }
+
 void AlphaLevelSource::prepareHeights(int xOffs, int zOffs, unsigned char* blocks) {
+	if (isFlatTerrain()) {
+		for (int x = 0; x < 16; ++x)
+			for (int z = 0; z < 16; ++z)
+				for (int y = 0; y < 128; ++y) {
+					const int p = (z * 16 + x) * 128 + y;
+					blocks[p] = y == 0 ? (unsigned char)Tile::unbreakable->id
+						: y < 60 ? (unsigned char)Tile::rock->id
+						: y < 63 ? (unsigned char)Tile::dirt->id
+						: y == 63 ? (unsigned char)Tile::grass->id : 0;
+				}
+		buildSurfaces(xOffs, zOffs, blocks);
+		return;
+	}
 	const bool winter = isSnowCoveredBiome(level, xOffs * 16 + 8, zOffs * 16 + 8);
 	const int cells = 16 / CHUNK_WIDTH;
 	getHeights(buffer, xOffs * cells, 0, zOffs * cells,
 		X_SIZE, Y_SIZE, X_SIZE);
+	adjustDensity(buffer, xOffs * cells, zOffs * cells, X_SIZE, Y_SIZE, X_SIZE);
 
 	for (int xc = 0; xc < cells; ++xc)
 		for (int zc = 0; zc < cells; ++zc)
@@ -190,9 +213,9 @@ void AlphaLevelSource::buildSurfaces(int xOffs, int zOffs, unsigned char* blocks
 			for (int y = 127; y >= 0; --y) {
 				const int offs = (z * 16 + x) * 128 + y;
 
-				// Alpha's bedrock test is nextInt(6)-1, producing a
-				// zero-to-five-block lower layer.
-				if (y <= random.nextInt(6) - 1) {
+				// Match the Infinite generator: Y=0 always becomes bedrock,
+				// with progressively lower odds through Y=1..4.
+				if (y <= random.nextInt(5)) {
 					blocks[offs] = (unsigned char)Tile::unbreakable->id;
 					continue;
 				}
@@ -328,8 +351,8 @@ LevelChunk* AlphaLevelSource::create(int x, int z) {
 	return getChunk(x, z);
 }
 
-bool AlphaLevelSource::hasChunk(int, int) {
-	return true;
+bool AlphaLevelSource::hasChunk(int x, int z) {
+	return !isFiniteIndev() || (x >= 0 && z >= 0 && x < 16 && z < 16);
 }
 
 void AlphaLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
@@ -345,6 +368,24 @@ void AlphaLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
 	const int xo = xt * 16;
 	const int zo = zt * 16;
 	Biome* biome = level->getBiomeSource()->getBiome(xo + 16, zo + 16);
+
+	// Alpha's Overworld also generates water and lava lakes during population.
+	if (populationRandom.nextInt(4) == 0) {
+		const int x = xo + populationRandom.nextInt(16) + 8;
+		const int y = populationRandom.nextInt(128);
+		const int z = zo + populationRandom.nextInt(16) + 8;
+		LakeFeature feature(Tile::calmWater->id);
+		feature.place(level, &populationRandom, x, y, z);
+	}
+	if (populationRandom.nextInt(8) == 0) {
+		const int x = xo + populationRandom.nextInt(16) + 8;
+		const int y = populationRandom.nextInt(populationRandom.nextInt(120) + 8);
+		const int z = zo + populationRandom.nextInt(16) + 8;
+		if (y < 64 || populationRandom.nextInt(10) == 0) {
+			LakeFeature feature(Tile::calmLava->id);
+			feature.place(level, &populationRandom, x, y, z);
+		}
+	}
 
 	// Alpha's first population pass is dungeon generation. The current PE
 	// tree/feature layer has no compatible dungeon + mob-spawner implementation,
@@ -371,6 +412,7 @@ void AlphaLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
 		placeOre(populationRandom, level, xo + populationRandom.nextInt(16),
 			zo + populationRandom.nextInt(16), populationRandom.nextInt(64),
 			Tile::ironOre->id, 8);
+	// Indev uses the same gold vein frequency as the Alpha/Infinite generator.
 	for (int i = 0; i < 2; ++i)
 		placeOre(populationRandom, level, xo + populationRandom.nextInt(16),
 			zo + populationRandom.nextInt(16), populationRandom.nextInt(32),
@@ -459,7 +501,7 @@ bool AlphaLevelSource::shouldSave() {
 }
 
 std::string AlphaLevelSource::gatherStats() {
-	return "AlphaLevelSource";
+	return isFiniteIndev() ? "IndevLevelSource" : "AlphaLevelSource";
 }
 
 Biome::MobList AlphaLevelSource::getMobsAt(const MobCategory& category,

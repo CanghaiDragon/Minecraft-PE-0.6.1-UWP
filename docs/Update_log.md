@@ -2,6 +2,44 @@
 
 This changelog covers the UWP project. It is separate from the Win32 changelog.
 
+## 1.2
+
+New features:
+
+- Achievements: a new additional feature, with 15 specific achievements, avaliable in survival mode.
+
+- Multiple Language (Only Chinese at the moment)
+
+- Adding "Indev" world type, with 4 new subtypes: Island, Floating, Flat and Inland.
+  
+  - Hidden world: Infdev 20100227.
+
+- Screenshots (Part of Debug Function, with key F2)
+
+Bug fix:
+
+- Spectator mode with touch input can fly up and down.
+
+- Fixed cobblestone's rendering issue in Indev and Alpha world at chest page.
+
+- Y=0 no longer have stones in Alpha world.
+
+Improvements:
+
+- Lakes can spawn in infinite, sky and alpha worlds.
+
+- Sky, Indev and Alpha worlds (don't naturally spawn spruce and birch) now generates a chest with those trees' saplings.
+
+- Less caves will spawn to improve performance on old devices.
+
+- Bedrock is added to creative player's inventory.
+
+- Items on hand now shows their name in Keyboard input.
+
+- Extended Multiplayer Mode (with optimized skin and more world types avaliable)
+
+- 
+
 ## 1.1.3
 
 New features:

@@ -144,12 +144,14 @@ bool BiomeSource::isAlphaWinterSeed(std::int64_t seedValue) {
     return (static_cast<std::uint64_t>(seedValue) & 3ULL) == 0ULL;
 }
 
-BiomeSource::BiomeSource(std::int64_t seedValue, bool skyWorld, bool alphaWorld)
+BiomeSource::BiomeSource(std::int64_t seedValue, bool skyWorld, bool alphaWorld,
+                         bool plainsWorld)
     : temperature_(seedProduct(seedValue, 9871), 4),
       downfall_(seedProduct(seedValue, 39811), 4),
       noise_(seedProduct(seedValue, 543321), 2),
       skyWorld_(skyWorld),
       alphaWorld_(alphaWorld),
+      plainsWorld_(plainsWorld),
       alphaWinter_(alphaWorld && isAlphaWinterSeed(seedValue)) {}
 
 std::uint8_t BiomeSource::classify(float temperature, float downfall) {
@@ -175,6 +177,7 @@ std::uint8_t BiomeSource::classify(float temperature, float downfall) {
 }
 
 std::uint8_t BiomeSource::targetBiomeId(int blockX, int blockZ) const {
+    if (plainsWorld_) return 1; // Indev and EarlyInfdev map to Plains
     if (skyWorld_) return 12; // Sky -> Ice Plains
     if (alphaWorld_) return alphaWinter_ ? 12 : 1; // Winter -> Ice Plains, Alpha -> Plains
 

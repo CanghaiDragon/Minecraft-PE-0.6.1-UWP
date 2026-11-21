@@ -1,10 +1,12 @@
 #include "pch.h"
 #include "WorldEditShellPage.xaml.h"
+#include "XamlLocalization.h"
 
 #include "../../../../src/platform/uwp/UwpLiveTile.h"
 #include "../../../../src/platform/uwp/UwpStoragePaths.h"
 #include "../../../../src/SharedConstants.h"
 #include "../../../../src/world/level/LevelSettings.h"
+#include "../../../../src/world/level/storage/AchievementIds.h"
 #include "../../../../src/world/level/storage/ExternalFileLevelStorage.h"
 #include "../../../../src/world/level/storage/LevelData.h"
 
@@ -16,6 +18,7 @@
 #include <windows.ui.startscreen.h>
 #include <windows.ui.xaml.controls.h>
 #include <windows.ui.xaml.media.h>
+#include <windows.ui.xaml.media.imaging.h>
 #include <windows.ui.xaml.media.animation.h>
 #include <ppltasks.h>
 #include <cstdio>
@@ -170,6 +173,36 @@ namespace
 		return L"Undefined";
 	}
 
+	unsigned int ReadAchievementMask(const std::string& directory)
+	{
+		if (directory.empty())
+			return 0;
+
+		const std::string filename = directory + "\\achievements.dat";
+		FILE* file = fopen(filename.c_str(), "rb");
+		if (file == nullptr)
+			return 0;
+
+		char contents[128] = {};
+		const size_t bytesRead = fread(contents, 1, sizeof(contents) - 1, file);
+		fclose(file);
+		const std::string state(contents, bytesRead);
+
+		static const char legacyState[] =
+			"MCPEUWP_ACHIEVEMENTS_V1\nbenchmarking=1\n";
+		if (state == legacyState)
+			return 1u << AchievementIds::Benchmarking;
+
+		static const char currentHeader[] = "MCPEUWP_ACHIEVEMENTS_V2\nunlocked=";
+		if (state.compare(0, sizeof(currentHeader) - 1, currentHeader) != 0)
+			return 0;
+
+		unsigned int mask = 0;
+		if (sscanf(state.c_str() + sizeof(currentHeader) - 1, "%u", &mask) != 1)
+			return 0;
+		return mask & (((1u << AchievementIds::Count) - 1u) | (0x0fu << 16));
+	}
+
 	std::wstring WorldTypeName(int worldType)
 	{
 		if (worldType == WorldType::Infinite)
@@ -178,6 +211,10 @@ namespace
 			return L"Sky / Nether Reactor";
 		if (worldType == WorldType::Alpha)
 			return L"Alpha";
+		if (worldType == WorldType::Indev)
+			return L"Indev";
+		if (worldType == WorldType::EarlyInfdev)
+			return L"Early Infdev";
 		return L"Old / Finite";
 	}
 
@@ -234,6 +271,10 @@ namespace
 			return isNewUwpFormat ? L"Sky" : L"Sky Legacy (Unsupported)";
 		if (worldType == WorldType::Alpha)
 			return isNewUwpFormat ? L"Alpha" : L"Alpha Legacy (Unsupported)";
+		if (worldType == WorldType::Indev)
+			return L"Indev / Finite";
+		if (worldType == WorldType::EarlyInfdev)
+			return isNewUwpFormat ? L"Early Infdev" : L"Early Infdev Legacy (Unsupported)";
 		return L"Old / Finite";
 	}
 
@@ -514,6 +555,7 @@ WorldEditShellPage::WorldEditShellPage()
 	WorldEditShellDiagnostic(L"constructor begin");
 	WorldEditShellDiagnostic(L"before InitializeComponent");
 	InitializeComponent();
+	UwpXamlLocalization::install(this);
 	if (StatusText != nullptr)
 		StatusText->Text = ref new Platform::String(L"Editor shell loaded.");
 	WorldEditShellDiagnostic(L"after InitializeComponent");
@@ -522,6 +564,12 @@ WorldEditShellPage::WorldEditShellPage()
 
 bool WorldEditShellPage::HandleEscapeKey()
 {
+	if (AchievementsOverlay != nullptr &&
+		AchievementsOverlay->Visibility == Windows::UI::Xaml::Visibility::Visible)
+	{
+		HideAchievements();
+		return true;
+	}
 	if (WorldConvertOverlay != nullptr &&
 		WorldConvertOverlay->Visibility == Windows::UI::Xaml::Visibility::Visible)
 	{
@@ -542,6 +590,7 @@ void WorldEditShellPage::SetWorldId(Platform::String^ worldId)
 	WorldEditShellDiagnostic(L"SetWorldId");
 	m_worldId = worldId == nullptr ? ref new Platform::String(L"") : worldId;
 	m_worldType = WorldType::Old;
+	m_gameType = -1;
 	m_worldSeed = 0;
 	m_worldStorageFormatCurrent = false;
 	m_legacyFormatConversionAvailable = false;
@@ -563,6 +612,10 @@ void WorldEditShellPage::SetWorldId(Platform::String^ worldId)
 			Windows::UI::Xaml::Visibility::Collapsed;
 	if (WorldConvertOverlay != nullptr)
 		WorldConvertOverlay->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
+	if (AchievementsOverlay != nullptr)
+		AchievementsOverlay->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
+	if (ViewAchievementsButton != nullptr)
+		ViewAchievementsButton->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
 	if (SizeOnDiskValueText != nullptr)
 		SizeOnDiskValueText->Text = ref new Platform::String(L"Unavailable");
 	if (StorageVersionValueText != nullptr)
@@ -956,6 +1009,8 @@ void WorldEditShellPage::LoadWorldData()
 {
 	if (m_worldId == nullptr || m_worldId->Length() == 0)
 		return;
+	if (ViewAchievementsButton != nullptr)
+		ViewAchievementsButton->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
 
 	try
 	{
@@ -1005,7 +1060,13 @@ void WorldEditShellPage::LoadWorldData()
 		const UwpStorageMarkerKind marker =
 			ReadUwpStorageMarker(WorldDirectory());
 		m_worldType = data.getWorldType();
+		m_worldIndevType = data.getIndevType();
+		m_gameType = data.getGameType();
 		m_worldSeed = data.getSeed();
+		if (ViewAchievementsButton != nullptr)
+			ViewAchievementsButton->Visibility = m_gameType == GameType::Survival
+				? Windows::UI::Xaml::Visibility::Visible
+				: Windows::UI::Xaml::Visibility::Collapsed;
 		const bool finiteStorageV3 =
 			!data.isInfinite() &&
 			data.getStorageVersion() == SharedConstants::StorageVersion;
@@ -1115,6 +1176,251 @@ void WorldEditShellPage::OnConvertToNewFormatClick(
 	this->LegacyFormatConversionRequested(this, m_worldId);
 }
 
+void WorldEditShellPage::OnViewAchievementsClick(
+	Platform::Object^, Windows::UI::Xaml::RoutedEventArgs^)
+{
+	if (m_gameType != GameType::Survival || AchievementsOverlay == nullptr)
+		return;
+	PopulateAchievements();
+	AnimateAchievementsOverlay(true);
+}
+
+void WorldEditShellPage::OnAchievementsBackClick(
+	Platform::Object^, Windows::UI::Xaml::RoutedEventArgs^)
+{
+	HideAchievements();
+}
+
+void WorldEditShellPage::HideAchievements()
+{
+	AnimateAchievementsOverlay(false);
+}
+
+void WorldEditShellPage::AnimateAchievementsOverlay(bool entering)
+{
+	if (AchievementsOverlay == nullptr)
+		return;
+
+	if (m_achievementsTransition != nullptr)
+	{
+		m_achievementsTransition->Stop();
+		if (m_achievementsTransitionCompletedToken.Value != 0)
+		{
+			m_achievementsTransition->Completed -=
+				m_achievementsTransitionCompletedToken;
+			m_achievementsTransitionCompletedToken.Value = 0;
+		}
+		m_achievementsTransition = nullptr;
+	}
+
+	if (entering)
+	{
+		AchievementsOverlay->Visibility = Windows::UI::Xaml::Visibility::Visible;
+		AchievementsOverlay->Opacity = 0.0;
+	}
+
+	auto transition = ref new Storyboard();
+	auto fade = ref new DoubleAnimation();
+	fade->From = entering ? 0.0 : AchievementsOverlay->Opacity;
+	fade->To = entering ? 1.0 : 0.0;
+	Windows::Foundation::TimeSpan duration;
+	duration.Duration = entering ? 2200000 : 1800000;
+	fade->Duration = duration;
+	Storyboard::SetTarget(fade, AchievementsOverlay);
+	Storyboard::SetTargetProperty(fade, ref new Platform::String(L"Opacity"));
+	transition->Children->Append(fade);
+
+	m_achievementsTransition = transition;
+	m_achievementsTransitionCompletedToken = transition->Completed +=
+		ref new Windows::Foundation::EventHandler<Platform::Object^>(
+			[this, transition, entering](Platform::Object^, Platform::Object^)
+		{
+			if (m_achievementsTransition != transition)
+				return;
+
+			if (!entering && AchievementsOverlay != nullptr)
+			{
+				AchievementsOverlay->Visibility =
+					Windows::UI::Xaml::Visibility::Collapsed;
+				AchievementsOverlay->Opacity = 0.0;
+			}
+			else if (entering && AchievementsOverlay != nullptr)
+				AchievementsOverlay->Opacity = 1.0;
+
+			if (m_achievementsTransitionCompletedToken.Value != 0)
+			{
+				transition->Completed -=
+					m_achievementsTransitionCompletedToken;
+				m_achievementsTransitionCompletedToken.Value = 0;
+			}
+			m_achievementsTransition = nullptr;
+		});
+	transition->Begin();
+}
+
+void WorldEditShellPage::PopulateAchievements()
+{
+	if (AchievementListPanel == nullptr)
+		return;
+
+	static const wchar_t* const names[AchievementIds::Count] = {
+		L"Taking Inventory", L"Benchmarking", L"Time to Mine!", L"Hot Topic",
+		L"Getting an Upgrade", L"Acquire Hardware", L"Bake Bread", L"Monster Hunter",
+		L"Full of Diamond", L"The End?", L"Farming", L"DIAMONDS!", L"Overkill",
+		L"War Pig", L"Sweet Dream"
+	};
+	static const wchar_t* const descriptions[AchievementIds::Count] = {
+		L"Open your inventory.", L"Craft a workbench.", L"Craft a wooden pickaxe.",
+		L"Craft a furnace.", L"Craft a stone pickaxe.", L"Obtain an iron ingot.",
+		L"Obtain bread.", L"Defeat a hostile creature.",
+		L"Wear a full set of diamond armor.", L"Activate a Nether Reactor.",
+		L"Obtain wheat seeds.", L"Obtain a diamond.",
+		L"Defeat all four hostile mob types.", L"Kill a zombie pigman.", L"Sleep in a bed."
+	};
+	// These indices use the same 48 px block / 16 px item atlas mapping as
+	// ItemRenderer::renderGuiItem for the icons selected by AchievementsScreen.
+	static const int iconAtlasIndices[AchievementIds::Count] = {
+		74, 72, 164, 75, 169, 150, 232, 146, 208, 51, 142, 153, 187, 188, 132
+	};
+
+	const unsigned int mask = ReadAchievementMask(WorldDirectory());
+	int unlockedCount = 0;
+	int overkillProgress = 0;
+	for (int i = 0; i < AchievementIds::Count; ++i)
+		if ((mask & (1u << i)) != 0)
+			++unlockedCount;
+	for (int i = 0; i < 4; ++i)
+		if ((mask & (1u << (16 + i))) != 0)
+			++overkillProgress;
+
+	if (AchievementSummaryText != nullptr)
+	{
+		std::wstringstream summary;
+		summary << L"Unlocked: " << unlockedCount << L" / " << AchievementIds::Count;
+		AchievementSummaryText->Text = ref new Platform::String(summary.str().c_str());
+	}
+
+	Windows::UI::Xaml::Media::Imaging::BitmapImage^ iconAtlas =
+		ref new Windows::UI::Xaml::Media::Imaging::BitmapImage();
+	iconAtlas->UriSource = ref new Windows::Foundation::Uri(
+		L"ms-appx:///data/images/gui/gui_blocks.png");
+	AchievementListPanel->Children->Clear();
+	for (int i = 0; i < AchievementIds::Count; ++i)
+	{
+		const bool unlocked = (mask & (1u << i)) != 0;
+		Border^ card = ref new Border();
+		card->Background = ref new Windows::UI::Xaml::Media::SolidColorBrush(
+			unlocked ? Windows::UI::Colors::DarkGreen : Windows::UI::Colors::DarkSlateGray);
+		card->BorderBrush = ref new Windows::UI::Xaml::Media::SolidColorBrush(
+			unlocked ? Windows::UI::Colors::Gold : Windows::UI::Colors::Gray);
+		card->BorderThickness = Thickness(1);
+		card->Padding = Thickness(10, 7, 10, 7);
+		card->Margin = Thickness(2, 3, 2, 3);
+
+		Grid^ row = ref new Grid();
+		ColumnDefinition^ iconColumn = ref new ColumnDefinition();
+		iconColumn->Width = GridLength(52);
+		ColumnDefinition^ textColumn = ref new ColumnDefinition();
+		textColumn->Width = GridLength(1, GridUnitType::Star);
+		row->ColumnDefinitions->Append(iconColumn);
+		row->ColumnDefinitions->Append(textColumn);
+
+		const int atlasIndex = iconAtlasIndices[i];
+		const int spriteSize = atlasIndex < 128 ? 48 : 16;
+		const int spriteIndex = atlasIndex < 128 ? atlasIndex : atlasIndex - 128;
+		const int sourceX = atlasIndex < 128
+			? (spriteIndex % 10) * 48
+			: (spriteIndex & 31) * 16;
+		const int sourceY = atlasIndex < 128
+			? (spriteIndex / 10) * 48
+			: 27 * 16 + (spriteIndex >> 5) * 16;
+
+		Grid^ iconSlot = ref new Grid();
+		iconSlot->Width = 48;
+		iconSlot->Height = 48;
+		iconSlot->VerticalAlignment = Windows::UI::Xaml::VerticalAlignment::Center;
+		iconSlot->Margin = Thickness(0, 0, 8, 0);
+		Border^ slotFrame = ref new Border();
+		slotFrame->Background = ref new Windows::UI::Xaml::Media::SolidColorBrush(
+			Windows::UI::Colors::DarkGray);
+		slotFrame->BorderBrush = ref new Windows::UI::Xaml::Media::SolidColorBrush(
+			Windows::UI::Colors::Gray);
+		slotFrame->BorderThickness = Thickness(2);
+		Border^ icon = ref new Border();
+		icon->Margin = Thickness(4);
+		Canvas^ iconViewport = ref new Canvas();
+		iconViewport->Width = 40;
+		iconViewport->Height = 40;
+		iconViewport->HorizontalAlignment = Windows::UI::Xaml::HorizontalAlignment::Center;
+		iconViewport->VerticalAlignment = Windows::UI::Xaml::VerticalAlignment::Center;
+		Windows::UI::Xaml::Media::RectangleGeometry^ iconClip =
+			ref new Windows::UI::Xaml::Media::RectangleGeometry();
+		iconClip->Rect = Windows::Foundation::Rect(0, 0, 40, 40);
+		iconViewport->Clip = iconClip;
+		Windows::UI::Xaml::Controls::Image^ iconImage =
+			ref new Windows::UI::Xaml::Controls::Image();
+		iconImage->Source = iconAtlas;
+		const double iconScale = 40.0 / spriteSize;
+		iconImage->Width = 512.0 * iconScale;
+		iconImage->Height = 512.0 * iconScale;
+		iconImage->Stretch = Windows::UI::Xaml::Media::Stretch::Fill;
+		iconImage->HorizontalAlignment = Windows::UI::Xaml::HorizontalAlignment::Left;
+		iconImage->VerticalAlignment = Windows::UI::Xaml::VerticalAlignment::Top;
+		Canvas::SetLeft(iconImage, -sourceX * iconScale - 2.0);
+		Canvas::SetTop(iconImage, -sourceY * iconScale);
+		iconViewport->Children->Append(iconImage);
+		icon->Child = iconViewport;
+		iconSlot->Children->Append(slotFrame);
+		iconSlot->Children->Append(icon);
+		Grid::SetColumn(iconSlot, 0);
+		row->Children->Append(iconSlot);
+
+		StackPanel^ content = ref new StackPanel();
+		Grid::SetColumn(content, 1);
+		TextBlock^ name = ref new TextBlock();
+		name->Text = ref new Platform::String(names[i]);
+		name->Foreground = ref new Windows::UI::Xaml::Media::SolidColorBrush(
+			unlocked ? Windows::UI::Colors::LightGreen : Windows::UI::Colors::White);
+		name->FontFamily = ref new Windows::UI::Xaml::Media::FontFamily(
+			L"ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont");
+		name->FontSize = 17;
+		name->TextWrapping = TextWrapping::Wrap;
+
+		TextBlock^ description = ref new TextBlock();
+		description->Text = ref new Platform::String(descriptions[i]);
+		description->Foreground = ref new Windows::UI::Xaml::Media::SolidColorBrush(
+			Windows::UI::Colors::Gainsboro);
+		description->FontFamily = name->FontFamily;
+		description->FontSize = 13;
+		description->TextWrapping = TextWrapping::Wrap;
+		description->Margin = Thickness(0, 3, 0, 0);
+
+		TextBlock^ status = ref new TextBlock();
+		if (i == AchievementIds::Overkill)
+		{
+			std::wstringstream progress;
+			progress << L"Progress: " << overkillProgress << L" / 4    ";
+			progress << (unlocked ? L"Unlocked" : L"Locked");
+			status->Text = ref new Platform::String(progress.str().c_str());
+		}
+		else
+			status->Text = ref new Platform::String(unlocked ? L"Unlocked" : L"Locked");
+		status->Foreground = ref new Windows::UI::Xaml::Media::SolidColorBrush(
+			unlocked ? Windows::UI::Colors::LightGreen : Windows::UI::Colors::LightGray);
+		status->FontFamily = name->FontFamily;
+		status->FontSize = 13;
+		status->HorizontalAlignment = Windows::UI::Xaml::HorizontalAlignment::Right;
+		status->Margin = Thickness(0, 3, 0, 0);
+
+		content->Children->Append(name);
+		content->Children->Append(description);
+		content->Children->Append(status);
+		row->Children->Append(content);
+		card->Child = row;
+		AchievementListPanel->Children->Append(card);
+	}
+}
+
 void WorldEditShellPage::ShowWorldConvertPage()
 {
 	if (WorldConvertOverlay == nullptr || WorldConvertFrame == nullptr)
@@ -1144,6 +1450,7 @@ void WorldEditShellPage::ShowWorldConvertPage()
 		m_worldId,
 		displayName,
 		m_worldType,
+		m_worldIndevType,
 		m_worldType == WorldType::Alpha &&
 			WorldType::isAlphaWinter(m_worldSeed),
 		m_worldStorageFormatCurrent);

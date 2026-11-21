@@ -14,7 +14,7 @@
         <TextBlock Grid.Row="0"
                    Text="World Edit"
                    Foreground="White"
-                   FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                   FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                    FontSize="32"
                    HorizontalAlignment="Center"
                    Margin="0,0,0,12" />
@@ -50,7 +50,7 @@
                            Grid.Column="0"
                            Text="Folder name"
                            Foreground="White"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="18"
                            VerticalAlignment="Center"
                            Margin="0,0,10,0" />
@@ -59,7 +59,7 @@
                            Grid.Column="1"
                            Text="Unavailable"
                            Foreground="#FFB0E0FF"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="18"
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis"
@@ -68,7 +68,7 @@
                         Grid.Column="2"
                         Content="Rename"
                         Click="OnChangeFolderNameClick"
-                        FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                        FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                         FontSize="18"
                         Foreground="White"
                         Height="52"
@@ -79,7 +79,7 @@
                            Grid.Column="0"
                            Text="World name"
                            Foreground="White"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="18"
                            VerticalAlignment="Center"
                            Margin="0,0,10,0" />
@@ -88,7 +88,7 @@
                            Grid.Column="1"
                            Text="Unavailable"
                            Foreground="#FFB0E0FF"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="18"
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis"
@@ -97,7 +97,7 @@
                         Grid.Column="2"
                         Content="Rename"
                         Click="OnChangeWorldNameClick"
-                        FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                        FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                         FontSize="18"
                         Foreground="White"
                         Height="52"
@@ -108,7 +108,7 @@
                            Grid.Column="0"
                            Text="Last opened"
                            Foreground="White"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="18"
                            VerticalAlignment="Center"
                            Margin="0,0,10,0" />
@@ -117,7 +117,7 @@
                            Grid.Column="1"
                            Text="Unavailable"
                            Foreground="#FFB0E0FF"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="18"
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis" />
@@ -126,7 +126,7 @@
                            Grid.Column="0"
                            Text="Play time"
                            Foreground="White"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="18"
                            VerticalAlignment="Center"
                            Margin="0,0,10,0" />
@@ -135,7 +135,7 @@
                            Grid.Column="1"
                            Text="Unavailable"
                            Foreground="#FFB0E0FF"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="18"
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis" />
@@ -144,7 +144,7 @@
                            Grid.Column="0"
                            Text="Seed"
                            Foreground="White"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="18"
                            VerticalAlignment="Center"
                            Margin="0,0,10,0" />
@@ -153,7 +153,7 @@
                            Grid.Column="1"
                            Text="Unavailable"
                            Foreground="#FFB0E0FF"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="18"
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis" />
@@ -162,7 +162,7 @@
                            Grid.Column="0"
                            Text="Game mode"
                            Foreground="White"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="18"
                            VerticalAlignment="Center"
                            Margin="0,0,10,0" />
@@ -171,7 +171,7 @@
                            Grid.Column="1"
                            Text="Unavailable"
                            Foreground="#FFB0E0FF"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="18"
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis" />
@@ -180,7 +180,7 @@
                            Grid.Column="0"
                            Text="World type"
                            Foreground="White"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="18"
                            VerticalAlignment="Center" />
                 <TextBlock x:Name="WorldTypeValueText"
@@ -188,7 +188,7 @@
                            Grid.Column="1"
                            Text="Unavailable"
                            Foreground="#FFB0E0FF"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="18"
                        VerticalAlignment="Center"
                        TextTrimming="CharacterEllipsis" />
@@ -197,7 +197,7 @@
                            Grid.Column="0"
                            Text="Size on disk"
                            Foreground="White"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="18"
                            VerticalAlignment="Center"
                            Margin="0,0,10,0" />
@@ -206,7 +206,7 @@
                            Grid.Column="1"
                            Text="Unavailable"
                            Foreground="#FFB0E0FF"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="18"
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis" />
@@ -215,7 +215,7 @@
                            Grid.Column="0"
                            Text="StorageVersion"
                            Foreground="White"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="14"
                            VerticalAlignment="Center"
                            Margin="0,0,10,0" />
@@ -224,7 +224,7 @@
                            Grid.Column="1"
                            Text="Unavailable"
                            Foreground="#FFB0E0FF"
-                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                           FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="18"
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis" />
@@ -235,7 +235,7 @@
                         x:Name="PinToStartButton"
                         Content="PIN to start menu"
                         Click="OnChooseStartIconClick"
-                        FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                        FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                         FontSize="18"
                         Foreground="White"
                         Height="60"
@@ -248,7 +248,7 @@
             <TextBlock x:Name="WorldIdValueText"
                        Text="Unavailable"
                        Foreground="#FFB0E0FF"
-                       FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                       FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                        FontSize="18"
                        HorizontalAlignment="Center"
                        TextWrapping="Wrap"
@@ -258,7 +258,7 @@
                     Content="Convert to PE 0.9+"
                     Click="OnConvertTo09Click"
                     Visibility="Collapsed"
-                    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                     FontSize="18"
                     Foreground="White"
                     Height="60"
@@ -268,7 +268,17 @@
                     Content="Upgrade to Infinite"
                     Click="OnUpgradeToInfiniteClick"
                     Visibility="Collapsed"
-                    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
+                    FontSize="18"
+                    Foreground="White"
+                    Height="60"
+                    HorizontalAlignment="Stretch"
+                    Margin="0,12,0,0" />
+            <Button x:Name="ViewAchievementsButton"
+                    Content="View Achievements"
+                    Click="OnViewAchievementsClick"
+                    Visibility="Collapsed"
+                    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                     FontSize="18"
                     Foreground="White"
                     Height="60"
@@ -278,7 +288,7 @@
                     Content="Convert to new format"
                     Click="OnConvertToNewFormatClick"
                     Visibility="Collapsed"
-                    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                     FontSize="18"
                     Foreground="White"
                     Height="60"
@@ -287,7 +297,7 @@
             <TextBlock x:Name="StatusText"
                        Text="Editor shell loaded."
                        Foreground="#FFFFD080"
-                       FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                       FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                        FontSize="18"
                        HorizontalAlignment="Center"
                        MaxWidth="820"
@@ -315,7 +325,7 @@
             <Button Content="Delete"
                     Grid.Column="0"
                     Click="OnDeleteWorldClick"
-                    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                     FontSize="18"
                     Foreground="White"
                     Height="60"
@@ -324,7 +334,7 @@
             <Button Content="Export"
                     Grid.Column="1"
                     Click="OnExportWorldClick"
-                    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                     FontSize="18"
                     Foreground="White"
                     Height="60"
@@ -333,7 +343,7 @@
             <Button Content="Back"
                     Grid.Column="2"
                     Click="OnBackClick"
-                    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                     FontSize="18"
                     Foreground="White"
                     Height="60"
@@ -362,14 +372,14 @@
                     <TextBlock x:Name="SecondaryDialogTitle"
                                Text=""
                                Foreground="#FF101010"
-                               FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                               FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                                FontSize="24"
                                HorizontalAlignment="Center"
                                TextWrapping="Wrap" />
                     <TextBlock x:Name="SecondaryDialogMessage"
                                Text=""
                                Foreground="#FF202020"
-                               FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                               FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                                FontSize="18"
                                Margin="0,18,0,0"
                                TextWrapping="Wrap"
@@ -383,7 +393,7 @@
                              HorizontalAlignment="Center"
                              VerticalContentAlignment="Center"
                              Padding="8,0,8,0"
-                             FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                             FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                              FontSize="18"
                              Margin="0,18,0,0" />
                      <Grid HorizontalAlignment="Stretch"
@@ -396,7 +406,7 @@
                                 Content="Save"
                                  Grid.Column="0"
                                 Click="OnSecondaryDialogPrimaryClick"
-                                FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                                 FontSize="18"
                                 Foreground="#FF101010"
                                 Height="56"
@@ -406,7 +416,7 @@
                                 Content="Cancel"
                                  Grid.Column="1"
                                 Click="OnSecondaryDialogCancelClick"
-                                FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                                FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                                 FontSize="18"
                                 Foreground="#FF101010"
                                  Height="56"
@@ -458,6 +468,61 @@
                 <Frame x:Name="WorldConvertFrame"
                        HorizontalAlignment="Stretch"
                        VerticalAlignment="Stretch" />
+            </Border>
+        </Grid>
+
+        <Grid x:Name="AchievementsOverlay"
+              Grid.Row="0"
+              Grid.RowSpan="3"
+              Margin="-24,-18,-24,-18"
+              Visibility="Collapsed"
+              Background="#EE2B1B10"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch">
+            <Border MaxWidth="760"
+                    MaxHeight="900"
+                    Margin="10"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    Background="#FF3A281D"
+                    BorderBrush="#FF8A6A4A"
+                    BorderThickness="2"
+                    Padding="16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                        <TextBlock Text="Achievements"
+                                   Foreground="White"
+                                   FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
+                                   FontSize="28"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock x:Name="AchievementSummaryText"
+                                   Text="Unlocked: 0 / 15"
+                                   Foreground="#FFB0E0FF"
+                                   FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
+                                   FontSize="16"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,6,0,0" />
+                    </StackPanel>
+                    <ScrollViewer Grid.Row="1"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="AchievementListPanel" />
+                    </ScrollViewer>
+                    <Button Grid.Row="2"
+                            Content="Back"
+                            Click="OnAchievementsBackClick"
+                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
+                            FontSize="18"
+                            Foreground="White"
+                            Height="56"
+                            HorizontalAlignment="Stretch"
+                            Margin="0,12,0,0" />
+                </Grid>
             </Border>
         </Grid>
     </Grid>

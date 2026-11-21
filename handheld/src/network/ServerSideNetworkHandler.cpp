@@ -9,6 +9,9 @@
 
 #include "RakNetInstance.h"
 #include "../client/Minecraft.h"
+#ifndef STANDALONE_SERVER
+#include "../client/renderer/Textures.h"
+#endif
 #include "../client/player/LocalPlayer.h"
 #include "../client/gamemode/GameMode.h"
 #include "../raknet/RakPeerInterface.h"
@@ -19,6 +22,7 @@
 #include "../server/ServerPlayer.h"
 #include "../world/entity/item/FallingTile.h"
 #include "../platform/log.h"
+#include <cstring>
 
 #define TIMES(x) for(int itc ## __LINE__ = 0; itc ## __LINE__ < x; ++ itc ## __LINE__)
 
@@ -127,7 +131,12 @@ void ServerSideNetworkHandler::redistributePacket(Packet* packet, const RakNet::
 void ServerSideNetworkHandler::displayGameMessage(const std::string& message)
 {
 #ifndef STANDALONE_SERVER
-	minecraft->gui.addMessage(message);
+	const std::string disconnectSuffix = " disconnected from the game";
+	if (message.size() >= disconnectSuffix.size() &&
+		message.compare(message.size() - disconnectSuffix.size(), disconnectSuffix.size(), disconnectSuffix) == 0)
+		minecraft->gui.displayClientMessage("multiplayer.player.left", message.substr(0, message.size() - disconnectSuffix.size()));
+	else
+		minecraft->gui.addMessage(message);
 #else
 	LOGI("%s\n", message.c_str());
 #endif
@@ -180,8 +189,14 @@ void ServerSideNetworkHandler::handle(const RakNet::RakNetGUID& source, LoginPac
 	//
 	// Bad/incompatible client version
 	//
-	bool oldClient = packet->clientNetworkVersion < SharedConstants::NetworkProtocolLowestSupportedVersion;
-	bool oldServer = packet->clientNetworkLowestSupportedVersion > SharedConstants::NetworkProtocolVersion;
+	const int protocolVersion = minecraft->isExtendedMultiplayer()
+		? SharedConstants::ExtendedNetworkProtocolVersion
+		: SharedConstants::NetworkProtocolVersion;
+	const int lowestSupportedVersion = minecraft->isExtendedMultiplayer()
+		? SharedConstants::ExtendedNetworkProtocolVersion
+		: SharedConstants::NetworkProtocolLowestSupportedVersion;
+	bool oldClient = packet->clientNetworkVersion < lowestSupportedVersion;
+	bool oldServer = packet->clientNetworkLowestSupportedVersion > protocolVersion;
 	if (oldClient || oldServer)
 		loginStatus = oldClient? LoginStatus::Failed_ClientOld : LoginStatus::Failed_ServerOld;
 
@@ -196,6 +211,26 @@ void ServerSideNetworkHandler::handle(const RakNet::RakNetGUID& source, LoginPac
 	// Valid client version
 	//
 	Player* newPlayer = new ServerPlayer(minecraft, level);
+	if (minecraft->isExtendedMultiplayer() && packet->hasExtendedSkin &&
+		packet->skinPixels.size() == 64 * 64 * 4) {
+		newPlayer->multiplayerSkinPixels = packet->skinPixels;
+#ifndef STANDALONE_SERVER
+		if (minecraft->textures != NULL) {
+			const std::string textureName = "skins/network_" +
+				std::to_string(newPlayer->entityId) + ".png";
+			TextureData skinTexture;
+			skinTexture.w = 64;
+			skinTexture.h = 64;
+			skinTexture.numBytes = (int)newPlayer->multiplayerSkinPixels.size();
+			skinTexture.transparent = true;
+			skinTexture.data = new unsigned char[skinTexture.numBytes];
+			std::memcpy(skinTexture.data, &newPlayer->multiplayerSkinPixels[0],
+				skinTexture.numBytes);
+			minecraft->textures->assignTexture(textureName, skinTexture);
+			newPlayer->setTextureName(textureName);
+		}
+#endif
+	}
 
 	minecraft->gameMode->initAbilities(newPlayer->abilities);
 	newPlayer->owner = source;
@@ -224,7 +259,10 @@ void ServerSideNetworkHandler::handle(const RakNet::RakNetGUID& source, LoginPac
             level->getLevelData()->getGeneratorVersion(),
             gameType,
             newPlayer->entityId,
-            newPlayer->x, newPlayer->y - newPlayer->heightOffset, newPlayer->z
+            newPlayer->x, newPlayer->y - newPlayer->heightOffset, newPlayer->z,
+            level->getLevelData()->getWorldType(),
+            level->getLevelData()->getIndevType(),
+            minecraft->isExtendedMultiplayer()
         ).write(&bitStream);
 
         rakPeer->Send(&bitStream, HIGH_PRIORITY, RELIABLE_ORDERED, 0, source, false);
@@ -263,7 +301,7 @@ void ServerSideNetworkHandler::onReady_ClientGeneration(const RakNet::RakNetGUID
 		Player* player = players[i];
 
         bitStream.Reset();
-        AddPlayerPacket(player).write(&bitStream);
+		AddPlayerPacket(player, minecraft->isExtendedMultiplayer()).write(&bitStream);
         rakPeer->Send(&bitStream, HIGH_PRIORITY, RELIABLE_ORDERED, 0, source, false);
 
         if (player->getArmorTypeHash()) {
@@ -275,7 +313,7 @@ void ServerSideNetworkHandler::onReady_ClientGeneration(const RakNet::RakNetGUID
 
 	level->addEntity(newPlayer);
 #ifndef STANDALONE_SERVER
-	minecraft->gui.addMessage(newPlayer->name + " joined the game");
+	minecraft->gui.displayClientMessage("multiplayer.player.joined", newPlayer->name);
 #else
 	LOGW("%s joined the game\n", newPlayer->name.c_str());
 #endif
@@ -303,7 +341,7 @@ void ServerSideNetworkHandler::onReady_ClientGeneration(const RakNet::RakNetGUID
 
 	// broadcast the new player to all other players
 	bitStream.Reset();
-	AddPlayerPacket(newPlayer).write(&bitStream);
+	AddPlayerPacket(newPlayer, minecraft->isExtendedMultiplayer()).write(&bitStream);
 	rakPeer->Send(&bitStream, HIGH_PRIORITY, RELIABLE_ORDERED, 0, source, true);
 }
 
@@ -354,6 +392,8 @@ void ServerSideNetworkHandler::handle(const RakNet::RakNetGUID& source, MovePlay
 			entity->xd = entity->yd = entity->zd = 0;
 			entity->lerpTo(packet->x, packet->y, packet->z, packet->yRot, packet->xRot, 3);
 		}
+		if (minecraft->isExtendedMultiplayer() && packet->hasExtendedState && entity->isPlayer())
+			((Player*)entity)->setSneaking(packet->sneaking);
 
 		// broadcast this packet to other clients
 		redistributePacket(packet, source);
@@ -396,7 +436,8 @@ void ServerSideNetworkHandler::handle(const RakNet::RakNetGUID& source, RequestC
 	if (!chunk)
         return;
 
-	ChunkDataPacket cpacket(chunk->x, chunk->z, chunk);
+	ChunkDataPacket cpacket(chunk->x, chunk->z, chunk,
+		minecraft != NULL && minecraft->isExtendedMultiplayer());
 
 	RakNet::BitStream bitStream;
 	cpacket.write(&bitStream);

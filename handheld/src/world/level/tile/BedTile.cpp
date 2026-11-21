@@ -73,7 +73,7 @@ bool BedTile::use(Level* level, int x, int y, int z, Player* player) {
 			BedTile::setOccupied(level, x, y, z, false);
 		}
 		else {
-			sleepingPlayer->displayClientMessage("This bed is occupied"/*"tile.bed.occupied"*/);
+			sleepingPlayer->displayClientMessage("message.bed.occupied");
 			return true;
 		}
 	}
@@ -83,9 +83,9 @@ bool BedTile::use(Level* level, int x, int y, int z, Player* player) {
 		return true;
 	}
 	if(result == BedSleepingResult::NOT_POSSIBLE_NOW) {
-		player->displayClientMessage("You can only sleep at night" /*tile.bed.noSleep"*/);
+		player->displayClientMessage("message.bed.nightOnly");
 	} else if(result == BedSleepingResult::NOT_SAFE) {
-		player->displayClientMessage("You may not rest now, there are monsters nearby"/*"tile.bed.notSafe"*/);
+		player->displayClientMessage("message.bed.monstersNearby");
 	}
 	return true;
 }

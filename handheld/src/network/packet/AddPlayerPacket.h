@@ -4,15 +4,17 @@
 #include "../Packet.h"
 #include "../../world/entity/player/Player.h"
 #include "../../world/entity/player/Inventory.h"
+#include <vector>
 
 class AddPlayerPacket : public Packet
 {
 public:
 	AddPlayerPacket()
-	:	_entityData(NULL)
+	:	hasExtendedSkin(false),
+		_entityData(NULL)
 	{}
 
-	AddPlayerPacket(const Player* p)
+	AddPlayerPacket(const Player* p, bool includeExtendedSkin = false)
 	:	owner(p->owner),
 		name(p->name.c_str()),
 		entityId(p->entityId),
@@ -23,6 +25,8 @@ public:
 		yRot(p->yRot),
 		carriedItemId(0),
 		carriedItemAuxValue(0),
+		skinPixels(includeExtendedSkin ? p->multiplayerSkinPixels : std::vector<unsigned char>()),
+		hasExtendedSkin(includeExtendedSkin),
 		_entityData(p->getEntityData())
 	{
 		if (ItemInstance* item = p->inventory->getSelected()) {
@@ -52,6 +56,12 @@ public:
 		bitStream->Write(carriedItemAuxValue);
 		RakDataOutput dos(*bitStream);
 		_entityData->packAll(&dos);
+		if (hasExtendedSkin) {
+			const int skinByteCount = skinPixels.size() == 64 * 64 * 4 ? (int)skinPixels.size() : 0;
+			bitStream->Write(skinByteCount);
+			if (skinByteCount > 0)
+				bitStream->WriteAlignedBytes(&skinPixels[0], skinByteCount);
+		}
 	}
 
 	void read(RakNet::BitStream* bitStream)
@@ -69,6 +79,16 @@ public:
 		bitStream->Read(carriedItemAuxValue);
 		RakDataInput dis(*bitStream);
 		unpack = SynchedEntityData::unpack(&dis);
+		if (bitStream->GetNumberOfUnreadBits() >= sizeof(int) * 8) {
+			int skinByteCount = 0;
+			bitStream->Read(skinByteCount);
+			if (skinByteCount == 64 * 64 * 4) {
+				skinPixels.resize(skinByteCount);
+				if (!bitStream->ReadAlignedBytes(&skinPixels[0], skinByteCount))
+					skinPixels.clear();
+			}
+			hasExtendedSkin = true;
+		}
 		yRot = PacketUtil::Rot_degreesToChar(ry);
 		xRot = PacketUtil::Rot_charToDegrees(rx);
 	}
@@ -86,6 +106,8 @@ public:
 	short carriedItemId;
 	short carriedItemAuxValue;
 	SynchedEntityData::DataList unpack;
+	std::vector<unsigned char> skinPixels;
+	bool hasExtendedSkin;
 private:
 	const SynchedEntityData* _entityData;
 };

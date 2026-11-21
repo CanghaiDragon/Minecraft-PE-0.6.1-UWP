@@ -16,6 +16,8 @@ GrassTile::GrassTile(int id)
 int GrassTile::getTexture( LevelSource* level, int x, int y, int z, int face ) {
 	const bool alpha = Tile::useAlphaTextures()
 		|| level->getBiome(x, z) == Biome::alpha
+		|| level->getBiome(x, z) == Biome::indev
+		|| level->getBiome(x, z) == Biome::earlyInfdev
 		|| level->getBiome(x, z) == Biome::winter;
 	const Material* above = level->getMaterial(x, y + 1, z);
 	if (alpha) {
@@ -51,6 +53,8 @@ int GrassTile::getColor( LevelSource* level, int x, int y, int z ) {
 
 	const bool alpha = Tile::useAlphaTextures()
 		|| level->getBiome(x, z) == Biome::alpha
+		|| level->getBiome(x, z) == Biome::indev
+		|| level->getBiome(x, z) == Biome::earlyInfdev
 		|| level->getBiome(x, z) == Biome::winter;
 	if (alpha) return 0xffffff;
 

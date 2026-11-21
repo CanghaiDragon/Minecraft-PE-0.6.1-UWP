@@ -230,26 +230,27 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
     int zScale = random.nextInt() / 2 * 2 + 1;
     random.setSeed(((xt * xScale) + (zt * zScale)) ^ level->getSeed());
 
-	// //@todo: hide those chunks if they are aren't visible
-//    if (random.nextInt(4) == 0) {
-//        int x = xo + random.nextInt(16) + 8;
-//        int y = random.nextInt(128);
-//        int z = zo + random.nextInt(16) + 8;
-//        LakeFeature feature(Tile::calmWater->id);
-//		feature.place(level, &random, x, y, z);
-//        LOGI("Adding underground lake @ (%d,%d,%d)\n", x, y, z);
-//    }
+	// Finite PE worlds use this same source, but Java-style lakes only belong
+	// to the infinite Overworld generator.
+	if (level->getLevelData()->getWorldType() == WorldType::Infinite) {
+		if (random.nextInt(4) == 0) {
+			int x = xo + random.nextInt(16) + 8;
+			int y = random.nextInt(128);
+			int z = zo + random.nextInt(16) + 8;
+			LakeFeature feature(Tile::calmWater->id);
+			feature.place(level, &random, x, y, z);
+		}
 
-	////@todo: hide those chunks if they are aren't visible
- //   if (random.nextInt(8) == 0) {
- //       int x = xo + random.nextInt(16) + 8;
- //       int y = random.nextInt(random.nextInt(120) + 8);
- //       int z = zo + random.nextInt(16) + 8;
- //       if (y < 64 || random.nextInt(10) == 0) {
-	//		LakeFeature feature(Tile::calmLava->id);
-	//		feature.place(level, &random, x, y, z);
-	//	}
- //   }
+		if (random.nextInt(8) == 0) {
+			int x = xo + random.nextInt(16) + 8;
+			int y = random.nextInt(random.nextInt(120) + 8);
+			int z = zo + random.nextInt(16) + 8;
+			if (y < 64 || random.nextInt(10) == 0) {
+				LakeFeature feature(Tile::calmLava->id);
+				feature.place(level, &random, x, y, z);
+			}
+		}
+	}
 
 	static float totalTime = 0;
 	const float st = getTimeS();

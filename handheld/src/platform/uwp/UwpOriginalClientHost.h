@@ -43,7 +43,7 @@ public:
 	bool applyImportedSkin();
 	bool clearImportedSkin();
 	bool consumeLevelSelection(std::string& levelId, std::string& levelName,
-		long& seed, int& gameType, int& worldType);
+		long& seed, int& gameType, int& worldType, int& indevType);
 	void setLoopEnabled(bool enabled);
 	bool attachWorld(Level* world, LocalPlayer* localPlayer);
 	bool hostMultiplayer(int port = 19132);

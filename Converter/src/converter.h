@@ -30,6 +30,9 @@ struct Options {
 
   // Sky-only option. Replace air at y=0..4 with bedrock in converted chunks.
   bool skyBedrockFloor = false;
+
+  // Indev Floating-only option. Replace every block at y=0 with bedrock.
+  bool floatingBedrockFloor = false;
 };
 
 // Initial Bedrock 1.17.41 exporter contract.  This is intentionally separate

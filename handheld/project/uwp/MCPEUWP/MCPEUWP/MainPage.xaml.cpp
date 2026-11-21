@@ -5,6 +5,7 @@
 
 #include "pch.h"
 #include "MainPage.xaml.h"
+#include "XamlLocalization.h"
 #include "../../../../src/platform/uwp/UwpLiveTile.h"
 #include "../../../../src/platform/uwp/UwpOriginalClientHost.h"
 #include "../../../../src/platform/uwp/UwpSettingsModel.h"
@@ -157,6 +158,7 @@ namespace
 MainPage::MainPage()
 {
 	InitializeComponent();
+	UwpXamlLocalization::install(this);
 	ConfigureDeviceMode();
 	// This probe is intentionally independent of ANGLE and the Minecraft
 	// client.  It verifies that MainPage XAML was constructed on ARM32.
@@ -168,12 +170,6 @@ MainPage::MainPage()
 #endif
 	m_touchPointerIds.assign(Multitouch::MAX_POINTERS,
 		(std::numeric_limits<std::uint32_t>::max)());
-	// StartupDiagnostic is a developer aid.  Release packages should present
-	// the normal Mojang/loading surface without an always-on diagnostic card.
-#if defined(MCPE_UWP_RELEASE)
-	if (StartupDiagnostic != nullptr)
-		StartupDiagnostic->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
-#endif
 	// Keep the original platform contract bound to the UWP page lifecycle now;
 	// a later bootstrap stage will pass it to the original client context.
 	m_platform.reset(new AppPlatform_uwp(1, 1));
@@ -635,10 +631,13 @@ void MainPage::SetStartupDiagnostic(const std::wstring& stage, const std::wstrin
 		Arm32StartupStage->Text = ref new Platform::String(text.c_str());
 	}
 	#endif
-	if (StartupStage != nullptr)
-		StartupStage->Text = ref new Platform::String(stage.c_str());
-	if (StartupDetails != nullptr)
-		StartupDetails->Text = ref new Platform::String(details.c_str());
+#if defined(_DEBUG)
+	std::wstring line = L"[StartupDiagnostic] " + stage;
+	if (!details.empty())
+		line += L" | " + details;
+	line += L"\n";
+	OutputDebugStringW(line.c_str());
+#endif
 }
 
 void MainPage::SyncOriginalMouseCursor()
@@ -685,7 +684,7 @@ void MainPage::SyncOriginalMouseCursor()
 
 void MainPage::BeginWorldLoad(const std::wstring& worldId,
 	const std::wstring& worldName, bool createNew, long seed,
-	int gameType, int worldType)
+	int gameType, int worldType, int indevType)
 {
 	// The menu cursor position is not a valid first in-world delta.  Reset it
 	// before the next mouse move so entering a world cannot rotate the camera
@@ -705,10 +704,10 @@ void MainPage::BeginWorldLoad(const std::wstring& worldId,
 	m_worldCreationPending = true;
 	m_ui.setStatusText(createNew ? L"Generating original MCPE world..." :
 		L"Loading original MCPE save...");
-	create_task([this, worldId, worldName, createNew, seed, gameType, worldType]()
+	create_task([this, worldId, worldName, createNew, seed, gameType, worldType, indevType]()
 	{
 		if (createNew)
-			m_core.startNewWorld(worldId, worldName, seed, gameType, worldType);
+			m_core.startNewWorld(worldId, worldName, seed, gameType, worldType, indevType);
 		else
 			m_core.startSavedWorld(worldId, worldName);
 	}).then([this, worldId](task<void> result)
@@ -801,7 +800,7 @@ void MainPage::TryOpenLaunchWorld()
 	m_exitAfterWorldSave = true;
 	m_originalMenuActive = false;
 	BeginWorldLoad(worldId, worldId, false, -1,
-		GameType::Undefined, WorldType::Old);
+		GameType::Undefined, WorldType::Old, IndevType::Inland);
 }
 
 void MainPage::ShowOriginalWorldSelection()
@@ -1657,14 +1656,15 @@ void MainPage::OnGameTick(std::uint64_t tick)
 			long seed = -1;
 			int gameType = GameType::Undefined;
 			int worldType = WorldType::Old;
+			int indevType = IndevType::Inland;
 			if (m_originalClientHost.consumeLevelSelection(
-				levelId, levelName, seed, gameType, worldType))
+				levelId, levelName, seed, gameType, worldType, indevType))
 			{
 				const std::wstring worldId(levelId.begin(), levelId.end());
 				const std::wstring worldName(levelName.begin(), levelName.end());
 				const bool createNew = gameType != GameType::Undefined;
 				BeginWorldLoad(worldId, worldName, createNew, seed,
-					gameType, worldType);
+					gameType, worldType, indevType);
 			}
 		}
 		return;
@@ -2693,12 +2693,14 @@ void MainPage::BeginOriginalClientTexturePreload()
 	};
 	const unsigned int textureCount = static_cast<unsigned int>(
 		sizeof(kOriginalClientTextures) / sizeof(kOriginalClientTextures[0]));
+	const unsigned int unifontBmpPageCount = 0x100;
 	m_clientTexturePreloadCompleted = 0;
 	m_clientTexturePreloadSucceeded = 0;
 	// terrain.png is loaded by LoadTerrainTexture below, while the array above
 	// is handled by this function.
 	const bool hasStoredSkin = UwpStoragePaths::localSkinExistsBlocking();
-	m_clientTexturePreloadExpected = textureCount + 1 + (hasStoredSkin ? 1 : 0);
+	m_clientTexturePreloadExpected = textureCount + unifontBmpPageCount + 1 +
+		(hasStoredSkin ? 1 : 0);
 	m_clientTexturePreloadFailures.clear();
 	std::wostringstream pending;
 	pending << L"Client texture cache: pending (0/"
@@ -2707,6 +2709,12 @@ void MainPage::BeginOriginalClientTexturePreload()
 
 	for (unsigned int i = 0; i < textureCount; ++i)
 		LoadOriginalClientStartupTexture(kOriginalClientTextures[i]);
+	for (unsigned int page = 0; page < unifontBmpPageCount; ++page)
+	{
+		char filename[32] = {};
+		sprintf_s(filename, sizeof(filename), "font/unifont/%02X.png", page);
+		LoadOriginalClientStartupTexture(filename);
+	}
 	if (hasStoredSkin)
 		LoadOriginalClientStartupTexture("skins/local.png");
 }

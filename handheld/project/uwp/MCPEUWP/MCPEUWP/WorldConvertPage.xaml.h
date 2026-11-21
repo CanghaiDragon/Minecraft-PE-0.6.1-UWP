@@ -14,6 +14,7 @@ namespace MCPEUWP
 			Platform::String^ worldId,
 			Platform::String^ worldName,
 			int worldType,
+			int indevType,
 			bool alphaWinter,
 			bool currentStorageFormat);
 
@@ -33,6 +34,7 @@ namespace MCPEUWP
 		Platform::String^ m_worldId;
 		Platform::String^ m_worldName;
 		int m_worldType = 0;
+		int m_indevType = 0;
 		bool m_alphaWinter = false;
 		bool m_currentStorageFormat = false;
 		bool m_convertTo17VoidWorld = false;

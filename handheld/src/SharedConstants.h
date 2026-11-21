@@ -18,6 +18,9 @@ namespace SharedConstants
 	// 0.6.0 uses NPv9
     const int NetworkProtocolVersion = 9;
 	const int NetworkProtocolLowestSupportedVersion = 9;
+	// Separate wire revision for project clients that opt into extended multiplayer.
+	// Keep the original PE-compatible protocol constants unchanged.
+	const int ExtendedNetworkProtocolVersion = 10;
 	const int GameProtocolVersion = 1;
 	const int GameProtocolLowestSupportedVersion = 1;
 

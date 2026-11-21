@@ -27,6 +27,8 @@ public:
     static Biome* tundra;
     static Biome* sky;
 	static Biome* alpha;
+	static Biome* indev;
+	static Biome* earlyInfdev;
 	static Biome* winter;
 
     class MobSpawnerData: public WeighedRandom::WeighedRandomItem

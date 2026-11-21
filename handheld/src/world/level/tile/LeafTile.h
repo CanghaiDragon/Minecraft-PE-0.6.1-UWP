@@ -58,6 +58,8 @@ public:
 		const bool useAlphaLeafMaterial =
 			(Tile::useAlphaTextures()
 				|| level->getBiome(x, z) == Biome::alpha
+				|| level->getBiome(x, z) == Biome::indev
+				|| level->getBiome(x, z) == Biome::earlyInfdev
 				|| level->getBiome(x, z) == Biome::winter)
 			&& (!Tile::useBetaVisuals() || allowSame);
 		if (useAlphaLeafMaterial)

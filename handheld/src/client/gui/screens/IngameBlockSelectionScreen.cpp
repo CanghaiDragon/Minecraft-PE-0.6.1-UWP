@@ -5,6 +5,7 @@
 #include "../../Minecraft.h"
 #include "../../sound/SoundEngine.h"
 #include "../../../world/entity/player/Inventory.h"
+#include "../../../world/level/storage/AchievementIds.h"
 #include "../../../platform/input/Mouse.h"
 
 #include "../Gui.h"
@@ -15,12 +16,16 @@
 #include "../components/Button.h"
 #include "../../../world/item/crafting/Recipe.h"
 #include "../../../util/Mth.h"
+#include "../../../locale/I18n.h"
 
+static std::string demoVersionText()
+{
 #if defined(__APPLE__)
-    static const std::string demoVersionString("Not available in the Lite version");
+	return I18n::get("demo.notAvailableLite");
 #else
-    static const std::string demoVersionString("Not available in the demo version");
+	return I18n::get("demo.notAvailable");
 #endif
+}
 
 IngameBlockSelectionScreen::IngameBlockSelectionScreen() 
 :	selectedItem(0),
@@ -29,13 +34,15 @@ IngameBlockSelectionScreen::IngameBlockSelectionScreen()
 	InventoryRows(1),
 	InventoryCols(1),
 	InventorySize(1),
-	bArmor(1, "Armor"),
-	bCraft(2, "Craft")
+	bArmor(1, I18n::get("container.armor")),
+	bCraft(2, I18n::get("container.crafting"))
 {
 }
 
 void IngameBlockSelectionScreen::init()
 {
+	if (minecraft->player != NULL)
+		minecraft->player->awardAchievement(AchievementIds::TakingInventory);
 	Inventory* inventory = minecraft->player->inventory;
 	InventoryCols = minecraft->isCreativeMode()? 13 : 9;
 	InventorySize = inventory->getContainerSize() - Inventory::MAX_SELECTION_SIZE;
@@ -336,7 +343,7 @@ void IngameBlockSelectionScreen::renderDemoOverlay() {
 
 	const int centerX = (getSlotPosX(4) + getSlotPosX(5)) / 2;
 	const int centerY = (getSlotPosY(3) + getSlotPosY(InventoryRows-1)) / 2 + 5;
-	drawCenteredString(minecraft->font, demoVersionString, centerX, centerY, 0xffffffff);
+	drawCenteredString(minecraft->font, demoVersionText(), centerX, centerY, 0xffffffff);
 #endif /*DEMO_MODE*/
 }
 

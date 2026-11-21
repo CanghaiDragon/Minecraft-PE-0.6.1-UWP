@@ -57,6 +57,8 @@ private:
 	ImageDef spectatorButtonOff;
 	ImageDef spectatorButtonOn;
 	bool spectatorButtonState;
+	F3ImageButton bAchievementButton;
+	ImageDef achievementButtonImage;
 };
 
 #endif /*NET_MINECRAFT_CLIENT_GUI__PauseScreen_H__*/

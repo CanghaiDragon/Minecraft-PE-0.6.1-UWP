@@ -73,7 +73,7 @@ The main work of this project is assisted with the help of Codex.
 
 The additional features below can be experienced after opening the corresponding settings in Options → Additional. If you wish to have an experience close to the original MCPE 0.6.1, you can leave those settings off.
 
-- Additional world type (Infinite, Sky and Alpha)
+- Additional world type (Infinite, Sky, Alpha and Indev)
 
 - Java Edition Beta visual effects
 
@@ -84,6 +84,8 @@ The additional features below can be experienced after opening the corresponding
 - Debug Function
 
 - Java Edition style UI
+
+- Achievements
 
 ![Debug](docs/debug.png)
 
@@ -114,7 +116,7 @@ The additional features below can be experienced after opening the corresponding
 
 <h2 align="center">World types</h2>
 
-**IMPORTANT**: Infinite, Sky and Alpha world have a level saving format different from both the original MCPE 0.6.1 and later MCPE infinite versions like 0.9. Please use "Convert to PE 0.9+" in world edit page to convert these saves. I **STRONGLY RECOMMEND** first open the converted world in a middle version (1.18 is tested and works well), as directly open it in 1.26 may cause compatibility issues. Meanwhile, classic finite worlds retain the original MCPE 0.6.1 save format. saves from 0.1-0.8 original PE are supported.
+**IMPORTANT**: Infinite, Sky and Alpha world have a level saving format different from both the original MCPE 0.6.1 and later MCPE infinite versions like 0.9. Please use "Convert to PE 0.9+" in world edit page to convert these saves. For Old and Indev worlds, I still recommend using this conversion function, as it performs better than original PE's. I **STRONGLY RECOMMEND** first open the converted world in a middle version (1.18 is tested and works well), as directly open it in 1.26 may cause compatibility issues. Meanwhile, classic finite worlds retain the original MCPE 0.6.1 save format. saves from 0.1-0.8 original PE are supported.
 
 ### Old (finite) world
 
@@ -154,6 +156,12 @@ The world type based on Java Edition Alpha v1.1.2_01. Only the biome "Alpha" or 
 
 <div align="center">Normal Alpha world and the special "Winter" Alpha world</div>
 
+### Indev world
+
+
+
+
+
 ---
 
 <h2 align="center">UWP related features</h2>
@@ -171,6 +179,7 @@ Dynamic Live Tiles and adaptation to UWP navigation bar are also added. You can 
 - Ported the game to Windows Universal Platform with native UWP application lifecycle and XAML integration.
 - Added x86, x64, ARM32 and ARM64 build configurations.
 - Reworked the rendering backend for platform-specific OpenGL and ANGLE paths.
+- Specific ANGLE dependencies are compiled for ARM32 and ARM64.
 - Added keyboard, mouse and touchscreen input abstraction.
 - Added multi-region storage and new Infinite/Sky world-generation systems.
 - Reworked chunk loading, chunk-boundary rendering and lighting updates for extended worlds.

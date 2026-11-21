@@ -23,7 +23,7 @@ class AvailableGamesList : public RolledSelectionListV
 
 public:
 	AvailableGamesList(Minecraft* _minecraft, int _width, int _height)
-	:	RolledSelectionListV(_minecraft, _width, _height, 0, _width, 24, _height, 34),
+	:	RolledSelectionListV(_minecraft, _width, _height, 0, _width, 42, _height, 34),
 		selectedItem(-1),
 		startSelected(-1)
 	{
@@ -66,6 +66,7 @@ private:
 	Button bJoin;
 	TButton bBack;
 	THeader bHeader;
+	TButton bMode;
 	AvailableGamesList* gamesList;
 };
 

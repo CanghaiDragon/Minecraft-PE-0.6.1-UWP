@@ -3,6 +3,7 @@
 
 #include "../Screen.h"
 #include "../components/Button.h"
+#include <string>
 
 // Shown only when the game has no saved options yet.  It deliberately uses
 // the touch-style controls regardless of the choice currently being made.
@@ -37,7 +38,10 @@ private:
 	Touch::TButton defaultProfileButton;
 	Touch::TButton lowPerformanceProfileButton;
 	Touch::TButton guiScaleButton;
+	Touch::TButton originLanguageButton;
+	Touch::TButton systemLanguageButton;
 	Touch::TButton continueButton;
+	std::string languageMode;
 	bool touchControls;
 	Options::DefaultProfile defaultProfile;
 	int guiScale;

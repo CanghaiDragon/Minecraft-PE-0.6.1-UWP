@@ -1,5 +1,6 @@
 #include "PlayerRenderer.h"
 #include "EntityRenderDispatcher.h"
+#include "../../Minecraft.h"
 #include "../../Options.h"
 #include "../Textures.h"
 #include "../../../world/entity/player/Player.h"
@@ -88,7 +89,15 @@ void PlayerRenderer::setupRotations( Entity* mob, float bob, float bodyRot, floa
 
 void PlayerRenderer::renderName( Mob* mob, float x, float y, float z ){
 	//@todo: figure out how to handle HideGUI
-	if (mob != entityRenderDispatcher->cameraEntity && mob->level->adventureSettings.showNameTags) {
+	bool showNameTag = mob->level->adventureSettings.showNameTags;
+	if (entityRenderDispatcher->minecraft != NULL &&
+		entityRenderDispatcher->minecraft->isExtendedMultiplayer())
+		showNameTag = true;
+	bool showLocalPlayerInFrontView = mob == entityRenderDispatcher->cameraEntity &&
+		entityRenderDispatcher->options != NULL &&
+		entityRenderDispatcher->options->isThirdPersonFront();
+	if ((mob != entityRenderDispatcher->cameraEntity || showLocalPlayerInFrontView) &&
+		showNameTag) {
 		renderNameTag(mob, ((Player*)mob)->name, x, y, z, 32);
 	}
 }

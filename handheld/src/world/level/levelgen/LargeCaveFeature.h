@@ -152,7 +152,9 @@ protected:
 
     void addFeature(Level* level, int x, int z, int xOffs, int zOffs, unsigned char* blocks, int blocksSize) {
         int caves = random.nextInt(random.nextInt(random.nextInt(40) + 1) + 1);
-        if (random.nextInt(15) != 0) caves = 0;
+        // Keep the original cave shapes and tunnel counts, but reduce cave
+        // systems to a 1-in-45 chance in the Infinite, Sky, and Alpha generators.
+        if (random.nextInt(45) != 0) caves = 0;
 
         for (int cave = 0; cave < caves; cave++) {
             float xCave = (float)(x * 16 + random.nextInt(16));

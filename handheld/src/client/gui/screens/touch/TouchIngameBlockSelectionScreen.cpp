@@ -1,4 +1,5 @@
 #include "TouchIngameBlockSelectionScreen.h"
+#include "../../../../locale/I18n.h"
 #include "../crafting/WorkbenchScreen.h"
 #include "../../Screen.h"
 #include "../../components/ImageButton.h"
@@ -13,6 +14,7 @@
 #include "../../../Minecraft.h"
 #include "../../../sound/SoundEngine.h"
 #include "../../../../world/entity/player/Inventory.h"
+#include "../../../../world/level/storage/AchievementIds.h"
 #include "../../../../platform/input/Mouse.h"
 #include "../../../../util/Mth.h"
 #include "../../../../world/item/ItemInstance.h"
@@ -23,11 +25,14 @@
 
 namespace Touch {
 
+static std::string demoVersionText()
+{
 #if defined(__APPLE__)
-    static const std::string demoVersionString("Not available in the Lite version");
+	return I18n::get("demo.notAvailableLite");
 #else
-    static const std::string demoVersionString("Not available in the demo version");
+	return I18n::get("demo.notAvailable");
 #endif
+}
 
 #ifdef __APPLE__
     static const float BorderPixels = 4;
@@ -53,12 +58,12 @@ IngameBlockSelectionScreen::IngameBlockSelectionScreen()
 :	selectedItem(0),
 	_blockList(NULL),
 	_pendingClose(false),
-	bArmor  (4, "Armor"),
+	bArmor  (4, I18n::get("container.armor")),
 	bDone   (3, ""),
 	//bDone   (3, "Done"),
-	bMenu   (2, "Menu"),
-	bCraft  (1, "Craft"),
-	bHeader (0, "Select blocks")
+	bMenu   (2, I18n::get("menu.game")),
+	bCraft  (1, I18n::get("container.crafting")),
+	bHeader (0, I18n::get("container.creative"))
 {
 }
 
@@ -69,6 +74,8 @@ IngameBlockSelectionScreen::~IngameBlockSelectionScreen()
 
 void IngameBlockSelectionScreen::init()
 {
+	if (minecraft->player != NULL)
+		minecraft->player->awardAchievement(AchievementIds::TakingInventory);
 	Inventory* inventory = minecraft->player->inventory;
 
 	//const int itemWidth = 2 * BorderPixels + 
@@ -233,7 +240,7 @@ void IngameBlockSelectionScreen::renderDemoOverlay() {
 
 	const int centerX = (getSlotPosX(4) + getSlotPosX(5)) / 2;
 	const int centerY = (getSlotPosY(0) + getSlotPosY(1)) / 2 + 5;
-	drawCenteredString(minecraft->font, demoVersionString, centerX, centerY, 0xffffffff);
+	drawCenteredString(minecraft->font, demoVersionText(), centerX, centerY, 0xffffffff);
 #endif /*DEMO_MODE*/
 }
 

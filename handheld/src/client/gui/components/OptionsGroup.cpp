@@ -1,10 +1,13 @@
 #include "OptionsGroup.h"
 #include "../../Minecraft.h"
+#include "Button.h"
 #include "ImageButton.h"
 #include "OptionsItem.h"
+#include "../screens/OptionsScreen.h"
 #include "Slider.h"
 #include "TextBox.h"
 #include "../../../locale/I18n.h"
+#include "../../../platform/input/Mouse.h"
 #include "../../sound/SoundEngine.h"
 #if defined(MCPE_UWP)
 #include "../../../platform/uwp/UwpOriginalClientBridge.h"
@@ -24,7 +27,7 @@ private:
 
 class ClearSkinCacheButton : public Touch::TButton {
 public:
-	ClearSkinCacheButton() : Touch::TButton(0, "Clear") {}
+	ClearSkinCacheButton() : Touch::TButton(0, I18n::get("options.clear")) {}
 	virtual void mouseClicked(Minecraft* minecraft, int x, int y, int buttonNum) {
 		if (buttonNum == MouseAction::ACTION_LEFT && clicked(minecraft, x, y)) {
 			minecraft->options.clearImportedSkin();
@@ -35,7 +38,7 @@ public:
 
 class ImportSkinButton : public Touch::TButton {
 public:
-	ImportSkinButton() : Touch::TButton(0, "Import") {}
+	ImportSkinButton() : Touch::TButton(0, I18n::get("options.import")) {}
 	virtual void mouseClicked(Minecraft* minecraft, int x, int y, int buttonNum) {
 		if (buttonNum == MouseAction::ACTION_LEFT && clicked(minecraft, x, y)) {
 			minecraft->options.importSkinFromFile();
@@ -46,7 +49,7 @@ public:
 
 class KeyMappingButton : public Touch::TButton {
 public:
-	KeyMappingButton() : Touch::TButton(0, "Configure") {}
+	KeyMappingButton() : Touch::TButton(0, I18n::get("options.configure")) {}
 	virtual void mouseClicked(Minecraft* minecraft, int x, int y, int buttonNum) {
 		if (buttonNum == MouseAction::ACTION_LEFT && clicked(minecraft, x, y)) {
 #if defined(MCPE_UWP)
@@ -60,7 +63,7 @@ public:
 
 class RestoreDefaultsButton : public Touch::TButton {
 public:
-	RestoreDefaultsButton() : Touch::TButton(0, "Apply") {}
+	RestoreDefaultsButton() : Touch::TButton(0, I18n::get("options.apply")) {}
 	virtual void mouseClicked(Minecraft* minecraft, int x, int y, int buttonNum) {
 		if (buttonNum == MouseAction::ACTION_LEFT && clicked(minecraft, x, y)) {
 			if (minecraft != nullptr)
@@ -70,6 +73,52 @@ public:
 		}
 	}
 };
+
+#if defined(MCPE_UWP)
+class LanguageModeButton : public Button {
+public:
+	LanguageModeButton(OptionsScreen* screen, const std::string& mode,
+		const std::string& label)
+		: Button(0, label), screen(screen), mode(mode), label(label) {}
+
+	void render(Minecraft* minecraft, int mouseX, int mouseY) override
+	{
+		if (!visible)
+			return;
+
+		const bool selected = screen->getLanguageMode() == mode;
+		const bool hovered = active && isInside(mouseX, mouseY);
+		if (selected)
+		{
+			// Match the gray outer / black inner selection frame used by
+			// RolledSelectionListH, and span the whole option row.
+			fill(x, y, x + width, y + height, 0xff808080);
+			if (width > 2 && height > 2)
+				fill(x + 1, y + 1, x + width - 1, y + height - 1, 0xff000000);
+		}
+
+		const int textHeight = minecraft->font->lineHeightFor(label);
+		const int textColor = (selected || hovered) ? 0xffffa0 : 0xe0e0e0;
+		drawCenteredString(minecraft->font, label, x + width / 2,
+			y + (height - textHeight) / 2, textColor);
+	}
+
+	void mouseClicked(Minecraft* minecraft, int x, int y, int buttonNum) override
+	{
+		if (buttonNum == MouseAction::ACTION_LEFT && clicked(minecraft, x, y))
+		{
+			if (minecraft->soundEngine != nullptr)
+				minecraft->soundEngine->playUI("random.click", 1, 1);
+			screen->requestLanguageChange(mode);
+		}
+	}
+
+private:
+	OptionsScreen* screen;
+	std::string mode;
+	std::string label;
+};
+#endif
 }
 
 OptionsGroup::OptionsGroup( std::string labelID )  {
@@ -132,12 +181,12 @@ OptionsGroup& OptionsGroup::addDisabledItem(const std::string& itemLabel, const 
 OptionsGroup& OptionsGroup::addKeyMappingItem(Minecraft* minecraft) {
 #if !defined(MCPE_UWP)
 	(void)minecraft;
-	return addDisabledItem("Key Mapping", "Unavailable");
+	return addDisabledItem(I18n::get("options.keyMapping"), I18n::get("options.unavailable"));
 #else
 	KeyMappingButton* element = new KeyMappingButton();
 	element->width = 96;
 	element->height = 20;
-	addChild(new OptionsItem("Key Mapping", element));
+	addChild(new OptionsItem(I18n::get("options.keyMapping"), element));
 	setupPositions();
 	return *this;
 #endif
@@ -154,7 +203,7 @@ OptionsGroup& OptionsGroup::addRestoreDefaultsItem(Minecraft* minecraft) {
 	RestoreDefaultsButton* element = new RestoreDefaultsButton();
 	element->width = 70;
 	element->height = 20;
-	addChild(new OptionsItem("Restore Default Settings", element));
+	addChild(new OptionsItem(I18n::get("options.restoreDefaults"), element));
 	setupPositions();
 	return *this;
 }
@@ -174,6 +223,32 @@ OptionsGroup& OptionsGroup::addImportSkinItem(Minecraft* minecraft) {
 	element->height = 20;
 	addChild(new OptionsItem(I18n::get("options.importSkin"), element));
 	setupPositions();
+	return *this;
+}
+
+OptionsGroup& OptionsGroup::addLanguageModes(Minecraft* minecraft,
+	OptionsScreen* screen) {
+#if defined(MCPE_UWP)
+	(void)minecraft;
+	static const char* modeKeys[][2] = {
+		{ "origin", "options.language.mode.origin" },
+		{ "system", "options.language.mode.system" },
+		{ "en_US", "options.language.mode.english" },
+		{ "zh_CN", "options.language.mode.simplifiedChinese" }
+	};
+	for (size_t i = 0; i < sizeof(modeKeys) / sizeof(modeKeys[0]); ++i)
+	{
+		LanguageModeButton* element = new LanguageModeButton(
+			screen, modeKeys[i][0], I18n::get(modeKeys[i][1]));
+		element->width = 160;
+		element->height = 22;
+		addChild(element);
+	}
+	setupPositions();
+#else
+	(void)minecraft;
+	(void)screen;
+#endif
 	return *this;
 }
 

@@ -34,6 +34,9 @@ Region::~Region() {
 int Region::getTile(int x, int y, int z) {
     if (y < 0) return 0;
     if (y >= Level::DEPTH) return 0;
+	if (!level->getLevelData()->isInfinite() &&
+		(x < 0 || z < 0 || x >= LEVEL_WIDTH || z >= LEVEL_DEPTH))
+		return Tile::invisible_bedrock ? Tile::invisible_bedrock->id : Tile::unbreakable->id;
 
     int xc = (x >> 4) - xc1;
     int zc = (z >> 4) - zc1;
@@ -96,6 +99,17 @@ int Region::getRawBrightness(int x, int y, int z, bool propagate) {
         if (br < 0) br = 0;
         return br;
     }
+	// Chunk meshes sample brightness one cell beyond the finite-world edge for
+	// face and vertex shading. Region's neighboring chunks have no generated
+	// lighting there, so extend the edge column's lighting into those samples.
+	// This preserves the actual finite boundary while avoiding an artificial
+	// dark AO seam on the last in-bounds block row.
+	if (!level->getLevelData()->isInfinite()) {
+		if (x < 0) x = 0;
+		else if (x >= LEVEL_WIDTH) x = LEVEL_WIDTH - 1;
+		if (z < 0) z = 0;
+		else if (z >= LEVEL_DEPTH) z = LEVEL_DEPTH - 1;
+	}
 
     int xc = (x >> 4) - xc1;
     int zc = (z >> 4) - zc1;

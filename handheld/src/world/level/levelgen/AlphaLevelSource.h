@@ -34,6 +34,13 @@ public:
 	virtual std::string gatherStats();
 	virtual Biome::MobList getMobsAt(const MobCategory& category, int x, int y, int z);
 
+protected:
+	virtual void adjustDensity(float* density, int x, int z, int xSize, int ySize, int zSize);
+	virtual bool isFlatTerrain() const;
+	virtual bool isFiniteIndev() const;
+	void setIndevType(int type);
+	int indevType;
+
 private:
 	void prepareHeights(int x, int z, unsigned char* blocks);
 	void buildSurfaces(int x, int z, unsigned char* blocks);

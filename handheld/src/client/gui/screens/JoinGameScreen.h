@@ -21,7 +21,8 @@ class AvailableGamesList : public ScrolledSelectionList
 public:
 
 	AvailableGamesList(Minecraft* _minecraft, int _width, int _height)
-	:	ScrolledSelectionList(_minecraft, _width, _height, 24, _height - 30, 28)
+	:	ScrolledSelectionList(_minecraft, _width, _height, 24, _height > 82 ? _height - 58 : 24, 28),
+		selectedItem(-1)
 	{
 	}
 
@@ -29,7 +30,7 @@ protected:
 
 	virtual int getNumberOfItems() { return (int)copiedServerList.size(); }
 
-	virtual void selectItem(int item, bool doubleClick) { selectedItem = item; }
+	virtual void selectItem(int item, bool doubleClick);
 	virtual bool isSelectedItem(int item) { return item == selectedItem; }
 
 	virtual void renderBackground() {}
@@ -66,9 +67,10 @@ public:
 
 	bool isInGameScreen();
 private:
-	Button bJoin;
 	Button bBack;
+	Button bMode;
 	AvailableGamesList* gamesList;
+	void joinSelectedServer();
 };
 
 #endif /*NET_MINECRAFT_CLIENT_GUI_SCREENS__JoinGameScreen_H__*/

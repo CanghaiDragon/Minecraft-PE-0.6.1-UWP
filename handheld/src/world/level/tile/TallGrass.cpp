@@ -6,6 +6,7 @@
 #include "../biome/Biome.h"
 #include "../../entity/player/Player.h"
 #include "../../item/Item.h"
+#include "../../item/ItemInstance.h"
 #include "../../item/ShearsItem.h"
 
 TallGrass::TallGrass( int id, int tex ) : super(id, tex, Material::replaceable_plant) {

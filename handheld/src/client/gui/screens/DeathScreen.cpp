@@ -4,6 +4,7 @@
 #include "../../Minecraft.h"
 #include "../../player/LocalPlayer.h"
 #include "../../../platform/time.h"
+#include "../../../locale/I18n.h"
 
 static const int WAIT_TICKS = 30;
 
@@ -24,11 +25,11 @@ DeathScreen::~DeathScreen()
 void DeathScreen::init()
 {
 	if (minecraft->useTouchscreen()) {
-		bRespawn = new Touch::TButton(1, "Respawn!");
-		bTitle = new Touch::TButton(2, "Main menu");
+		bRespawn = new Touch::TButton(1, I18n::get("death.respawn"));
+		bTitle = new Touch::TButton(2, I18n::get("gui.toMenu"));
 	} else {
-		bRespawn = new Button(1, "Respawn!");
-		bTitle = new Button(2, "Main menu");
+		bRespawn = new Button(1, I18n::get("death.respawn"));
+		bTitle = new Button(2, I18n::get("gui.toMenu"));
 	}
 	buttons.push_back(bRespawn);
 	buttons.push_back(bTitle);
@@ -58,7 +59,7 @@ void DeathScreen::render( int xm, int ym, float a )
 
 	glPushMatrix2();
 	glScalef2(2, 2, 2);
-	drawCenteredString(font, "You died!", width / 2 / 2, height / 8, 0xffffff);
+	drawCenteredString(font, I18n::get("death.title"), width / 2 / 2, height / 8, 0xffffff);
 	glPopMatrix2();
 
 	if (_tick >= WAIT_TICKS)

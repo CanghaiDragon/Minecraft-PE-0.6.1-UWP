@@ -10,6 +10,7 @@
 class Font;
 class Minecraft;
 class TextBox;
+class OptionsScreen;
 
 class OptionsGroup: public GuiElementContainer {
 	typedef GuiElementContainer super;
@@ -25,6 +26,7 @@ public:
 	OptionsGroup& addRestoreDefaultsItem(Minecraft* minecraft);
 	OptionsGroup& addClearSkinCacheItem(Minecraft* minecraft);
 	OptionsGroup& addImportSkinItem(Minecraft* minecraft);
+	OptionsGroup& addLanguageModes(Minecraft* minecraft, OptionsScreen* screen);
 protected:
 	virtual void createToggle(const Options::Option* option, Minecraft* minecraft);
 	virtual void createProgressSlider(const Options::Option* option, Minecraft* minecraft);

@@ -16,12 +16,12 @@
                     Margin="0,0,0,12">
             <TextBlock Text="Choose Start Icon"
                        Foreground="White"
-                       FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                       FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                        FontSize="28"
                        HorizontalAlignment="Center" />
             <TextBlock Text="Icon may not function on Win11, just randomly choose one"
                        Foreground="#FFFFD080"
-                       FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                       FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                        FontSize="12"
                        HorizontalAlignment="Center"
                        MaxWidth="620"
@@ -158,7 +158,7 @@
         <Button Grid.Row="2"
                 Content="Back"
                 Click="OnBackClick"
-                FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft"
+                FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                 FontSize="18"
                 Foreground="White"
                 Height="56"

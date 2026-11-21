@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "SettingsPage.xaml.h"
+#include "XamlLocalization.h"
 #include <cstdint>
 #include <string>
 using namespace MCPEUWP;
@@ -7,7 +8,11 @@ using namespace Platform;
 using namespace Windows::System;
 using namespace Windows::UI::Xaml::Input;
 using namespace Windows::UI::Xaml::Controls;
-SettingsPage::SettingsPage() { InitializeComponent(); }
+SettingsPage::SettingsPage()
+{
+	InitializeComponent();
+	UwpXamlLocalization::install(this);
+}
 
 void SettingsPage::SetClientHandle(unsigned long long handleValue)
 {

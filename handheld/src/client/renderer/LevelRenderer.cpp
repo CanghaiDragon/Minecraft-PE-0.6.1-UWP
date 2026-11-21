@@ -35,6 +35,49 @@
 /* static */ const int LevelRenderer::CHUNK_SIZE = 16;
 #endif
 
+namespace {
+	// Visual-only surfaces that sample existing sky light but do not participate
+	// in light propagation. Fixed values are fallbacks and cached Floating colors.
+	const float INDEV_OUTER_WATER_BRIGHTNESS = 0.87f;
+	const float INDEV_OUTER_GRASS_FALLBACK_BRIGHTNESS = 0.82f;
+	const float INDEV_OUTER_DIRT_FALLBACK_BRIGHTNESS = 0.78f;
+	const float INDEV_OUTER_UNDERWATER_DIRT_BRIGHTNESS = 0.15f;
+
+	void getNearestIndevBoundarySample(float cameraX, float cameraZ, int& sampleX, int& sampleZ) {
+		sampleX = Mth::floor(cameraX);
+		sampleZ = Mth::floor(cameraZ);
+		if (sampleX < 0) sampleX = 0;
+		else if (sampleX >= LEVEL_WIDTH) sampleX = LEVEL_WIDTH - 1;
+		if (sampleZ < 0) sampleZ = 0;
+		else if (sampleZ >= LEVEL_DEPTH) sampleZ = LEVEL_DEPTH - 1;
+		if (cameraX < 0.0f || cameraX >= LEVEL_WIDTH ||
+			cameraZ < 0.0f || cameraZ >= LEVEL_DEPTH)
+			return;
+
+		const float edgeDistances[4] = {
+			cameraX, (float)(LEVEL_WIDTH - 1) - cameraX,
+			cameraZ, (float)(LEVEL_DEPTH - 1) - cameraZ
+		};
+		int nearestEdge = 0;
+		for (int i = 1; i < 4; ++i)
+			if (edgeDistances[i] < edgeDistances[nearestEdge]) nearestEdge = i;
+		if (nearestEdge == 0) sampleX = 0;
+		else if (nearestEdge == 1) sampleX = LEVEL_WIDTH - 1;
+		else if (nearestEdge == 2) sampleZ = 0;
+		else sampleZ = LEVEL_DEPTH - 1;
+	}
+
+	bool sampleIndevSkyBrightness(Level* level, int x, int z, float& brightness) {
+		if (level == NULL || !level->hasChunk(x >> 4, z >> 4))
+			return false;
+		const int sampleY = Level::DEPTH - 1;
+		if (level->getRawBrightness(x, sampleY, z) <= 0)
+			return false;
+		brightness = level->getBrightness(x, sampleY, z);
+		return true;
+	}
+}
+
 
 LevelRenderer::LevelRenderer( Minecraft* mc)
 :	mc(mc),
@@ -68,7 +111,8 @@ LevelRenderer::LevelRenderer( Minecraft* mc)
 	skyList(0), starList(0), darkList(0),
 	tileRenderer(NULL),
 	destroyProgress(0),
-	xrayRenderActive(false)
+	xrayRenderActive(false),
+	indevFloatingSurfaceCacheReady(false)
 {
 #ifdef USE_VBO
 	// Pool must cover the largest possible distance.  The desktop and UWP
@@ -106,6 +150,17 @@ LevelRenderer::~LevelRenderer()
 {
 	delete tileRenderer;
 	tileRenderer = NULL;
+
+#ifdef USE_VBO
+	for (size_t i = 0; i < indevFloatingGroundMeshes.size(); ++i) {
+		GLuint buffer = indevFloatingGroundMeshes[i].vboId;
+		if (buffer != 0) glDeleteBuffers(1, &buffer);
+	}
+	for (size_t i = 0; i < indevFloatingWaterMeshes.size(); ++i) {
+		GLuint buffer = indevFloatingWaterMeshes[i].vboId;
+		if (buffer != 0) glDeleteBuffers(1, &buffer);
+	}
+#endif
 
 	deleteChunks();
 
@@ -159,8 +214,10 @@ void LevelRenderer::setLevel( Level* level )
 	EntityRenderDispatcher::getInstance()->setLevel(level);
 	EntityRenderDispatcher::getInstance()->setMinecraft(mc);
 	this->level = level;
-	Tile::setAlphaTextures(level != NULL
-		&& level->getLevelData()->getWorldType() == WorldType::Alpha);
+	Tile::setAlphaTextures(level != NULL &&
+		(level->getLevelData()->getWorldType() == WorldType::Alpha ||
+		 level->getLevelData()->getWorldType() == WorldType::Indev ||
+		 level->getLevelData()->getWorldType() == WorldType::EarlyInfdev));
 
 	delete tileRenderer;
 	tileRenderer = new TileRenderer(level);
@@ -177,8 +234,10 @@ void LevelRenderer::allChanged()
 	// tile presentation flag immediately before scheduling their rebuild.
 	Tile::setBetaVisuals(mc->options.betaVisuals);
 	Tile::setBetaFancyGraphics(mc->options.betaVisuals && mc->options.fancyGraphics);
-	Tile::setAlphaTextures(level != NULL
-		&& level->getLevelData()->getWorldType() == WorldType::Alpha);
+	Tile::setAlphaTextures(level != NULL &&
+		(level->getLevelData()->getWorldType() == WorldType::Alpha ||
+		 level->getLevelData()->getWorldType() == WorldType::Indev ||
+		 level->getLevelData()->getWorldType() == WorldType::EarlyInfdev));
 	deleteChunks();
 
 #ifdef USE_VBO
@@ -1088,11 +1147,10 @@ void LevelRenderer::renderClouds( float alpha ) {
 	int d = 256 / s;
 	Tesselator& t = Tesselator::instance;
 
-	//glBindTexture(GL_TEXTURE_2D, texturesloadTexture("/environment/clouds.png"));
-	textures->loadAndBindTexture("environment/clouds.png");
-	
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	//glBindTexture(GL_TEXTURE_2D, texturesloadTexture("/environment/clouds.png"));
+	textures->loadAndBindTexture("environment/clouds.png");
 
 	Vec3 cc = level->getCloudColor(alpha);
 	float cr = (float) cc.x;
@@ -1109,7 +1167,10 @@ void LevelRenderer::renderClouds( float alpha ) {
 	xo -= xOffs * 2048;
 	zo -= zOffs * 2048;
 
-	float cloudHeight = level->getLevelData()->getWorldType() == WorldType::Sky ? 9.0f : 128.0f;
+	const int worldType = level->getLevelData()->getWorldType();
+	const bool indevFloating = worldType == WorldType::Indev &&
+		level->getLevelData()->getIndevType() == IndevType::Floating;
+	float cloudHeight = worldType == WorldType::Sky ? 9.0f : (indevFloating ? -16.0f : 128.0f);
 	float yy = cloudHeight - yOffs + 0.33f;//mc->player->y + 1;
 	float uo = (float) (xo * scale);
 	float vo = (float) (zo * scale);
@@ -1130,6 +1191,373 @@ void LevelRenderer::renderClouds( float alpha ) {
 	glEnable(GL_CULL_FACE);
 }
 
+void LevelRenderer::buildIndevFloatingSurfaceCache() {
+	if (indevFloatingSurfaceCacheReady)
+		return;
+
+#ifdef USE_VBO
+	const int radius = 200;
+	const int batchColumns = 64;
+	auto buildPlane = [&](int texture, std::vector<RenderChunk>& meshes,
+		float brightness) {
+		const float u0 = (float)((texture & 15) * 16) / 256.0f;
+		const float u1 = (float)((texture & 15) * 16 + 15.99f) / 256.0f;
+		const float v0 = (float)((texture >> 4) * 16) / 256.0f;
+		const float v1 = (float)((texture >> 4) * 16 + 15.99f) / 256.0f;
+		Tesselator& t = Tesselator::instance;
+		for (int x = -radius; x < radius; ++x) {
+			if ((x + radius) % batchColumns == 0) {
+				t.begin();
+				t.color(brightness, brightness, brightness, 1.0f);
+			}
+			for (int z = -radius; z < radius; ++z) {
+				const float dx = (float)x + 0.5f;
+				const float dz = (float)z + 0.5f;
+				if (dx * dx + dz * dz > radius * radius)
+					continue;
+				t.vertexUV((float)x, 0.0f, (float)z + 1.0f, u0, v1);
+				t.vertexUV((float)x + 1.0f, 0.0f, (float)z + 1.0f, u1, v1);
+				t.vertexUV((float)x + 1.0f, 0.0f, (float)z, u1, v0);
+				t.vertexUV((float)x, 0.0f, (float)z, u0, v0);
+			}
+			if (((x + radius + 1) % batchColumns == 0) || x + 1 == radius) {
+				GLuint buffer = 0;
+				glGenBuffers2(1, &buffer);
+				if (buffer != 0) {
+					RenderChunk mesh = t.end(true, buffer);
+					if (mesh.vertexCount > 0)
+						meshes.push_back(mesh);
+					else
+						glDeleteBuffers(1, &buffer);
+				} else {
+					t.endOverrideAndDraw();
+				}
+			}
+		}
+	};
+	buildPlane(Tile::dirt->getTexture(1), indevFloatingGroundMeshes,
+		INDEV_OUTER_UNDERWATER_DIRT_BRIGHTNESS);
+	buildPlane(Tile::calmWater->getTexture(1), indevFloatingWaterMeshes,
+#if defined(MCPE_UWP)
+		1.0f);
+#else
+		INDEV_OUTER_WATER_BRIGHTNESS);
+#endif
+	glBindBuffer2(GL_ARRAY_BUFFER, 0);
+	indevFloatingSurfaceCacheReady = !indevFloatingGroundMeshes.empty() &&
+		!indevFloatingWaterMeshes.empty();
+	if (!indevFloatingSurfaceCacheReady) {
+		for (size_t i = 0; i < indevFloatingGroundMeshes.size(); ++i) {
+			GLuint buffer = indevFloatingGroundMeshes[i].vboId;
+			glDeleteBuffers(1, &buffer);
+		}
+		for (size_t i = 0; i < indevFloatingWaterMeshes.size(); ++i) {
+			GLuint buffer = indevFloatingWaterMeshes[i].vboId;
+			glDeleteBuffers(1, &buffer);
+		}
+		indevFloatingGroundMeshes.clear();
+		indevFloatingWaterMeshes.clear();
+	}
+#endif
+}
+
+void LevelRenderer::drawIndevFloatingSurface(const std::vector<RenderChunk>& meshes, RenderList& list,
+	float cameraX, float surfaceY, float cameraZ, float colorMultiplier) {
+	if (meshes.empty())
+		return;
+	const float fractionalX = cameraX - (float)Mth::floor(cameraX);
+	const float fractionalZ = cameraZ - (float)Mth::floor(cameraZ);
+	list.clear();
+	list.init(fractionalX, -surfaceY, fractionalZ);
+	for (size_t i = 0; i < meshes.size(); ++i) {
+		list.addR(meshes[i]);
+		list.next();
+	}
+	#if defined(MCPE_UWP)
+	glVertexColorMultiplier_shader(colorMultiplier, colorMultiplier, colorMultiplier, 1.0f);
+	#endif
+	list.render();
+	#if defined(MCPE_UWP)
+	glVertexColorMultiplier_shader(1.0f, 1.0f, 1.0f, 1.0f);
+	#endif
+	// Subsequent UWP paths may supply client-memory vertex pointers.
+	glBindBuffer2(GL_ARRAY_BUFFER, 0);
+}
+
+void LevelRenderer::renderIndevGround(float alpha) {
+	// Match Old world's Fast Graphics path: skip every distant Indev boundary
+	// surface, including the Floating VBO cache, when fancy graphics are off.
+	if (!mc->options.fancyGraphics || level == NULL || mc->player == NULL ||
+		level->getLevelData()->getWorldType() != WorldType::Indev)
+		return;
+	const int indevType = level->getLevelData()->getIndevType();
+	const bool island = indevType == IndevType::Island;
+	const bool floating = indevType == IndevType::Floating;
+	if (!island && !floating && indevType != IndevType::Inland && indevType != IndevType::Flat)
+		return;
+
+	const float cameraX = mc->player->xOld + (mc->player->x - mc->player->xOld) * alpha;
+	const float cameraY = mc->player->yOld + (mc->player->y - mc->player->yOld) * alpha;
+	const float cameraZ = mc->player->zOld + (mc->player->z - mc->player->zOld) * alpha;
+	// Reuse a nearby boundary column's already-computed world lighting. A few
+	// samples per frame keep the distant surface in step with day/night lighting
+	// without running light propagation or sampling every outer quad.
+	int edgeSampleX, edgeSampleZ;
+	getNearestIndevBoundarySample(cameraX, cameraZ, edgeSampleX, edgeSampleZ);
+	float edgeSurfaceBrightness = INDEV_OUTER_GRASS_FALLBACK_BRIGHTNESS;
+	float edgeSideBrightness = INDEV_OUTER_DIRT_FALLBACK_BRIGHTNESS;
+	// Sample above the highest terrain: a fixed Y=32/33 can be inside a tall
+	// edge cliff, which is valid but too dark for the distant surface.
+	float sampledEdgeBrightness;
+	if (sampleIndevSkyBrightness(level, edgeSampleX, edgeSampleZ, sampledEdgeBrightness)) {
+		edgeSurfaceBrightness = sampledEdgeBrightness;
+		edgeSideBrightness = sampledEdgeBrightness;
+	}
+	// Keep Floating's layered underlay visible in UWP's vertical range: dirt
+	// below the outer sea, with the low cloud layer above both.
+	const float groundLevel = floating ? -20.0f : island ? 23.0f : 33.0f;
+	const float groundY = groundLevel - cameraY;
+	const float groundBrightness = (island || floating)
+		? INDEV_OUTER_UNDERWATER_DIRT_BRIGHTNESS : edgeSurfaceBrightness;
+	const int grassTexture = (island || floating) ? Tile::dirt->getTexture(1)
+		: Tile::grass->getTexture(level, 0, 33, 0, 1);
+	const int grassSideTexture = Tile::grass->getTexture(level, 0, 33, 0, 2);
+	const int dirtTexture = Tile::dirt->getTexture(2);
+	const float u0 = (float)((grassTexture & 15) * 16) / 256.0f;
+	const float u1 = (float)((grassTexture & 15) * 16 + 15.99f) / 256.0f;
+	const float v0 = (float)((grassTexture >> 4) * 16) / 256.0f;
+	const float v1 = (float)((grassTexture >> 4) * 16 + 15.99f) / 256.0f;
+	const float sideU0 = (float)((grassSideTexture & 15) * 16) / 256.0f;
+	const float sideU1 = (float)((grassSideTexture & 15) * 16 + 15.99f) / 256.0f;
+	const float sideV0 = (float)((grassSideTexture >> 4) * 16) / 256.0f;
+	const float sideV1 = (float)((grassSideTexture >> 4) * 16 + 15.99f) / 256.0f;
+	const float dirtU0 = (float)((dirtTexture & 15) * 16) / 256.0f;
+	const float dirtU1 = (float)((dirtTexture & 15) * 16 + 15.99f) / 256.0f;
+	const float dirtV0 = (float)((dirtTexture >> 4) * 16) / 256.0f;
+	const float dirtV1 = (float)((dirtTexture >> 4) * 16 + 15.99f) / 256.0f;
+	const int renderRadius = floating ? 200 : 160;
+	const int batchColumns = floating ? 64 : 16;
+	if (floating) {
+#ifdef USE_VBO
+		if (!indevFloatingSurfaceCacheReady)
+			buildIndevFloatingSurfaceCache();
+		if (indevFloatingSurfaceCacheReady) {
+			textures->loadAndBindTexture("terrain.png");
+			drawIndevFloatingSurface(indevFloatingGroundMeshes, indevFloatingGroundRenderList,
+				cameraX, groundY, cameraZ);
+			glColor4f2(1.0f, 1.0f, 1.0f, 1.0f);
+			return;
+		}
+#endif
+	}
+
+	// Indev's out-of-bounds ground is a repeating tiled surface. Floating's
+	// negative ground level makes the original renderer draw it under the map
+	// as well, so only the other presets omit tiles inside the finite map.
+	textures->loadAndBindTexture("terrain.png");
+	Tesselator& t = Tesselator::instance;
+	t.begin();
+	t.color(groundBrightness, groundBrightness, groundBrightness, 1.0f);
+	int minX = Mth::floor(cameraX) - renderRadius;
+	int maxX = Mth::floor(cameraX) + renderRadius;
+	int minZ = Mth::floor(cameraZ) - renderRadius;
+	int maxZ = Mth::floor(cameraZ) + renderRadius;
+	if (minX < -renderRadius) minX = -renderRadius;
+	if (maxX > LEVEL_WIDTH + renderRadius) maxX = LEVEL_WIDTH + renderRadius;
+	if (minZ < -renderRadius) minZ = -renderRadius;
+	if (maxZ > LEVEL_DEPTH + renderRadius) maxZ = LEVEL_DEPTH + renderRadius;
+	for (int x = minX; x < maxX; ++x) {
+		for (int z = minZ; z < maxZ; ++z) {
+			if (!floating && x >= 0 && z >= 0 && x < LEVEL_WIDTH && z < LEVEL_DEPTH)
+				continue;
+			const float dx = (float)x + 0.5f - cameraX;
+			const float dz = (float)z + 0.5f - cameraZ;
+			if (dx * dx + dz * dz > renderRadius * renderRadius)
+				continue;
+			const float x0 = (float)x - cameraX;
+			const float x1 = x0 + 1.0f;
+			const float z0 = (float)z - cameraZ;
+			const float z1 = z0 + 1.0f;
+			t.vertexUV(x0, groundY, z1, u0, v1);
+			t.vertexUV(x1, groundY, z1, u1, v1);
+			t.vertexUV(x1, groundY, z0, u1, v0);
+			t.vertexUV(x0, groundY, z0, u0, v0);
+		}
+		// Flush in small x-slices as well: positions near a world corner can
+		// place most of the radius disk outside the map and overflow one batch.
+		if ((x - minX + 1) % batchColumns == 0 && x + 1 < maxX) {
+			t.endOverrideAndDraw();
+			t.begin();
+			t.color(groundBrightness, groundBrightness, groundBrightness, 1.0f);
+		}
+	}
+	t.endOverrideAndDraw();
+	if (island || floating) {
+		glColor4f2(1.0f, 1.0f, 1.0f, 1.0f);
+		return;
+	}
+
+	// Keep the vertical cliff faces in a separate tessellation batch. Combined
+	// with the distant top surface they can exceed Tesselator's fixed vertex
+	// buffer, which drops earlier quads and leaves only a small faraway patch.
+	t.begin();
+	auto drawBoundarySide = [&](float x0, float x1, float z0, float z1, int side) {
+		for (int y = 0; y < 33; ++y) {
+			const bool grassSide = y == 32;
+			const float faceShade = side < 2 ? 0.8f : 0.6f;
+			const float brightness = grassSide
+				? edgeSurfaceBrightness * faceShade
+				: edgeSideBrightness * faceShade;
+			t.color(brightness, brightness, brightness, 1.0f);
+			const float su0 = grassSide ? sideU0 : dirtU0;
+			const float su1 = grassSide ? sideU1 : dirtU1;
+			const float sv0 = grassSide ? sideV0 : dirtV0;
+			const float sv1 = grassSide ? sideV1 : dirtV1;
+			const float y0 = (float)y - cameraY;
+			const float y1 = y0 + 1.0f;
+			if (side == 0) { // north, faces +Z
+				t.vertexUV(x0, y0, z1, su0, sv1); t.vertexUV(x1, y0, z1, su1, sv1);
+				t.vertexUV(x1, y1, z1, su1, sv0); t.vertexUV(x0, y1, z1, su0, sv0);
+			} else if (side == 1) { // south, faces -Z
+				t.vertexUV(x1, y0, z0, su0, sv1); t.vertexUV(x0, y0, z0, su1, sv1);
+				t.vertexUV(x0, y1, z0, su1, sv0); t.vertexUV(x1, y1, z0, su0, sv0);
+			} else if (side == 2) { // west, faces +X
+				t.vertexUV(x1, y0, z0, su0, sv1); t.vertexUV(x1, y1, z0, su0, sv0);
+				t.vertexUV(x1, y1, z1, su1, sv0); t.vertexUV(x1, y0, z1, su1, sv1);
+			} else { // east, faces -X
+				t.vertexUV(x0, y0, z1, su0, sv1); t.vertexUV(x0, y1, z1, su0, sv0);
+				t.vertexUV(x0, y1, z0, su1, sv0); t.vertexUV(x0, y0, z0, su1, sv1);
+			}
+		}
+	};
+	for (int x = 0; x < LEVEL_WIDTH; ++x) {
+		const float dx = (float)x + 0.5f - cameraX;
+		float edgeZ = -0.5f - cameraZ;
+		if (dx * dx + edgeZ * edgeZ <= renderRadius * renderRadius) {
+			const float x0 = (float)x - cameraX, x1 = x0 + 1.0f;
+			drawBoundarySide(x0, x1, -1.0f - cameraZ, -cameraZ, 0);
+		}
+		edgeZ = (float)LEVEL_DEPTH + 0.5f - cameraZ;
+		if (dx * dx + edgeZ * edgeZ <= renderRadius * renderRadius) {
+			const float x0 = (float)x - cameraX, x1 = x0 + 1.0f;
+			drawBoundarySide(x0, x1, (float)LEVEL_DEPTH - cameraZ,
+				(float)LEVEL_DEPTH + 1.0f - cameraZ, 1);
+		}
+	}
+	for (int z = 0; z < LEVEL_DEPTH; ++z) {
+		const float dz = (float)z + 0.5f - cameraZ;
+		float edgeX = -0.5f - cameraX;
+		if (edgeX * edgeX + dz * dz <= renderRadius * renderRadius) {
+			const float z0 = (float)z - cameraZ, z1 = z0 + 1.0f;
+			drawBoundarySide(-1.0f - cameraX, -cameraX, z0, z1, 2);
+		}
+		edgeX = (float)LEVEL_WIDTH + 0.5f - cameraX;
+		if (edgeX * edgeX + dz * dz <= renderRadius * renderRadius) {
+			const float z0 = (float)z - cameraZ, z1 = z0 + 1.0f;
+			drawBoundarySide((float)LEVEL_WIDTH - cameraX,
+				(float)LEVEL_WIDTH + 1.0f - cameraX, z0, z1, 3);
+		}
+	}
+	t.endOverrideAndDraw();
+	glColor4f2(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+void LevelRenderer::renderIndevWater(float alpha) {
+	const int indevType = level != NULL ? level->getLevelData()->getIndevType() : -1;
+	if (!mc->options.fancyGraphics || level == NULL || mc->player == NULL ||
+		level->getLevelData()->getWorldType() != WorldType::Indev ||
+		(indevType != IndevType::Island && indevType != IndevType::Floating))
+		return;
+
+	const float cameraX = mc->player->xOld + (mc->player->x - mc->player->xOld) * alpha;
+	const float cameraY = mc->player->yOld + (mc->player->y - mc->player->yOld) * alpha;
+	const float cameraZ = mc->player->zOld + (mc->player->z - mc->player->zOld) * alpha;
+	float waterBrightness = INDEV_OUTER_WATER_BRIGHTNESS;
+	if (indevType == IndevType::Island) {
+		int edgeSampleX, edgeSampleZ;
+		getNearestIndevBoundarySample(cameraX, cameraZ, edgeSampleX, edgeSampleZ);
+		float sampledEdgeBrightness;
+		if (sampleIndevSkyBrightness(level, edgeSampleX, edgeSampleZ, sampledEdgeBrightness))
+			waterBrightness = sampledEdgeBrightness;
+	} else {
+		int sampleX = Mth::floor(cameraX);
+		int sampleZ = Mth::floor(cameraZ);
+		if (sampleX < 0) sampleX = 0;
+		else if (sampleX >= LEVEL_WIDTH) sampleX = LEVEL_WIDTH - 1;
+		if (sampleZ < 0) sampleZ = 0;
+		else if (sampleZ >= LEVEL_DEPTH) sampleZ = LEVEL_DEPTH - 1;
+		float sampledSkyBrightness;
+		if (sampleIndevSkyBrightness(level, sampleX, sampleZ, sampledSkyBrightness))
+			waterBrightness = sampledSkyBrightness;
+	}
+	// Island fills through block Y=31. Floating's sea is 20 blocks below its
+	// former Y=0.91 level, above the matching lowered dirt floor.
+	const float waterLevel = indevType == IndevType::Floating ? -19.09f : 31.0f + (8.0f / 9.0f);
+	const float waterY = waterLevel - cameraY;
+	const int waterTexture = Tile::calmWater->getTexture(1);
+	const float u0 = (float)((waterTexture & 15) * 16) / 256.0f;
+	const float u1 = (float)((waterTexture & 15) * 16 + 15.99f) / 256.0f;
+	const float v0 = (float)((waterTexture >> 4) * 16) / 256.0f;
+	const float v1 = (float)((waterTexture >> 4) * 16 + 15.99f) / 256.0f;
+	const int renderRadius = indevType == IndevType::Floating ? 200 : 160;
+	const int batchColumns = indevType == IndevType::Floating ? 64 : 16;
+	int minX = Mth::floor(cameraX) - renderRadius;
+	int maxX = Mth::floor(cameraX) + renderRadius;
+	int minZ = Mth::floor(cameraZ) - renderRadius;
+	int maxZ = Mth::floor(cameraZ) + renderRadius;
+	if (minX < -renderRadius) minX = -renderRadius;
+	if (maxX > LEVEL_WIDTH + renderRadius) maxX = LEVEL_WIDTH + renderRadius;
+	if (minZ < -renderRadius) minZ = -renderRadius;
+	if (maxZ > LEVEL_DEPTH + renderRadius) maxZ = LEVEL_DEPTH + renderRadius;
+
+	textures->loadAndBindTexture("terrain.png");
+	glEnable2(GL_BLEND);
+	glBlendFunc2(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDepthMask(GL_FALSE);
+	if (indevType == IndevType::Floating) {
+#ifdef USE_VBO
+		if (!indevFloatingSurfaceCacheReady)
+			buildIndevFloatingSurfaceCache();
+		if (indevFloatingSurfaceCacheReady) {
+			drawIndevFloatingSurface(indevFloatingWaterMeshes, indevFloatingWaterRenderList,
+				cameraX, waterY, cameraZ, waterBrightness);
+			glDepthMask(GL_TRUE);
+			glDisable2(GL_BLEND);
+			glColor4f2(1.0f, 1.0f, 1.0f, 1.0f);
+			return;
+		}
+#endif
+	}
+	Tesselator& t = Tesselator::instance;
+	t.begin();
+	t.color(waterBrightness, waterBrightness, waterBrightness, 1.0f);
+	for (int x = minX; x < maxX; ++x) {
+		for (int z = minZ; z < maxZ; ++z) {
+			if (indevType != IndevType::Floating && x >= 0 && z >= 0 && x < LEVEL_WIDTH && z < LEVEL_DEPTH)
+				continue;
+			const float dx = (float)x + 0.5f - cameraX;
+			const float dz = (float)z + 0.5f - cameraZ;
+			if (dx * dx + dz * dz > renderRadius * renderRadius)
+				continue;
+			const float x0 = (float)x - cameraX, x1 = x0 + 1.0f;
+			const float z0 = (float)z - cameraZ, z1 = z0 + 1.0f;
+			t.vertexUV(x0, waterY, z1, u0, v1);
+			t.vertexUV(x1, waterY, z1, u1, v1);
+			t.vertexUV(x1, waterY, z0, u1, v0);
+			t.vertexUV(x0, waterY, z0, u0, v0);
+		}
+		if ((x - minX + 1) % batchColumns == 0 && x + 1 < maxX) {
+			t.endOverrideAndDraw();
+			t.begin();
+			t.color(waterBrightness, waterBrightness, waterBrightness, 1.0f);
+		}
+	}
+	t.endOverrideAndDraw();
+	glDepthMask(GL_TRUE);
+	glDisable2(GL_BLEND);
+	glColor4f2(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
 void LevelRenderer::renderBetaClouds(float alpha) {
 	// Ported from Beta 1.7.3 RenderGlobal.renderCloudsFancy.  The important
 	// detail is that UV coordinates are in the unscaled 8x8 cloud grid, while
@@ -1137,14 +1565,17 @@ void LevelRenderer::renderBetaClouds(float alpha) {
 	// was the source of the stretched/repeated cloud artefacts.
 	glEnable2(GL_TEXTURE_2D);
 	glDisable(GL_CULL_FACE);
-	textures->loadAndBindTexture("environment/clouds.png");
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	textures->loadAndBindTexture("environment/clouds.png");
 	Vec3 cc = level->getCloudColor(alpha);
 	float time = ticks + alpha;
 	float xo = (mc->player->xo + (mc->player->x - mc->player->xo) * alpha + time * 0.03f) / 12.0f;
 	float zo = (mc->player->zo + (mc->player->z - mc->player->zo) * alpha) / 12.0f + 0.33f;
-	const float cloudHeight = level->getLevelData()->getWorldType() == WorldType::Sky ? 9.0f : 108.0f;
+	const int worldType = level->getLevelData()->getWorldType();
+	const bool indevFloating = worldType == WorldType::Indev &&
+		level->getLevelData()->getIndevType() == IndevType::Floating;
+	const float cloudHeight = worldType == WorldType::Sky ? 9.0f : (indevFloating ? -16.0f : 108.0f);
 	const float cloudY = cloudHeight - (mc->player->yOld + (mc->player->y - mc->player->yOld) * alpha) + 0.33f;
 	const float uv = 1.0f / 256.0f, tile = 8.0f, scale = 12.0f;
 	float uOffset = (float)Mth::floor(xo) * uv;
@@ -1461,6 +1892,15 @@ void LevelRenderer::renderHitSelect( Player* player, const HitResult& h, int mod
 
 void LevelRenderer::onGraphicsReset()
 {
+#ifdef USE_VBO
+	// Buffer names belong to the lost graphics context; rebuild this cache
+	// lazily on the next Floating render.
+	indevFloatingGroundMeshes.clear();
+	indevFloatingWaterMeshes.clear();
+	indevFloatingGroundRenderList.clear();
+	indevFloatingWaterRenderList.clear();
+	indevFloatingSurfaceCacheReady = false;
+#endif
 #if defined(OPENGL_ES) || defined(MACOS) || defined(LINUX)
 	generateSky();
 #endif

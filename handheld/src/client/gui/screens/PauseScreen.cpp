@@ -1,11 +1,15 @@
 #include "PauseScreen.h"
 #include "StartMenuScreen.h"
+#include "AchievementsScreen.h"
 #include "../components/ImageButton.h"
 #include "../../Minecraft.h"
 #include "../../../util/Mth.h"
 #include "../../../world/level/Level.h"
+#include "../../../world/level/storage/LevelStorage.h"
+#include "../../../world/level/storage/AchievementIds.h"
 #include "../../../network/RakNetInstance.h"
 #include "../../../network/ServerSideNetworkHandler.h"
+#include "../../../locale/I18n.h"
 
 PauseScreen::PauseScreen(bool wasBackPaused)
 :	saveStep(0),
@@ -22,7 +26,8 @@ PauseScreen::PauseScreen(bool wasBackPaused)
 	bEntityButton(5, ""),
 	entityButtonState(false),
 	bSpectatorButton(6, ""),
-	spectatorButtonState(false)
+	spectatorButtonState(false),
+	bAchievementButton(7, "")
 {
 	ImageDef def;
 	// touchguinew.png keeps the pause icons in three consecutive rows.
@@ -63,6 +68,12 @@ PauseScreen::PauseScreen(bool wasBackPaused)
 	spectatorButtonState = false;
 	bSpectatorButton.setImageDef(
 		spectatorButtonState ? spectatorButtonOn : spectatorButtonOff, true);
+	// Trophy icon directly below the spectator eye in touchgui2.png.
+	achievementButtonImage.setSrc(IntRectangle(160, 173, 39, 31));
+	achievementButtonImage.name = "gui/touchgui2.png";
+	achievementButtonImage.width = 39 * 0.666667f;
+	achievementButtonImage.height = 31 * 0.666667f;
+	bAchievementButton.setImageDef(achievementButtonImage, true);
 	//void setImageDef(ImageDef& imageDef, bool setButtonSize);
 }
 
@@ -80,25 +91,59 @@ void PauseScreen::init() {
 	spectatorButtonState = minecraft->isSpectatorMode();
 	bSpectatorButton.setImageDef(
 		spectatorButtonState ? spectatorButtonOn : spectatorButtonOff, false);
+	bool allAchievementsUnlocked = false;
+	if (minecraft->options.achievementsEnabled && !minecraft->isCreativeMode() && minecraft->level != NULL) {
+		LevelStorage* storage = minecraft->level->getLevelStorage();
+		if (storage != NULL) {
+			allAchievementsUnlocked = true;
+			for (int i = 0; i < AchievementIds::Count; ++i) {
+				if (!storage->hasAchievement(i)) {
+					allAchievementsUnlocked = false;
+					break;
+				}
+			}
+		}
+	}
+	achievementButtonImage.setSrc(IntRectangle(allAchievementsUnlocked ? 199 : 160, 173, 39, 31));
+	bAchievementButton.setImageDef(achievementButtonImage, false);
 
 	// Pause presentation follows Java UI, not the selected input device. PE
 	// pause controls must remain available when a keyboard is connected.
 	if (!minecraft->options.javaUi) {
-		bContinue = new Touch::TButton(1, "Back to game");
-		bQuit = new Touch::TButton(2, "Quit to title");
-		bQuitAndSaveLocally = new Touch::TButton(3, "Quit and copy map");
+		bContinue = new Touch::TButton(1, I18n::get("menu.returnToGame"));
+		bQuit = new Touch::TButton(2, I18n::get("menu.returnToMenu"));
+		bQuitAndSaveLocally = new Touch::TButton(3, I18n::get("menu.quitAndCopyMap"));
 		bServerVisibility = new Touch::TButton(4, "");
 //		bThirdPerson = new Touch::TButton(5, "Toggle 3:rd person view");
 	} else {
-		bContinue = new Button(1, "Back to game");
-		bQuit = new Button(2, "Quit to title");
-		bQuitAndSaveLocally = new Button(3, "Quit and copy map");
+		bContinue = new Button(1, I18n::get("menu.returnToGame"));
+		bQuit = new Button(2, I18n::get("menu.returnToMenu"));
+		bQuitAndSaveLocally = new Button(3, I18n::get("menu.quitAndCopyMap"));
 		bServerVisibility = new Button(4, "");
 //		bThirdPerson = new Button(5, "Toggle 3:rd person view");
 	}
 
 	buttons.push_back(bContinue);
 	buttons.push_back(bQuit);
+	bool legacyCompatibleWorld = true;
+	if (minecraft->level != NULL && minecraft->level->getLevelData() != NULL) {
+		int worldType = minecraft->level->getLevelData()->getWorldType();
+		legacyCompatibleWorld = worldType == WorldType::Old;
+	}
+	bool multiplayerAvailable = minecraft->isExtendedMultiplayer() || legacyCompatibleWorld;
+	if (!multiplayerAvailable) {
+		// Legacy protocol clients cannot represent these custom world types.
+		// Close any existing session when the pause screen is opened and keep
+		// the multiplayer controls out of this screen.
+		minecraft->cancelLocateMultiplayer();
+		if (minecraft->raknetInstance)
+			minecraft->raknetInstance->disconnect();
+	}
+	bAchievementButton.visible = minecraft->options.achievementsEnabled &&
+		minecraft->level != NULL && !minecraft->isCreativeMode();
+	if (bAchievementButton.visible) {
+		buttons.push_back(&bAchievementButton);
+	}
 
 	bSound.updateImage(&minecraft->options);
 	bThirdPerson.updateImage(&minecraft->options);
@@ -118,7 +163,7 @@ void PauseScreen::init() {
 	// and Back to game) here
     
     #if !defined(APPLE_DEMO_PROMOTION) && !defined(RPI)
-	if (true || !wasBackPaused) {
+	if (multiplayerAvailable && (true || !wasBackPaused)) {
 		if (minecraft->raknetInstance) {
 			// A local UWP world remains offline until the user explicitly opens
 			// it to LAN. Keep the original server button visible in that state,
@@ -129,15 +174,17 @@ void PauseScreen::init() {
 					buttons.push_back(bServerVisibility);
 				}
 			}
+			// Visitors can save the received temporary world through the existing
+			// copy-map flow; renameLevel moves it from temporary to world storage.
+			else if (minecraft->level != NULL && minecraft->level->isClientSide) {
+				bQuitAndSaveLocally->msg = I18n::get("menu.quitAndCopyMap");
+				buttons.push_back(bQuitAndSaveLocally);
+			}
 			#if defined(MCPE_UWP)
 			// UWP local worlds deliberately stay offline until the player chooses
-			// Open to LAN.  The pause screen must still expose that action instead
-			// of falling through to the legacy "Quit and copy map" client branch.
-			// Keep the level check as a runtime fallback for configurations where
-			// the borrowed-world marker is cleared during a screen transition.
-			else if (minecraft->hasUwpWorld() ||
-				(minecraft->level != NULL && minecraft->level->isClientSide)) {
-				bServerVisibility->msg = "Open to LAN";
+			// Open to LAN. Do not apply this to client-side visitor levels above.
+			else if (minecraft->hasUwpWorld()) {
+				bServerVisibility->msg = I18n::get("menu.openToLan");
 				buttons.push_back(bServerVisibility);
 			}
 			#endif
@@ -147,6 +194,14 @@ void PauseScreen::init() {
 				#endif
 			}
 		}
+	}
+	// Custom world types cannot use the legacy protocol. Offer a one-click
+	// transition here so the player can enable the extended protocol and open
+	// the current local world without leaving the pause screen.
+	if (!multiplayerAvailable && minecraft->level != NULL &&
+		minecraft->raknetInstance != NULL) {
+		bServerVisibility->msg = I18n::get("menu.extendedMultiplayer");
+		buttons.push_back(bServerVisibility);
 	}
     #endif
 //	buttons.push_back(bThirdPerson);
@@ -178,6 +233,8 @@ void PauseScreen::setupPositions() {
     
 	bQuitAndSaveLocally->x = bServerVisibility->x = (width - bQuitAndSaveLocally->width) / 2;
 	bQuitAndSaveLocally->y = bServerVisibility->y = yBase + 32 * 3;
+	bAchievementButton.x = width - bAchievementButton.width - 8;
+	bAchievementButton.y = 8;
 
 	bSound.y = bThirdPerson.y = 8;
 	bSound.x = 4;
@@ -226,7 +283,7 @@ void PauseScreen::render(int xm, int ym, float a) {
 	//	drawString(font, "Saving level..", 8, height - 16, br << 16 | br << 8 | br);
 	//}
 
-	drawCenteredString(font, "Game menu", width / 2, 24, 0xffffff);
+	drawCenteredString(font, I18n::get("menu.game"), width / 2, 24, 0xffffff);
 
 	super::render(xm, ym, a);
 }
@@ -257,8 +314,20 @@ void PauseScreen::buttonClicked(Button* button) {
 	if (button->id == bQuitAndSaveLocally->id) {
 		minecraft->leaveGame(true);
 	}
+	if (button == &bAchievementButton) {
+		if (!minecraft->options.achievementsEnabled || minecraft->level == NULL)
+			return;
+		if (minecraft->isCreativeMode())
+			return;
+		minecraft->setScreen(new AchievementsScreen());
+	}
 
 	if (button->id == bServerVisibility->id) {
+		if (!minecraft->isExtendedMultiplayer() && minecraft->level != NULL &&
+			minecraft->level->getLevelData() != NULL &&
+			minecraft->level->getLevelData()->getWorldType() != WorldType::Old) {
+			minecraft->setExtendedMultiplayer(true);
+		}
 		if (minecraft->raknetInstance &&
 			(!minecraft->raknetInstance->isServer() || minecraft->netCallback == NULL)) {
 			// UWP local worlds start offline. Reuse the original host path only
@@ -296,7 +365,6 @@ void PauseScreen::updateServerVisibilityText()
 		return;
 
 	ServerSideNetworkHandler* ss = (ServerSideNetworkHandler*) minecraft->netCallback;
-	bServerVisibility->msg = ss->allowsIncomingConnections()?
-		"Server is visible"
-	:   "Server is invisible";
+	bServerVisibility->msg = I18n::get(ss->allowsIncomingConnections()?
+		"menu.serverVisible" : "menu.serverInvisible");
 }

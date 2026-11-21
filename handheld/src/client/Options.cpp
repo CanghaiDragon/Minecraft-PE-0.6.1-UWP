@@ -25,6 +25,7 @@ void Options::initDefaultValues(DefaultProfile profile) {
 	thirdPersonViewMode = THIRD_PERSON_FIRST;
 	renderDebug = false;
 	debugScreenEnabled = false;
+	achievementsEnabled = false;
 	isFlying = false;
 	smoothCamera = true;
 	fixedCamera = false;
@@ -62,6 +63,12 @@ void Options::initDefaultValues(DefaultProfile profile) {
 
 	//skin     = "Default";
 	username = "Steve";
+	languageCode = minecraft && minecraft->platform()
+		? minecraft->platform()->getLanguageCode() : "en_US";
+#if defined(MCPE_UWP)
+	// The UWP language menu defaults to following the device language.
+	languageCode = "system";
+#endif
 	serverVisible = false;
 	dynamicTileMode = DYNAMIC_TILE_OFF;
 	fullscreen = false;
@@ -179,6 +186,7 @@ void Options::resetKeyMappings()
 	keySpectator = KeyMapping("key.spectator", Keyboard::KEY_F);
 	keyHideHud = KeyMapping("key.hideHud", Keyboard::KEY_F1);
 	keyDebugScreen = KeyMapping("key.debugScreen", Keyboard::KEY_F3);
+	keyScreenshot = KeyMapping("key.screenshot", Keyboard::KEY_F2);
 	keyThirdPerson = KeyMapping("key.thirdPerson", Keyboard::KEY_F5);
 	keyPause = KeyMapping("key.pause", Keyboard::KEY_ESCAPE);
 	for (int i = 0; i < 8; ++i)
@@ -214,6 +222,7 @@ void Options::resetKeyMappings()
 	keyMappings[k++] = &keySpectator;
 	keyMappings[k++] = &keyHideHud;
 	keyMappings[k++] = &keyDebugScreen;
+	keyMappings[k++] = &keyScreenshot;
 	keyMappings[k++] = &keyThirdPerson;
 	keyMappings[k++] = &keyPause;
 	for (int i = 0; i < 8; ++i)
@@ -249,6 +258,7 @@ const Options::Option
 	Options::Option::SKIN_MENU            (26, "options.skinMenu", false, true),
 	Options::Option::TOUCH_SNEAK          (27, "options.touchSneak", false, true),
 	Options::Option::DEBUG_SCREEN         (28, "options.debugScreen", false, true),
+	Options::Option::ACHIEVEMENTS         (32, "options.achievements", false, true),
 	Options::Option::JAVA_UI              (29, "options.javaUi", false, true),
 	Options::Option::PIXELS_PER_MILLIMETER(19, "options.pixelspermilimeter", true, false),
 	Options::Option::FOV                  (20, "options.fov",               true, false);
@@ -351,6 +361,9 @@ void Options::update()
 		// Multiplayer
 		if (key == OptionStrings::Multiplayer_Username) username = value;
 		if (key == OptionStrings::Multiplayer_ServerVisible) readBool(value, serverVisible);
+		if (key == OptionStrings::Language &&
+			(value == "origin" || value == "system" || value == "en_US" || value == "zh_CN"))
+			languageCode = value;
 
 		// Controls
         if (key == OptionStrings::Controls_Sensitivity) {
@@ -478,6 +491,9 @@ void Options::update()
 		if (key == OptionStrings::Extra_DebugScreen) {
 			readBool(value, debugScreenEnabled);
 		}
+		if (key == OptionStrings::Extra_Achievements) {
+			readBool(value, achievementsEnabled);
+		}
 		if (key == OptionStrings::Extra_JavaUI) {
 			readBool(value, javaUi);
 		}
@@ -500,6 +516,7 @@ void Options::update()
 		if (key == keySpectator.name) readInt(value, keySpectator.key);
 		if (key == keyHideHud.name) readInt(value, keyHideHud.key);
 		if (key == keyDebugScreen.name) readInt(value, keyDebugScreen.key);
+		if (key == keyScreenshot.name) readInt(value, keyScreenshot.key);
 		if (key == keyThirdPerson.name) readInt(value, keyThirdPerson.key);
 		if (key == keyPause.name) readInt(value, keyPause.key);
 		for (int hotbarSlot = 0; hotbarSlot < 8; ++hotbarSlot)
@@ -605,6 +622,7 @@ void Options::save()
 	// Game
 	addOptionToSaveOutput(stringVec, OptionStrings::Multiplayer_Username, username);
 	addOptionToSaveOutput(stringVec, OptionStrings::Multiplayer_ServerVisible, serverVisible);
+	addOptionToSaveOutput(stringVec, OptionStrings::Language, languageCode);
 	addOptionToSaveOutput(stringVec, OptionStrings::Game_DifficultyLevel, difficulty);
 	addOptionToSaveOutput(stringVec, OptionStrings::Game_ThirdPerson, thirdPersonView);
 	addOptionToSaveOutput(stringVec, OptionStrings::Game_ThirdPersonMode, thirdPersonViewMode);
@@ -615,6 +633,7 @@ void Options::save()
 	addOptionToSaveOutput(stringVec, OptionStrings::Skin_Menu, skinMenu);
 	addOptionToSaveOutput(stringVec, OptionStrings::Touch_Sneak, touchSneak);
 	addOptionToSaveOutput(stringVec, OptionStrings::Extra_DebugScreen, debugScreenEnabled);
+	addOptionToSaveOutput(stringVec, OptionStrings::Extra_Achievements, achievementsEnabled);
 	addOptionToSaveOutput(stringVec, OptionStrings::Extra_JavaUI, javaUi);
 
 	// Input
@@ -640,6 +659,7 @@ void Options::save()
 	addOptionToSaveOutput(stringVec, keySpectator.name, keySpectator.key);
 	addOptionToSaveOutput(stringVec, keyHideHud.name, keyHideHud.key);
 	addOptionToSaveOutput(stringVec, keyDebugScreen.name, keyDebugScreen.key);
+	addOptionToSaveOutput(stringVec, keyScreenshot.name, keyScreenshot.key);
 	addOptionToSaveOutput(stringVec, keyThirdPerson.name, keyThirdPerson.key);
 	addOptionToSaveOutput(stringVec, keyPause.name, keyPause.key);
 	for (int hotbarSlot = 0; hotbarSlot < 8; ++hotbarSlot)

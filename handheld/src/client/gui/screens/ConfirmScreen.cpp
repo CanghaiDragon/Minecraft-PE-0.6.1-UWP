@@ -1,14 +1,15 @@
 #include "ConfirmScreen.h"
 #include "../components/Button.h"
 #include "../../Minecraft.h"
+#include "../../../locale/I18n.h"
 
 ConfirmScreen::ConfirmScreen(Screen* parent_, const std::string& title1_, const std::string& title2_, int id_)
 :   parent(parent_),
 	title1(title1_),
 	title2(title2_),
 	id(id_),
-	yesButtonText("Ok"),
-	noButtonText("Cancel"),
+	yesButtonText(I18n::get("gui.yes")),
+	noButtonText(I18n::get("gui.cancel")),
 	yesButton(0),
 	noButton(0)
 {

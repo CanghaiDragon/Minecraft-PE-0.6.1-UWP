@@ -9,12 +9,15 @@
 #include "../../../locale/I18n.h"
 
 WelcomeScreen::WelcomeScreen()
-:	touchButton(1, "Touch Controls"),
-	keyboardButton(2, "Keyboard & Mouse"),
-	defaultProfileButton(3, "Desktop Default"),
-	lowPerformanceProfileButton(4, "Desktop Low Performance"),
-	guiScaleButton(5, "GUI Scale"),
-	continueButton(6, "Continue"),
+:	touchButton(1, I18n::get("welcome.touchControls")),
+	keyboardButton(2, I18n::get("welcome.keyboardMouse")),
+	defaultProfileButton(3, I18n::get("welcome.desktopDefault")),
+	lowPerformanceProfileButton(4, I18n::get("welcome.desktopLow")),
+	guiScaleButton(5, I18n::get("options.guiScale")),
+	originLanguageButton(6, I18n::get("welcome.language.origin")),
+	systemLanguageButton(7, I18n::get("welcome.language.system")),
+	continueButton(8, I18n::get("gui.continue")),
+	languageMode("system"),
 	touchControls(true),
 	defaultProfile(Options::DefaultProfile::DesktopDefault),
 	guiScale(0),
@@ -30,12 +33,15 @@ void WelcomeScreen::init()
 {
 	touchControls = minecraft->options.useTouchScreen;
 	guiScale = minecraft->options.guiScale;
+	languageMode = minecraft->options.languageCode == "origin" ? "origin" : "system";
 
 	buttons.push_back(&touchButton);
 	buttons.push_back(&keyboardButton);
 	buttons.push_back(&defaultProfileButton);
 	buttons.push_back(&lowPerformanceProfileButton);
 	buttons.push_back(&guiScaleButton);
+	buttons.push_back(&originLanguageButton);
+	buttons.push_back(&systemLanguageButton);
 	buttons.push_back(&continueButton);
 	updateSelection();
 }
@@ -56,14 +62,18 @@ void WelcomeScreen::setupPositions()
 	touchButton.height = keyboardButton.height = defaultProfileButton.height =
 		lowPerformanceProfileButton.height = guiScaleButton.height = continueButton.height = buttonHeight;
 
-	touchButton.y = 66;
-	keyboardButton.y = 98;
-	// Leave a clear gap below the controls row before the profile choices.
-	defaultProfileButton.y = 168;
-	lowPerformanceProfileButton.y = 200;
-	guiScaleButton.y = 258;
-	// Keep one empty button row between GUI Scale and Continue.
-	continueButton.y = 310;
+	const int languageButtonWidth = (buttonWidth - 4) / 2;
+	originLanguageButton.x = x;
+	systemLanguageButton.x = x + languageButtonWidth + 4;
+	originLanguageButton.width = systemLanguageButton.width = languageButtonWidth;
+	originLanguageButton.height = systemLanguageButton.height = buttonHeight;
+	originLanguageButton.y = systemLanguageButton.y = 58;
+	touchButton.y = 128;
+	keyboardButton.y = 160;
+	defaultProfileButton.y = 230;
+	lowPerformanceProfileButton.y = 262;
+	guiScaleButton.y = 320;
+	continueButton.y = 372;
 	contentHeight = continueButton.y + continueButton.height + 48;
 	clampScroll();
 }
@@ -87,7 +97,7 @@ void WelcomeScreen::render(int xm, int ym, float a)
 	renderDirtBackground(0);
 	const int headerHeight = 30;
 	fill(0, 0, width, headerHeight, 0x99000000);
-	drawCenteredString(font, "Welcome", width / 2, 10, 0xffffff);
+	drawCenteredString(font, I18n::get("welcome.title"), width / 2, 10, 0xffffff);
 
 	const int visibleHeight = height - headerHeight;
 	GLint scissorY = minecraft->height - (GLint)(Gui::GuiScale * height);
@@ -96,13 +106,14 @@ void WelcomeScreen::render(int xm, int ym, float a)
 	glPushMatrix2();
 	glTranslatef2(0, -scrollY, 0);
 
-	drawCenteredString(font, "Choose your controls", width / 2, 38, 0xffffff);
-	drawCenteredString(font, "Touch or keyboard/mouse controls are exclusive in a world.", width / 2, 52, 0xc0c0c0);
-	drawCenteredString(font, "Choose your base configuration", width / 2, 140, 0xffffff);
-	drawCenteredString(font, "Default or Low Performance", width / 2, 154, 0xc0c0c0);
-	drawCenteredString(font, "Adjust interface size", width / 2, 242, 0xffffff);
-	drawCenteredString(font, "You are free to change these settings at any time in options.", width / 2, 344, 0xc0c0c0);
-	drawCenteredString(font, "Don't forget to take a look at \"Additional\" in options!", width / 2, 356, 0xc0c0c0);
+	drawCenteredString(font, I18n::get("welcome.language.title"), width / 2, 38, 0xffffff);
+	drawCenteredString(font, I18n::get("welcome.controls.title"), width / 2, 100, 0xffffff);
+	drawCenteredString(font, I18n::get("welcome.controls.info"), width / 2, 114, 0xc0c0c0);
+	drawCenteredString(font, I18n::get("welcome.profile.title"), width / 2, 202, 0xffffff);
+	drawCenteredString(font, I18n::get("welcome.profile.info"), width / 2, 216, 0xc0c0c0);
+	drawCenteredString(font, I18n::get("welcome.scale.title"), width / 2, 304, 0xffffff);
+	drawCenteredString(font, I18n::get("welcome.options.info"), width / 2, 406, 0xc0c0c0);
+	drawCenteredString(font, I18n::get("welcome.additional.info"), width / 2, 418, 0xc0c0c0);
 	for (unsigned int i = 0; i < buttons.size(); ++i)
 		buttons[i]->render(minecraft, hoverX, hoverY + (int)scrollY);
 
@@ -223,6 +234,14 @@ void WelcomeScreen::buttonClicked(Button* button)
 		// Apply immediately so setSize() recalculates Gui::GuiScale and
 		// re-lays out this welcome page for the newly selected size.
 		minecraft->options.set(&Options::Option::GUI_SCALE, guiScale);
+	} else if (button == &originLanguageButton || button == &systemLanguageButton) {
+		const std::string selectedLanguage = button == &originLanguageButton ? "origin" : "system";
+		if (languageMode != selectedLanguage) {
+			languageMode = selectedLanguage;
+			minecraft->options.languageCode = languageMode;
+			I18n::loadLanguage(minecraft->platform(), languageMode);
+			updateSelection();
+		}
 	} else if (button == &continueButton) {
 		// Apply the selected base profile first, then restore the two choices
 		// made explicitly on this page.  The profile therefore controls only
@@ -245,14 +264,24 @@ void WelcomeScreen::buttonClicked(Button* button)
 
 void WelcomeScreen::updateSelection()
 {
+	touchButton.msg = I18n::get("welcome.touchControls");
+	keyboardButton.msg = I18n::get("welcome.keyboardMouse");
+	defaultProfileButton.msg = I18n::get("welcome.desktopDefault");
+	lowPerformanceProfileButton.msg = I18n::get("welcome.desktopLow");
+	originLanguageButton.msg = I18n::get("welcome.language.origin");
+	systemLanguageButton.msg = I18n::get("welcome.language.system");
+	continueButton.msg = I18n::get("gui.continue");
 	touchButton.selected = touchControls;
 	keyboardButton.selected = !touchControls;
 	defaultProfileButton.selected =
 		defaultProfile == Options::DefaultProfile::DesktopDefault;
 	lowPerformanceProfileButton.selected =
 		defaultProfile == Options::DefaultProfile::DesktopLowPerformance;
+	originLanguageButton.selected = languageMode == "origin";
+	systemLanguageButton.selected = languageMode == "system";
 	guiScaleButton.selected = false;
-	guiScaleButton.msg = std::string("GUI Scale: ") + I18n::get(Options::GUI_SCALE[guiScale]);
+	guiScaleButton.msg = I18n::get("welcome.guiScale") + ": " +
+		I18n::get(Options::GUI_SCALE[guiScale]);
 }
 
 void WelcomeScreen::clampScroll()

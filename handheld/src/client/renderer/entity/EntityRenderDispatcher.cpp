@@ -114,6 +114,13 @@ void EntityRenderDispatcher::prepare( Level* level, Font* font, Mob* player, Opt
 	else {
 		playerRotY = player->yRotO + (player->yRot - player->yRotO) * a;
 		playerRotX = player->xRotO + (player->xRot - player->xRotO) * a;
+		// Name tags billboard against the active camera. The front third-person
+		// camera orbits from the opposite side and inverts pitch, just like the
+		// camera transform in GameRenderer; use those angles so labels face it.
+		if (options != NULL && !options->fixedCamera && options->isThirdPersonFront()) {
+			playerRotY += 180.0f;
+			playerRotX = -playerRotX;
+		}
 	}
 	
 	xPlayer = player->xOld + (player->x - player->xOld) * a;

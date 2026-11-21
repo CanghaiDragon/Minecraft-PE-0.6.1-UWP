@@ -1,11 +1,19 @@
-#include "AppPlatform_uwp.h"
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 
+#include "AppPlatform_uwp.h"
+#include "client/renderer/gles.h"
+
+#include <windows.h>
 #include <windows.applicationmodel.h>
 #include <windows.devices.haptics.h>
 #include <windows.foundation.metadata.h>
 #include <windows.graphics.display.h>
 #include <windows.system.h>
 #include <windows.system.profile.h>
+#include <windows.system.userprofile.h>
+#include <windows.storage.h>
 #include <windows.ui.viewmanagement.h>
 
 // Windows.Phone.Devices.Notification belongs to the optional Windows Mobile
@@ -19,18 +27,23 @@
 #endif
 
 #include <cstdio>
+#include <cstdint>
 #include <ctime>
 #include <cwchar>
+#include <limits>
 #include <ppltasks.h>
 #include <string>
 #include <utility>
+#include <zlib.h>
 
 using namespace Platform;
 using namespace Concurrency;
 using namespace Windows::ApplicationModel;
 using namespace Windows::Foundation;
+using namespace Windows::Storage;
 using namespace Windows::Devices::Haptics;
 using namespace Windows::Graphics::Display;
+using namespace Windows::System::UserProfile;
 using namespace Windows::System;
 using namespace Windows::Foundation::Metadata;
 using namespace Windows::UI::ViewManagement;
@@ -59,12 +72,183 @@ namespace
 	{
 		return (textureFolder ? "images/" : "") + filename;
 	}
+
+	void appendBigEndian32(std::vector<unsigned char>& destination,
+		std::uint32_t value)
+	{
+		destination.push_back(static_cast<unsigned char>((value >> 24) & 0xff));
+		destination.push_back(static_cast<unsigned char>((value >> 16) & 0xff));
+		destination.push_back(static_cast<unsigned char>((value >> 8) & 0xff));
+		destination.push_back(static_cast<unsigned char>(value & 0xff));
+	}
+
+	void appendPngChunk(std::vector<unsigned char>& png, const char type[4],
+		const unsigned char* data, std::uint32_t length)
+	{
+		appendBigEndian32(png, length);
+		const size_t crcStart = png.size();
+		for (int i = 0; i < 4; ++i)
+			png.push_back(static_cast<unsigned char>(type[i]));
+		if (length > 0)
+			png.insert(png.end(), data, data + length);
+		const uLong crc = crc32(0L, png.data() + crcStart,
+			static_cast<uInt>(4u + length));
+		appendBigEndian32(png, static_cast<std::uint32_t>(crc));
+	}
 }
 
 AppPlatform_uwp::AppPlatform_uwp(int screenWidth, int screenHeight)
 	: m_screenWidth(screenWidth),
-	  m_screenHeight(screenHeight)
+	  m_screenHeight(screenHeight),
+	  m_debugScreenshotResult(0),
+	  m_debugScreenshotPending(false)
 {
+}
+
+bool AppPlatform_uwp::saveDebugScreenshot(const std::string& filename,
+	int glWidth, int glHeight)
+{
+	if (!isSafeAssetName(filename) || glWidth <= 0 || glHeight <= 0)
+		return false;
+	if (m_debugScreenshotPending.exchange(true))
+		return false;
+
+	const std::uint64_t pixelCount = static_cast<std::uint64_t>(glWidth) *
+		static_cast<std::uint64_t>(glHeight);
+	if (pixelCount > std::numeric_limits<std::uint32_t>::max() / 4u)
+	{
+		m_debugScreenshotPending.store(false);
+		return false;
+	}
+	const std::uint64_t rawRowBytes = static_cast<std::uint64_t>(glWidth) * 3u + 1u;
+	const std::uint64_t rawBytes = rawRowBytes * glHeight;
+	if (rawBytes > std::numeric_limits<uLong>::max() ||
+		rawBytes > std::numeric_limits<size_t>::max())
+	{
+		m_debugScreenshotPending.store(false);
+		return false;
+	}
+
+	try
+	{
+		std::vector<unsigned char> rgba(static_cast<size_t>(pixelCount) * 4u);
+		GLint previousPackAlignment = 4;
+		glGetIntegerv(GL_PACK_ALIGNMENT, &previousPackAlignment);
+		glPixelStorei(GL_PACK_ALIGNMENT, 1);
+		glReadPixels(0, 0, glWidth, glHeight, GL_RGBA, GL_UNSIGNED_BYTE,
+			rgba.data());
+		glPixelStorei(GL_PACK_ALIGNMENT, previousPackAlignment);
+
+		std::vector<unsigned char> raw(static_cast<size_t>(rawBytes));
+		for (int y = 0; y < glHeight; ++y)
+		{
+			const int sourceY = glHeight - 1 - y;
+			const size_t rowStart = static_cast<size_t>(y) * rawRowBytes;
+			raw[rowStart] = 0; // PNG filter: None
+			for (int x = 0; x < glWidth; ++x)
+			{
+				const size_t source =
+					(static_cast<size_t>(sourceY) * glWidth + x) * 4u;
+				const size_t destination = rowStart + 1u +
+					static_cast<size_t>(x) * 3u;
+				raw[destination] = rgba[source];
+				raw[destination + 1] = rgba[source + 1];
+				raw[destination + 2] = rgba[source + 2];
+			}
+		}
+
+		uLongf compressedSize = compressBound(static_cast<uLong>(raw.size()));
+		std::vector<unsigned char> compressed(compressedSize);
+		if (compress2(compressed.data(), &compressedSize, raw.data(),
+			static_cast<uLong>(raw.size()), Z_BEST_SPEED) != Z_OK)
+		{
+			m_debugScreenshotPending.store(false);
+			return false;
+		}
+		compressed.resize(compressedSize);
+
+		std::vector<unsigned char> png;
+		static const unsigned char signature[8] =
+			{ 137, 80, 78, 71, 13, 10, 26, 10 };
+		png.insert(png.end(), signature, signature + sizeof(signature));
+		unsigned char ihdr[13] = {};
+		ihdr[0] = static_cast<unsigned char>((glWidth >> 24) & 0xff);
+		ihdr[1] = static_cast<unsigned char>((glWidth >> 16) & 0xff);
+		ihdr[2] = static_cast<unsigned char>((glWidth >> 8) & 0xff);
+		ihdr[3] = static_cast<unsigned char>(glWidth & 0xff);
+		ihdr[4] = static_cast<unsigned char>((glHeight >> 24) & 0xff);
+		ihdr[5] = static_cast<unsigned char>((glHeight >> 16) & 0xff);
+		ihdr[6] = static_cast<unsigned char>((glHeight >> 8) & 0xff);
+		ihdr[7] = static_cast<unsigned char>(glHeight & 0xff);
+		ihdr[8] = 8; // bit depth
+		ihdr[9] = 2; // RGB
+		appendPngChunk(png, "IHDR", ihdr, sizeof(ihdr));
+		appendPngChunk(png, "IDAT", compressed.data(),
+			static_cast<std::uint32_t>(compressed.size()));
+		appendPngChunk(png, "IEND", nullptr, 0);
+
+		std::wstring requestedName = widenAsciiPath(filename);
+		const size_t extensionPos = requestedName.find_last_of(L'.');
+		if (extensionPos != std::wstring::npos)
+			requestedName.erase(extensionPos);
+		requestedName += L".png";
+		Array<unsigned char>^ pngBytes = ref new Array<unsigned char>(
+			png.data(), static_cast<unsigned int>(png.size()));
+		m_debugScreenshotResult.store(0);
+		create_task(KnownFolders::PicturesLibrary->CreateFolderAsync(
+			ref new String(L"MinecraftPE"), CreationCollisionOption::OpenIfExists))
+			.then([requestedName, pngBytes](StorageFolder^ screenshotFolder)
+			{
+				return create_task(screenshotFolder->CreateFileAsync(
+					ref new String(requestedName.c_str()),
+					CreationCollisionOption::GenerateUniqueName))
+					.then([pngBytes](StorageFile^ file)
+					{
+						return create_task(FileIO::WriteBytesAsync(file, pngBytes))
+							.then([file](task<void> writeTask)
+							{
+								try
+								{
+									writeTask.get();
+								}
+								catch (...)
+								{
+									create_task(file->DeleteAsync()).then(
+										[](task<void> deleteTask)
+										{
+											try { deleteTask.get(); }
+											catch (...) {}
+										});
+									throw;
+								}
+							});
+					});
+			})
+			.then([this](task<void> completed)
+			{
+				try
+				{
+					completed.get();
+					m_debugScreenshotResult.store(1);
+				}
+				catch (...)
+				{
+					m_debugScreenshotResult.store(-1);
+				}
+				m_debugScreenshotPending.store(false);
+			});
+		return true;
+	}
+	catch (...)
+	{
+		m_debugScreenshotPending.store(false);
+		return false;
+	}
+}
+
+int AppPlatform_uwp::consumeDebugScreenshotResult()
+{
+	return m_debugScreenshotResult.exchange(0);
 }
 
 BinaryBlob AppPlatform_uwp::readAssetFile(const std::string& filename)
@@ -114,6 +298,22 @@ BinaryBlob AppPlatform_uwp::readAssetFile(const std::string& filename)
 	{
 		return BinaryBlob();
 	}
+}
+
+std::string AppPlatform_uwp::getLanguageCode()
+{
+	try
+	{
+		String^ language = GlobalizationPreferences::Languages->GetAt(0);
+		if (language != nullptr && language->Length() >= 2 &&
+			language->Data()[0] == L'z' && language->Data()[1] == L'h')
+			return "zh_CN";
+	}
+	catch (...)
+	{
+		// Keep the game usable if Windows does not provide a language preference.
+	}
+	return "en_US";
 }
 
 TextureData AppPlatform_uwp::loadTexture(const std::string& filename, bool textureFolder)

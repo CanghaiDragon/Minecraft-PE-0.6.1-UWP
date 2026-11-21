@@ -3,6 +3,7 @@
 #include "SelectWorldScreen.h"
 #include "JoinGameScreen.h"
 #include "PauseScreen.h"
+#include "AchievementsScreen.h"
 #include "RenameMPLevelScreen.h"
 #include "IngameBlockSelectionScreen.h"
 #include "touch/TouchStartMenuScreen.h"

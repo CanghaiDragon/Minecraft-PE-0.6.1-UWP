@@ -107,7 +107,7 @@ void NinecraftApp::init()
 #ifndef STANDALONE_SERVER
 	initGLStates();
 	Tesselator::instance.init();
-	I18n::loadLanguage(platform(), "en_US");
+	I18n::loadLanguage(platform(), platform()->getLanguageCode());
 #endif
 
 	Minecraft::init();

@@ -3,6 +3,7 @@
 #include "../ProgressScreen.h"
 #include "../DialogDefinitions.h"
 #include "../../components/ImageButton.h" //weird!
+#include "../../../../locale/I18n.h"
 #include "../../../renderer/Textures.h"
 #include "../../../renderer/Tesselator.h"
 #include "../../../../world/level/LevelSettings.h"
@@ -110,7 +111,7 @@ void TouchWorldSelectionList::renderItem( int i, int x, int y, int h, Tesselator
 		t.draw();
 	} else {
 		// Draw the "Create new world" icon
-		drawCenteredString(minecraft->font, "Create new", centerx, TY +  12, textColor);
+		drawCenteredString(minecraft->font, I18n::get("selectWorld.create"), centerx, TY +  12, textColor);
 
 		minecraft->textures->loadAndBindTexture("gui/touchgui.png");
 
@@ -281,10 +282,11 @@ void TouchWorldSelectionList::tweenInited() {
 // Select World Screen
 //
 SelectWorldScreen::SelectWorldScreen()
-:	bEdit   (1, "Edit"),
-	bImport (3, "Import"),
-	bBack   (4, "Back"),
-	bHeader (0, "Select world"),
+:	bEdit   (1, I18n::get("gui.edit")),
+	bCreate (2, I18n::get("selectWorld.create")),
+	bImport (3, I18n::get("gui.import")),
+	bBack   (4, I18n::get("gui.back")),
+	bHeader (0, I18n::get("selectWorld.title")),
 	bWorldView(5, ""),
 	worldsList(NULL),
 	_hasStartedLevel(false),
@@ -305,6 +307,7 @@ void SelectWorldScreen::init()
 	worldsList->commit();
 
 	buttons.push_back(&bEdit);
+	buttons.push_back(&bCreate);
 	buttons.push_back(&bImport);
 	buttons.push_back(&bBack);
 	buttons.push_back(&bHeader);
@@ -313,6 +316,7 @@ void SelectWorldScreen::init()
 
 	tabButtons.push_back(&bWorldView);
 	tabButtons.push_back(&bEdit);
+	tabButtons.push_back(&bCreate);
 	tabButtons.push_back(&bImport);
 	tabButtons.push_back(&bBack);
 }
@@ -323,18 +327,32 @@ void SelectWorldScreen::setupPositions() {
 	bBack.y   = 0;
 	bHeader.y = 0;
 	bEdit.y   = height - 30;
+	bCreate.y = height - 30;
+	const int buttonGap = 6;
+	const int preferredButtonWidth = 100;
+	const int availableButtonWidth = (width - 12 - buttonGap) / 2;
+	const int bottomButtonWidth = availableButtonWidth < preferredButtonWidth
+		? availableButtonWidth : preferredButtonWidth;
+	bEdit.width = bottomButtonWidth;
+	bCreate.width = bottomButtonWidth;
+	const int buttonGroupWidth = bottomButtonWidth * 2 + buttonGap;
+	bEdit.x = (width - buttonGroupWidth) / 2;
+	bCreate.x = bEdit.x + bottomButtonWidth + buttonGap;
 
 	// Keep Back on the left and place Import on the right in the touch top bar.
 	bImport.x   = width - bImport.width;
 	bBack.x     = 0;
 	bHeader.x   = bBack.width;
 	bHeader.width   = width - (bBack.width + bImport.width);
-	bEdit.x     = (width - bEdit.width) / 2;
 	bHeader.height   = bImport.height;
 }
 
 void SelectWorldScreen::buttonClicked(Button* button)
 {
+	if (button->id == bCreate.id && _state == _STATE_DEFAULT && !_hasStartedLevel) {
+		minecraft->platform()->createUserInput(DialogDefinitions::DIALOG_CREATE_NEW_WORLD);
+		_state = _STATE_CREATEWORLD;
+	}
 	if (button->id == bEdit.id) {
 		if (isIndexValid(worldsList->selectedItem)) {
 		#if defined(MCPE_UWP)
@@ -441,6 +459,8 @@ void SelectWorldScreen::tick()
 						worldType = WorldType::Infinite;
 					else if (sv.size() >= 4 && sv[3] == "alpha")
 						worldType = WorldType::Alpha;
+					else if (sv.size() >= 4 && sv[3] == "earlyinfdev")
+						worldType = WorldType::EarlyInfdev;
 
 					// Start a new level with the given name and seed
 					LOGI("Creating a level with id '%s', name '%s' and seed '%d'\n", levelId.c_str(), levelName.c_str(), seed);
@@ -589,9 +609,9 @@ void SelectWorldScreen::keyPressed( int eventKey )
 // Delete World Screen
 //
 TouchDeleteWorldScreen::TouchDeleteWorldScreen(const LevelSummary& level)
-:	ConfirmScreen(NULL, "Are you sure you want to delete this world?",
-						"'" + level.name + "' will be lost forever!",
-						"Delete", "Cancel", 0),
+:	ConfirmScreen(NULL, I18n::get("selectWorld.deleteQuestion"),
+						"'" + level.name + "' " + I18n::get("selectWorld.deleteWarning"),
+						I18n::get("selectWorld.delete"), I18n::get("gui.cancel"), 0),
 	_level(level)
 {
 	tabButtonIndex = 1;

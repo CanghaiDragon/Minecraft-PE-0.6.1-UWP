@@ -9,6 +9,7 @@
 #include "../../components/SmallButton.h"
 #include "../../components/ScrolledSelectionList.h"
 #include "../../components/GuiElement.h"
+#include "../../../../locale/I18n.h"
 
 #include "../../../Minecraft.h"
 #include "../../../renderer/Tesselator.h"
@@ -103,12 +104,12 @@ namespace Touch {
 
 // Some kind of default settings, might be overridden in ::init
 StartMenuScreen::StartMenuScreen()
-:	bHost(    2, "Start Game"),
-	bJoin(    3, "Join Game"),
-	bOptions( 4, "Options"),
+:	bHost(    2, I18n::get("menu.pe.startGame")),
+	bJoin(    3, I18n::get("menu.pe.joinGame")),
+	bOptions( 4, I18n::get("menu.pe.options")),
 	bQuit(    5, ""),
 	bBuy(     5),
-	bTest(    9, "Create")
+	bTest(    9, I18n::get("selectWorld.create"))
 {
 	ImageDef def;
 	bJoin.width = 75;
@@ -155,10 +156,10 @@ void StartMenuScreen::init()
 		tabButtons.push_back(&bBuy);
 	#endif
 
-	copyright = "\xffMojang AB";//. Do not distribute!";
+	copyright = "©Mojang AB";//. Do not distribute!";
 	githubUrl = "https://github.com/CanghaiDragon/Minecraft-PE-0.6.1-UWP";
-	githubLabel = "Visit Github Repository";
-	buildInfo = std::string("UWP v1.1.3 build ") + getBuildArchitecture();
+	githubLabel = I18n::get("menu.githubRepository");
+	buildInfo = std::string("UWP v1.2 build ") + getBuildArchitecture();
 
 	#ifdef PRE_ANDROID23
 		std::string versionString = Common::getGameVersionString("j");

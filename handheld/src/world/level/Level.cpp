@@ -470,13 +470,53 @@ bool Level::findSkySpawn(int x, int z) {
     return false;
 }
 
+static void generateIndevSpawnHouse(Level* level) {
+	const int spawnX = level->getLevelData()->getXSpawn();
+	const int spawnY = level->getLevelData()->getYSpawn();
+	const int spawnZ = level->getLevelData()->getZSpawn();
+	// UWP stores the supporting surface block in Y. Indev's house generator
+	// centers the structure two blocks above its spawn Y, putting the floor on
+	// that supporting block.
+	const int houseY = spawnY + 2;
+
+	for (int x = spawnX - 3; x <= spawnX + 3; ++x)
+		for (int y = houseY - 2; y <= houseY + 2; ++y)
+			for (int z = spawnZ - 3; z <= spawnZ + 3; ++z) {
+				int tile = y < houseY - 1 ? Tile::obsidian->id : 0;
+				if (x == spawnX - 3 || z == spawnZ - 3 ||
+					x == spawnX + 3 || z == spawnZ + 3 ||
+					y == houseY - 2 || y == houseY + 2) {
+					tile = Tile::rock->id;
+					if (y >= houseY - 1) tile = Tile::wood->id;
+				}
+				if (z == spawnZ - 3 && x == spawnX &&
+					y >= houseY - 1 && y <= houseY)
+					tile = 0;
+				level->setTileNoUpdate(x, y, z, tile);
+			}
+
+	level->setTileNoUpdate(spawnX - 2, houseY, spawnZ, Tile::torch->id);
+	level->setTileNoUpdate(spawnX + 2, houseY, spawnZ, Tile::torch->id);
+}
+
 void Level::setInitialSpawn() {
-    if (levelData.getWorldType() == WorldType::Sky) {
+	if (levelData.getWorldType() == WorldType::Sky) {
         isFindingSpawn = true;
         findSkySpawn(8, 8);
         isFindingSpawn = false;
         return;
     }
+	if (levelData.getWorldType() == WorldType::Indev) {
+		// Indev maps are finite, so search from their center and stop after the
+		// bounded ring scan instead of random-walking indefinitely for a large
+		// spawn plateau (which Floating terrain may not have).
+		isFindingSpawn = true;
+		const bool foundSpawn = findSkySpawn(LEVEL_WIDTH / 2, LEVEL_DEPTH / 2);
+		isFindingSpawn = false;
+		if (_isNew && foundSpawn)
+			generateIndevSpawnHouse(this);
+		return;
+	}
     isFindingSpawn = true;
     // Infinite worlds start at the center of the first chunk, not the corner.
     int xSpawn = levelData.isInfinite() ? 8 : CHUNK_CACHE_WIDTH * CHUNK_WIDTH / 2;
@@ -500,7 +540,9 @@ void Level::setInitialSpawn() {
 
 /*public*/
 void Level::validateSpawn() {
-    if (levelData.getWorldType() == WorldType::Sky) {
+    if (levelData.getWorldType() == WorldType::Sky ||
+		(levelData.getWorldType() == WorldType::Indev &&
+		levelData.getIndevType() == IndevType::Floating)) {
         findSkySpawn(levelData.getXSpawn(), levelData.getZSpawn());
         return;
     }
@@ -526,7 +568,7 @@ void Level::validateSpawn() {
 }
 
 int Level::getTopTile(int x, int z) {
-    if (levelData.getWorldType() == WorldType::Sky || levelData.getWorldType() == WorldType::Alpha) {
+    if (levelData.getWorldType() == WorldType::Sky || levelData.getWorldType() == WorldType::Alpha || levelData.getWorldType() == WorldType::Indev) {
         int y = getTopTileY(x, z);
         return y < 0 ? 0 : getTile(x, y, z);
     }
@@ -538,7 +580,7 @@ int Level::getTopTile(int x, int z) {
 }
 
 int Level::getTopTileY(int x, int z) {
-    if (levelData.getWorldType() == WorldType::Sky || levelData.getWorldType() == WorldType::Alpha) {
+    if (levelData.getWorldType() == WorldType::Sky || levelData.getWorldType() == WorldType::Alpha || levelData.getWorldType() == WorldType::Indev) {
         for (int y = DEPTH - 1; y >= 0; --y) {
             const Material* material = getMaterial(x, y, z);
             // Snow layers and small plants do not replace the spawn's supporting block.
@@ -592,6 +634,9 @@ int Level::getTile(int x, int y, int z) {
     //}
     if (y < 0) return 0;
     if (y >= DEPTH) return 0;
+	if (!levelData.isInfinite() &&
+		(x < 0 || z < 0 || x >= LEVEL_WIDTH || z >= LEVEL_DEPTH))
+		return Tile::invisible_bedrock ? Tile::invisible_bedrock->id : Tile::unbreakable->id;
 	//if (z == 128) {
 	//	int a = 0;
 	//}
@@ -646,6 +691,8 @@ bool Level::setTileAndDataNoUpdate(int x, int y, int z, int tile, int data) {
     //}
     if (y < 0) return false;
     if (y >= DEPTH) return false;
+	if (!levelData.isInfinite() &&
+		(x < 0 || z < 0 || x >= LEVEL_WIDTH || z >= LEVEL_DEPTH)) return false;
     LevelChunk* c = getChunk(x >> 4, z >> 4);
     return c->setTileAndData(x & 15, y, z & 15, tile, data);
 }
@@ -656,6 +703,8 @@ bool Level::setTileNoUpdate(int x, int y, int z, int tile) {
     //}
     if (y < 0) return false;
     if (y >= DEPTH) return false;
+	if (!levelData.isInfinite() &&
+		(x < 0 || z < 0 || x >= LEVEL_WIDTH || z >= LEVEL_DEPTH)) return false;
     LevelChunk* c = getChunk(x >> 4, z >> 4);
     return c->setTile(x & 15, y, z & 15, tile);
 }
@@ -1224,6 +1273,17 @@ std::vector<AABB>& Level::getCubes(const Entity* source, const AABB& box_) { //@
 
     for (int x = x0; x < x1; x++)
         for (int z = z0; z < z1; z++) {
+			if (!levelData.isInfinite() &&
+				(x < 0 || z < 0 || x >= LEVEL_WIDTH || z >= LEVEL_DEPTH)) {
+				Tile* boundary = Tile::invisible_bedrock;
+				if (boundary != NULL) {
+					for (int y = y0 - 1; y < y1; y++) {
+						if (y >= 0 && y < DEPTH)
+							boundary->addAABBs(this, x, y, z, box, boxes);
+					}
+				}
+				continue;
+			}
             if (hasChunkAt(x, Level::DEPTH / 2, z)) {
                 for (int y = y0 - 1; y < y1; y++) {
                     Tile* tile = Tile::tiles[getTile(x, y, z)];
@@ -1266,6 +1326,9 @@ int Level::getSkyDarken(float a) {
 }
 
 Vec3 Level::getSkyColor(Entity* source, float a) {
+	if (levelData.getWorldType() == WorldType::EarlyInfdev)
+		return Vec3(0.0f, 0.0f, 1.0f);
+
     float td = getTimeOfDay(a);
 
 	float br = Mth::cos(td * Mth::PI * 2) * 2 + 0.5f;
@@ -1288,9 +1351,11 @@ Vec3 Level::getSkyColor(Entity* source, float a) {
 }
 
 Vec3 Level::getBetaSkyColor(Entity* source, float a) {
-	// WorldProviderSky fixes the celestial angle at daytime.  Preserve that
-	// visual behaviour only for the Java/Beta renderer; PE rendering continues
-	// to use its normal sky palette and day/night treatment.
+	if (levelData.getWorldType() == WorldType::EarlyInfdev)
+		return Vec3(0.0f, 0.0f, 1.0f);
+
+	// The Sky world uses the fixed #C0C0FF Beta sky tint and keeps its
+	// celestial angle at daytime.
 	if (levelData.getWorldType() == WorldType::Sky) {
 		// The fixed Beta Sky tint is #C0C0FF.  Its brightness must follow the
 		// atmospheric sky curve, not the block-light sky-darkening value: the
@@ -1657,11 +1722,17 @@ void Level::tick(Entity* e, bool actual) {
     int xc = Mth::floor(e->x);
     int zc = Mth::floor(e->z);
     int r = 32;
-    // For finite worlds, skip ticking entities in unloaded regions.
-    // For infinite worlds, any chunk is generated on demand so this check
-    // would falsely freeze the player when crossing into fresh territory.
-    if (actual && !levelData.isInfinite() && !hasChunksAt(xc - r, 0, zc - r, xc + r, 128, zc + r)) {
-        return;
+    // Finite worlds skip entity ticks while chunks in the active area are
+    // unavailable. Clip that area to the actual world: requesting chunks
+    // outside Old/Indev bounds always fails and used to freeze players near
+    // every finite-world edge (including original Old worlds).
+    if (actual && !levelData.isInfinite()) {
+        const int x0 = xc - r < 0 ? 0 : xc - r;
+        const int z0 = zc - r < 0 ? 0 : zc - r;
+        const int x1 = xc + r >= LEVEL_WIDTH ? LEVEL_WIDTH - 1 : xc + r;
+        const int z1 = zc + r >= LEVEL_DEPTH ? LEVEL_DEPTH - 1 : zc + r;
+        if (x0 <= x1 && z0 <= z1 && !hasChunksAt(x0, 0, z0, x1, Level::DEPTH, z1))
+            return;
     }
 
     e->xOld = e->x;

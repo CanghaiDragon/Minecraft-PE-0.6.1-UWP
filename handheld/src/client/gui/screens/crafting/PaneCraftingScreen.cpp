@@ -1,4 +1,5 @@
 #include "PaneCraftingScreen.h"
+#include "../../../../world/level/storage/AchievementIds.h"
 #include "../touch/TouchStartMenuScreen.h"
 #include "../../Screen.h"
 #include "../../components/NinePatch.h"
@@ -534,6 +535,18 @@ void PaneCraftingScreen::craftSelectedItem()
 		if (!minecraft->player->inventory->add(&resultItem)) {
 			minecraft->player->drop(new ItemInstance(resultItem), false);
 		}
+		if (resultItem.id == Tile::workBench->id)
+			minecraft->player->awardAchievement(AchievementIds::Benchmarking);
+		else if (resultItem.id == Item::pickAxe_wood->id)
+			minecraft->player->awardAchievement(AchievementIds::TimeToMine);
+		else if (resultItem.id == Tile::furnace->id)
+			minecraft->player->awardAchievement(AchievementIds::HotTopic);
+		else if (resultItem.id == Item::ironIngot->id)
+			minecraft->player->awardAchievement(AchievementIds::AcquireHardware);
+		else if (resultItem.id == Item::pickAxe_stone->id)
+			minecraft->player->awardAchievement(AchievementIds::GettingAnUpgrade);
+		else if (resultItem.id == Item::bread->id)
+			minecraft->player->awardAchievement(AchievementIds::BakeBread);
 
 		recheckRecipes();
 	}

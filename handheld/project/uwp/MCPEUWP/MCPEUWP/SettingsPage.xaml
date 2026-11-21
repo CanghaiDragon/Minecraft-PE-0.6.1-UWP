@@ -3,30 +3,30 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Background="Transparent" IsTabStop="True" KeyDown="OnPageKeyDown"
     RequestedTheme="Dark"
-    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft">
+    FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont">
     <Page.Resources>
         <Style x:Key="McButtonStyle" TargetType="Button">
-            <Setter Property="FontFamily" Value="ms-appx:///data/fonts/minecraft.ttf#Minecraft" />
+            <Setter Property="FontFamily" Value="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont" />
             <Setter Property="Foreground" Value="White" />
         </Style>
         <Style x:Key="McComboBoxStyle" TargetType="ComboBox">
-            <Setter Property="FontFamily" Value="ms-appx:///data/fonts/minecraft.ttf#Minecraft" />
+            <Setter Property="FontFamily" Value="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont" />
             <Setter Property="Foreground" Value="White" />
         </Style>
         <Style x:Key="McComboBoxItemStyle" TargetType="ComboBoxItem">
-            <Setter Property="FontFamily" Value="ms-appx:///data/fonts/minecraft.ttf#Minecraft" />
+            <Setter Property="FontFamily" Value="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont" />
             <Setter Property="Foreground" Value="White" />
         </Style>
         <Style x:Key="McTextBoxStyle" TargetType="TextBox">
-            <Setter Property="FontFamily" Value="ms-appx:///data/fonts/minecraft.ttf#Minecraft" />
+            <Setter Property="FontFamily" Value="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont" />
             <Setter Property="Foreground" Value="White" />
         </Style>
         <Style x:Key="McCheckBoxStyle" TargetType="CheckBox">
-            <Setter Property="FontFamily" Value="ms-appx:///data/fonts/minecraft.ttf#Minecraft" />
+            <Setter Property="FontFamily" Value="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont" />
             <Setter Property="Foreground" Value="White" />
         </Style>
         <Style x:Key="McSliderStyle" TargetType="Slider">
-            <Setter Property="FontFamily" Value="ms-appx:///data/fonts/minecraft.ttf#Minecraft" />
+            <Setter Property="FontFamily" Value="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont" />
             <Setter Property="Foreground" Value="White" />
         </Style>
     </Page.Resources>

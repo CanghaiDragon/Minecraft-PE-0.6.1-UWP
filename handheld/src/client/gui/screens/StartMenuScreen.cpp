@@ -20,6 +20,7 @@
 #include "../../../LicenseCodes.h"
 #include "SimpleChooseLevelScreen.h"
 #include "../../renderer/Textures.h"
+#include "../../../locale/I18n.h"
 #include "../../../SharedConstants.h"
 #include "../../../platform/input/Mouse.h"
 
@@ -41,12 +42,12 @@ const char* getBuildArchitecture() {
 
 // Some kind of default settings, might be overridden in ::init
 StartMenuScreen::StartMenuScreen()
-:	bHost(    2, 0, 0, 200, 22, "Singleplayer"),
-	bJoin(    3, 0, 0, 200, 22, "Multiplayer"),
-	bOptions( 4, 0, 0,  98, 22, "Options..."),
-	bQuit(    6, 0, 0,  98, 22, "Quit Game"),
-	bBuy(     5, 0, 0, 78, 22, "Buy"),
-	bTest(    999, 0, 0, 78, 22, "Create")
+:	bHost(    2, 0, 0, 200, 22, I18n::get("menu.singleplayer")),
+	bJoin(    3, 0, 0, 200, 22, I18n::get("menu.multiplayer")),
+	bOptions( 4, 0, 0,  98, 22, I18n::get("menu.options")),
+	bQuit(    6, 0, 0,  98, 22, I18n::get("menu.quit")),
+	bBuy(     5, 0, 0, 78, 22, I18n::get("menu.buy")),
+	bTest(    999, 0, 0, 78, 22, I18n::get("selectWorld.create"))
 {
 }
 
@@ -75,10 +76,10 @@ void StartMenuScreen::init()
 		tabButtons.push_back(&bBuy);
 	#endif
 
-	copyright = "\xffMojang AB";//. Do not distribute!";
+	copyright = "©Mojang AB";//. Do not distribute!";
 	githubUrl = "https://github.com/CanghaiDragon/Minecraft-PE-0.6.1-UWP";
-	githubLabel = "Visit Github Repository";
-	buildInfo = std::string("UWP v1.1.3 build ") + getBuildArchitecture();
+	githubLabel = I18n::get("menu.githubRepository");
+	buildInfo = std::string("UWP v1.2 build ") + getBuildArchitecture();
 
 	#ifdef PRE_ANDROID23
 		std::string versionString = Common::getGameVersionString("j");

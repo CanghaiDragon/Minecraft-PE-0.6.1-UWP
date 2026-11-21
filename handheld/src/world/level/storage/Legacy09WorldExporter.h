@@ -7,8 +7,8 @@
 namespace legacy09 {
 
 // UI-independent entry point for the PE 0.9+ LevelDB exporter.  The source
-// may be a UWP V2 Infinite/Sky/Alpha world or a current finite
-// StorageVersion 3 world backed by chunks.dat.  The source and destination
+// may be a UWP V2 world or a current finite StorageVersion 3 Old/Indev world
+// backed by chunks.dat. The source and destination
 // are ordinary filesystem paths so this layer can be called by either the
 // native game UI or the XAML conversion page.
 struct ExportOptions {
@@ -23,6 +23,7 @@ struct ExportOptions {
     bool lowerSeaLevel = false;
     bool freezeWinterWater = false;
     bool skyBedrockFloor = false;
+    bool floatingBedrockFloor = false;
 };
 
 using Log = std::function<void(const std::wstring&)>;

@@ -73,11 +73,12 @@ static const char* s_fragSrc =
     "uniform float u_fogDensity;\n"
     "uniform int   u_useVertexColor;\n"
     "uniform vec4  u_color;\n"
+    "uniform vec4  u_vertexColorMultiplier;\n"
     "varying vec2 v_texCoord;\n"
     "varying vec4 v_color;\n"
     "varying float v_fogDist;\n"
     "void main() {\n"
-    "    vec4 color = (u_useVertexColor != 0) ? v_color : u_color;\n"
+    "    vec4 color = (u_useVertexColor != 0) ? (v_color * u_vertexColorMultiplier) : u_color;\n"
     "    if (u_useTexture != 0) {\n"
     "        color *= texture2D(u_tex, v_texCoord);\n"
     "    }\n"
@@ -170,6 +171,7 @@ GLint  g_loc_fogDensity   = -1;
 GLint  g_loc_tex          = -1;
 GLint  g_loc_useVertexColor = -1;
 GLint  g_loc_uColor       = -1;
+GLint  g_loc_vertexColorMultiplier = -1;
 
 bool  g_shaderEnabled    = false;
 bool  g_texture2DEnabled = false;
@@ -182,6 +184,7 @@ float g_fogColor[4]      = {1,1,1,1};
 int   g_fogMode          = GL_LINEAR;
 float g_fogDensity       = 1.0f;
 float g_currentColor[4]  = {1,1,1,1};
+float g_vertexColorMultiplier[4] = {1,1,1,1};
 
 // ---------------------------------------------------------------------------
 // Helper: compile a single shader stage and print errors if any
@@ -247,6 +250,7 @@ void shaderInit() {
     g_loc_tex          = glGetUniformLocation(g_shader_program, "u_tex");
     g_loc_useVertexColor = glGetUniformLocation(g_shader_program, "u_useVertexColor");
     g_loc_uColor       = glGetUniformLocation(g_shader_program, "u_color");
+    g_loc_vertexColorMultiplier = glGetUniformLocation(g_shader_program, "u_vertexColorMultiplier");
 #else
     g_loc_useTexture   = glGetUniformLocation(g_shader_program, "useTexture");
     g_loc_useAlphaTest = glGetUniformLocation(g_shader_program, "useAlphaTest");
@@ -271,6 +275,8 @@ void shaderInit() {
     if (g_loc_useFog       >= 0) glUniform1i(g_loc_useFog,       0);
     if (g_loc_useVertexColor >= 0) glUniform1i(g_loc_useVertexColor, 1);
     if (g_loc_uColor       >= 0) glUniform4f(g_loc_uColor, 1, 1, 1, 1);
+    if (g_loc_vertexColorMultiplier >= 0)
+        glUniform4fv(g_loc_vertexColorMultiplier, 1, g_vertexColorMultiplier);
 
     if (g_loc_fogStart   >= 0) glUniform1f(g_loc_fogStart, g_fogStart);
     if (g_loc_fogEnd     >= 0) glUniform1f(g_loc_fogEnd, g_fogEnd);
@@ -304,6 +310,8 @@ void shaderSyncUniforms() {
     // Upload MVP and MV matrices from software stack
     if (g_loc_mvp >= 0) glUniformMatrix4fv(g_loc_mvp, 1, GL_FALSE, MatrixStack::getMVP());
     if (g_loc_mv  >= 0) glUniformMatrix4fv(g_loc_mv,  1, GL_FALSE, MatrixStack::getModelView());
+    if (g_loc_vertexColorMultiplier >= 0)
+        glUniform4fv(g_loc_vertexColorMultiplier, 1, g_vertexColorMultiplier);
 #endif
 }
 
@@ -412,6 +420,15 @@ void glColor4f_shader(float r, float g, float b, float a) {
     if (g_shaderEnabled && g_loc_uColor >= 0) {
         glUniform4f(g_loc_uColor, r, g, b, a);
     }
+}
+
+void glVertexColorMultiplier_shader(float r, float g, float b, float a) {
+    g_vertexColorMultiplier[0] = r;
+    g_vertexColorMultiplier[1] = g;
+    g_vertexColorMultiplier[2] = b;
+    g_vertexColorMultiplier[3] = a;
+    if (g_shaderEnabled && g_loc_vertexColorMultiplier >= 0)
+        glUniform4f(g_loc_vertexColorMultiplier, r, g, b, a);
 }
 
 void glFogf_shader(GLenum pname, GLfloat param) {

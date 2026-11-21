@@ -78,6 +78,7 @@ public:
 		static const Option SKIN_MENU;
 		static const Option TOUCH_SNEAK;
 		static const Option DEBUG_SCREEN;
+		static const Option ACHIEVEMENTS;
 		static const Option JAVA_UI;
 
 		static const Option PIXELS_PER_MILLIMETER;
@@ -176,6 +177,7 @@ public:
 	KeyMapping keySpectator;
 	KeyMapping keyHideHud;
 	KeyMapping keyDebugScreen;
+	KeyMapping keyScreenshot;
 	KeyMapping keyThirdPerson;
 	KeyMapping keyPause;
 	KeyMapping keyHotbar[8];
@@ -200,6 +202,7 @@ public:
     bool renderDebug;
 	// Enables the F3 debug screen and its touch/pause-screen button.
 	bool debugScreenEnabled;
+	bool achievementsEnabled;
 
     bool isFlying;
     bool smoothCamera;
@@ -209,6 +212,7 @@ public:
     int guiScale;
 	int dpadSize;
 	std::string username;
+	std::string languageCode;
 
 	bool serverVisible;
 	int dynamicTileMode;
@@ -366,6 +370,7 @@ public:
 			debugScreenEnabled = !debugScreenEnabled;
 			if (!debugScreenEnabled) renderDebug = false;
 		}
+		if (option == &Option::ACHIEVEMENTS) achievementsEnabled = !achievementsEnabled;
 		if (option == &Option::JAVA_UI) javaUi = !javaUi;
         if (option == &Option::VIEW_BOBBING)	bobView = !bobView;
 		if (option == &Option::THIRD_PERSON)	setThirdPersonViewMode((thirdPersonViewMode + 1) % 3);
@@ -470,6 +475,8 @@ public:
 			return touchSneak;
 		if (item == &Option::DEBUG_SCREEN)
 			return debugScreenEnabled;
+		if (item == &Option::ACHIEVEMENTS)
+			return achievementsEnabled;
 		if (item == &Option::JAVA_UI)
 			return javaUi;
 		if (item == &Option::FULLSCREEN)

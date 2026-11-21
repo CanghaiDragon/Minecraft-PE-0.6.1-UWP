@@ -266,6 +266,7 @@ extern GLint g_loc_fogDensity;
 extern GLint g_loc_tex;
 extern GLint g_loc_useVertexColor;
 extern GLint g_loc_uColor;
+extern GLint g_loc_vertexColorMultiplier;
 
 // Current GL state mirrored for uniform updates
 extern bool  g_shaderEnabled;
@@ -279,6 +280,7 @@ extern float g_fogColor[4];
 extern int   g_fogMode;
 extern float g_fogDensity;
 extern float g_currentColor[4];
+extern float g_vertexColorMultiplier[4];
 
 void shaderInit();
 void shaderBind();
@@ -290,6 +292,7 @@ void glEnable_shader(GLenum cap);
 void glDisable_shader(GLenum cap);
 void glAlphaFunc_shader(GLenum func, GLclampf ref);
 void glColor4f_shader(float r, float g, float b, float a);
+void glVertexColorMultiplier_shader(float r, float g, float b, float a);
 void glFogf_shader(GLenum pname, GLfloat param);
 void glFogfv_shader(GLenum pname, const GLfloat* params);
 void glFogx_shader(GLenum pname, GLint param);

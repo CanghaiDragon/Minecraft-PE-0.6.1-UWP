@@ -1,4 +1,5 @@
 #include "SelectWorldScreen.h"
+#include "../../../locale/I18n.h"
 #include "StartMenuScreen.h"
 #include "ProgressScreen.h"
 #include "DialogDefinitions.h"
@@ -229,10 +230,10 @@ void WorldSelectionList::tweenInited() {
 // Select World Screen
 //
 SelectWorldScreen::SelectWorldScreen()
-:	bEdit   (1, "Edit"),
-	bCreate (2, "Create new"),
-	bImport (3, "Import"),
-	bBack   (4, "Back"),
+:	bEdit   (1, I18n::get("gui.edit")),
+	bCreate (2, I18n::get("selectWorld.create")),
+	bImport (3, I18n::get("gui.import")),
+	bBack   (4, I18n::get("gui.back")),
 	bWorldView(5, ""),
 	worldsList(NULL),
 	_state(_STATE_DEFAULT),
@@ -367,6 +368,8 @@ void SelectWorldScreen::tick()
 						worldType = WorldType::Infinite;
 					else if (sv.size() >= 4 && sv[3] == "alpha")
 						worldType = WorldType::Alpha;
+					else if (sv.size() >= 4 && sv[3] == "earlyinfdev")
+						worldType = WorldType::EarlyInfdev;
 
 					// Start a new level with the given name and seed
 					LevelSettings settings(seed, isCreative? GameType::Creative : GameType::Survival, worldType);
@@ -513,7 +516,7 @@ void SelectWorldScreen::render( int xm, int ym, float a )
 	//Performance::watches.get("sws-screen").stop();
 
 	//Performance::watches.get("sws-string").start();
-	drawCenteredString(minecraft->font, "Select world", width / 2, 8, 0xffffffff);
+	drawCenteredString(minecraft->font, I18n::get("selectWorld.title"), width / 2, 8, 0xffffffff);
 	//Performance::watches.get("sws-string").stop();
 
 	//Performance::watches.get("sws-full").stop();
@@ -563,9 +566,9 @@ void SelectWorldScreen::keyPressed( int eventKey )
 // Delete World Screen
 //
 DeleteWorldScreen::DeleteWorldScreen(const LevelSummary& level)
-:	ConfirmScreen(NULL, "Are you sure you want to delete this world?",
-						"'" + level.name + "' will be lost forever!",
-						"Delete", "Cancel", 0),
+:	ConfirmScreen(NULL, I18n::get("selectWorld.deleteQuestion"),
+						"'" + level.name + "' " + I18n::get("selectWorld.deleteWarning"),
+						I18n::get("selectWorld.delete"), I18n::get("gui.cancel"), 0),
 	_level(level)
 {
 	tabButtonIndex = 1;

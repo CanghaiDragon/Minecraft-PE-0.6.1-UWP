@@ -70,6 +70,10 @@ public:
     virtual ~AppPlatform() {}
 
 	virtual void saveScreenshot(const std::string& filename, int glWidth, int glHeight) {}
+	virtual bool saveDebugScreenshot(const std::string& filename, int glWidth, int glHeight) { return false; }
+	// Returns 1 after an asynchronous screenshot save succeeds, -1 on failure,
+	// or 0 while no result is ready.
+	virtual int consumeDebugScreenshotResult() { return 0; }
 	virtual TextureData loadTexture(const std::string& filename_, bool textureFolder) { return TextureData(); }
 
     virtual void playSound(const std::string& fn, float volume, float pitch) {}
@@ -101,6 +105,8 @@ public:
 
 	virtual void uploadPlatformDependentData(int id, void* data) {}
 	virtual BinaryBlob readAssetFile(const std::string& filename) { return BinaryBlob(); }
+	// Locale identifier used for packaged game translations (for example zh_CN).
+	virtual std::string getLanguageCode() { return "en_US"; }
 	virtual void _tick() {}
 
 	virtual int getScreenWidth() { return 854; }

@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <string>
+#include "AchievementIds.h"
 
 class LevelData;
 class ChunkStorage;
@@ -33,6 +34,10 @@ public:
 	virtual void loadEntities(Level* level, LevelChunk* levelChunk) {}
 	virtual bool loadDeferredEntities(Level* level, int maxEntities) { return true; }
 	virtual void finishPreload() {}
+	virtual bool unlockAchievement(int id) { (void)id; return false; }
+	virtual bool hasAchievement(int id) { (void)id; return false; }
+	virtual bool markOverkillMob(int mobType) { (void)mobType; return false; }
+	virtual int getOverkillMobCount() { return 0; }
 
 	//void checkSession() throws LevelConflictException;
 	//PlayerIO getPlayerIO();

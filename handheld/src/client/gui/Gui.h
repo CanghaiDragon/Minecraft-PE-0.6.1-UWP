@@ -39,6 +39,7 @@ public:
 
 	void handleClick(int button, int x, int y);
 	void handleKeyPressed( int key );
+	void showSelectedItemName();
 
 	void tick();
 	void render(float a, bool mouseFree, int xMouse, int yMouse);
@@ -64,7 +65,7 @@ public:
 	void inventoryUpdated();
 
 	void setNowPlaying(const std::string& string);
-	void displayClientMessage(const std::string& messageId);
+	void displayClientMessage(const std::string& messageId, const std::string& argument = std::string());
 	void renderSlotText(const ItemInstance* item, float x, float y, bool hasFinite, bool shadow);
 	void texturesLoaded( Textures* textures );
 

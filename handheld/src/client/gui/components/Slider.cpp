@@ -70,7 +70,7 @@ static std::string sliderValueText(SliderType sliderType, const Options::Option*
 			// The surrounding row is already labelled "Input Mode".  A compact
 			// desktop label keeps this value inside the option pane at every GUI
 			// scale, unlike the old "Keyboard & Mouse" string.
-			return curStepValue ? "Touch" : "Keyboard";
+			return I18n::get(curStepValue ? "options.inputMode.touch" : "options.inputMode.keyboard");
 		} else if (option == &Options::Option::SKIN_ARM_TYPE) {
 			return I18n::get(curStepValue ? "options.skinArmType.slim" : "options.skinArmType.classic");
 		} else if (option == &Options::Option::GRAPHICS) {

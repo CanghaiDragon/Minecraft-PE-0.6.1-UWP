@@ -1,5 +1,14 @@
 #include "LevelData.h"
 
+static int getConfiguredWorldType(const LevelSettings& settings)
+{
+	if (settings.shouldResolveIndevInfdev() &&
+		settings.getWorldType() == WorldType::Indev &&
+		WorldType::isIndevInfdev(settings.getSeed()))
+		return WorldType::EarlyInfdev;
+	return settings.getWorldType();
+}
+
 LevelData::LevelData()
 :	xSpawn(128),
 	ySpawn(64),
@@ -14,6 +23,10 @@ LevelData::LevelData()
 	storageVersion(0),
 	gameType(GameType::Default),
 	worldType(WorldType::Old),
+	indevType(IndevType::Inland),
+	biomeMapping(BiomeMapping::None),
+	alphaWinterDiscoveryPending(false),
+	infdevDiscoveryPending(false),
 	loadedPlayerTag(NULL)
 {
 	//LOGI("ctor 1: %p\n", this);
@@ -23,11 +36,18 @@ LevelData::LevelData()
 LevelData::LevelData( const LevelSettings& settings, const std::string& levelName, int generatorVersion /*= -1*/ )
 :	seed(settings.getSeed()),
 	gameType(settings.getGameType()),
-	worldType(settings.getWorldType()),
+	worldType(getConfiguredWorldType(settings)),
+	indevType(settings.getIndevType()),
+	biomeMapping(BiomeMapping::None),
+	alphaWinterDiscoveryPending(settings.getWorldType() == WorldType::Alpha &&
+		WorldType::isAlphaWinter(settings.getSeed())),
+	infdevDiscoveryPending(settings.shouldResolveIndevInfdev() &&
+		settings.getWorldType() == WorldType::Indev &&
+		WorldType::isIndevInfdev(settings.getSeed())),
 	levelName(levelName),
-	xSpawn((settings.getWorldType() == WorldType::Infinite || settings.getWorldType() == WorldType::Sky || settings.getWorldType() == WorldType::Alpha) ? 0 : 128),
+	xSpawn((getConfiguredWorldType(settings) == WorldType::Infinite || getConfiguredWorldType(settings) == WorldType::Sky || getConfiguredWorldType(settings) == WorldType::Alpha || getConfiguredWorldType(settings) == WorldType::EarlyInfdev) ? 0 : 128),
 	ySpawn(64),
-	zSpawn((settings.getWorldType() == WorldType::Infinite || settings.getWorldType() == WorldType::Sky || settings.getWorldType() == WorldType::Alpha) ? 0 : 128),
+	zSpawn((getConfiguredWorldType(settings) == WorldType::Infinite || getConfiguredWorldType(settings) == WorldType::Sky || getConfiguredWorldType(settings) == WorldType::Alpha || getConfiguredWorldType(settings) == WorldType::EarlyInfdev) ? 0 : 128),
 	lastPlayed(0),
 	time(0),
 	dimension(Dimension::NORMAL),
@@ -54,6 +74,8 @@ LevelData::LevelData( const LevelData& rhs )
 :	seed(rhs.seed),
 	gameType(rhs.gameType),
 	worldType(rhs.worldType),
+	indevType(rhs.indevType),
+	biomeMapping(rhs.biomeMapping),
 	levelName(rhs.levelName),
 	xSpawn(rhs.xSpawn),
 	ySpawn(rhs.ySpawn),
@@ -65,6 +87,8 @@ LevelData::LevelData( const LevelData& rhs )
 	playerDataVersion(rhs.playerDataVersion),
 	generatorVersion(rhs.generatorVersion),
 	spawnMobs(rhs.spawnMobs),
+	alphaWinterDiscoveryPending(rhs.alphaWinterDiscoveryPending),
+	infdevDiscoveryPending(rhs.infdevDiscoveryPending),
 	loadedPlayerTag(NULL),
 	playerData(rhs.playerData)
 {
@@ -80,6 +104,8 @@ LevelData& LevelData::operator=( const LevelData& rhs )
 		seed		= rhs.seed;
 		gameType	= rhs.gameType;
 		worldType	= rhs.worldType;
+		indevType = rhs.indevType;
+		biomeMapping = rhs.biomeMapping;
 		levelName	= rhs.levelName;
 		xSpawn		= rhs.xSpawn;
 		ySpawn		= rhs.ySpawn;
@@ -88,6 +114,8 @@ LevelData& LevelData::operator=( const LevelData& rhs )
 		time		= rhs.time;
 		dimension	= rhs.dimension;
 		spawnMobs	= rhs.spawnMobs;
+		alphaWinterDiscoveryPending = rhs.alphaWinterDiscoveryPending;
+		infdevDiscoveryPending = rhs.infdevDiscoveryPending;
 		playerData  = rhs.playerData;
 		playerDataVersion	= rhs.playerDataVersion;
 		generatorVersion	= rhs.generatorVersion;
@@ -175,6 +203,10 @@ void LevelData::setTagData( CompoundTag* tag, CompoundTag* playerTag )
 	tag->putInt("StorageVersion", storageVersion);
 	tag->putInt("Platform", 2);
 	tag->putInt("WorldType", worldType);
+	tag->putInt("IndevType", indevType);
+	tag->putInt("BiomeMapping", biomeMapping);
+	tag->putBoolean("AlphaWinterDiscoveryPending", alphaWinterDiscoveryPending);
+	tag->putBoolean("InfdevDiscoveryPending", infdevDiscoveryPending);
 
 	if (playerTag != NULL) {
 		tag->putCompound("Player", playerTag);
@@ -195,6 +227,14 @@ void LevelData::getTagData( const CompoundTag* tag )
 	levelName = tag->getString("LevelName");
 	storageVersion = tag->getInt("StorageVersion");
 	worldType = tag->getInt("WorldType"); // 0 if missing (old worlds default to Old)
+	indevType = tag->contains("IndevType", Tag::TAG_Int)
+		? tag->getInt("IndevType") : IndevType::Inland;
+	biomeMapping = tag->contains("BiomeMapping", Tag::TAG_Int)
+		? tag->getInt("BiomeMapping") : BiomeMapping::None;
+	alphaWinterDiscoveryPending = tag->contains("AlphaWinterDiscoveryPending", Tag::TAG_Byte) &&
+		tag->getBoolean("AlphaWinterDiscoveryPending");
+	infdevDiscoveryPending = tag->contains("InfdevDiscoveryPending", Tag::TAG_Byte) &&
+		tag->getBoolean("InfdevDiscoveryPending");
 
 	spawnMobs = (gameType == GameType::Survival);
 
@@ -369,10 +409,32 @@ void LevelData::setSpawnMobs( bool doSpawn )
 	spawnMobs = doSpawn;
 }
 
+bool LevelData::takeAlphaWinterDiscoveryMessage()
+{
+	if (!alphaWinterDiscoveryPending) return false;
+	alphaWinterDiscoveryPending = false;
+	return true;
+}
+
+bool LevelData::takeInfdevDiscoveryMessage()
+{
+	if (!infdevDiscoveryPending) return false;
+	infdevDiscoveryPending = false;
+	return true;
+}
+
 int LevelData::getWorldType() const
 {
 	return worldType;
 }
+
+int LevelData::getIndevType() const { return indevType; }
+
+void LevelData::setIndevType(int type) { indevType = type; }
+
+int LevelData::getBiomeMapping() const { return biomeMapping; }
+
+void LevelData::setBiomeMapping(int mapping) { biomeMapping = mapping; }
 
 void LevelData::setWorldType( int type )
 {
@@ -381,5 +443,6 @@ void LevelData::setWorldType( int type )
 
 bool LevelData::isInfinite() const
 {
-	return worldType == WorldType::Infinite || worldType == WorldType::Sky || worldType == WorldType::Alpha;
+	return worldType == WorldType::Infinite || worldType == WorldType::Sky ||
+		worldType == WorldType::Alpha || worldType == WorldType::EarlyInfdev;
 }

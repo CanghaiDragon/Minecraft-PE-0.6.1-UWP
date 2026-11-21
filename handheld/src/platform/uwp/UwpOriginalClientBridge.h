@@ -123,7 +123,7 @@ void UwpOriginalClientSetOptionFloat(UwpOriginalClientHandle handle, UwpOptionId
 void UwpOriginalClientRequestWorldEdit(const std::string& worldId);
 bool UwpOriginalClientConsumeLevelSelection(UwpOriginalClientHandle handle,
 	std::string& levelId, std::string& levelName, long& seed,
-	int& gameType, int& worldType);
+	int& gameType, int& worldType, int& indevType);
 bool UwpOriginalClientConsumeWorldEdit(UwpOriginalClientHandle handle,
 	std::string& worldId);
 Minecraft* UwpOriginalClientGetMinecraft(UwpOriginalClientHandle handle);

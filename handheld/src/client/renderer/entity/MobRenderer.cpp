@@ -26,6 +26,12 @@ Model* MobRenderer::getArmor() {
 	return armor;
 }
 
+void MobRenderer::copyModelStateToArmor() {
+	armor->riding = model->riding;
+	armor->young = model->young;
+	armor->attackTime = model->attackTime;
+}
+
 void MobRenderer::render(Entity* e, float x, float y, float z, float rot, float a)
 {
 	Mob* mob = (Mob*) e;
@@ -36,12 +42,6 @@ void MobRenderer::render(Entity* e, float x, float y, float z, float rot, float 
 	model->attackTime = getAttackAnim(mob, a);
 	model->riding = false;//mob.isRiding();
 	model->young = mob->isBaby();
-
-	if (armor) {
-		armor->riding = model->riding;
-		armor->young  = model->young;
-		armor->attackTime = model->attackTime;
-	}
 
 	float bodyRot = (mob->yBodyRotO + (mob->yBodyRot - mob->yBodyRotO) * a);
 	float headRot = (mob->yRotO + (mob->yRot - mob->yRotO) * a);
@@ -76,6 +76,7 @@ void MobRenderer::render(Entity* e, float x, float y, float z, float rot, float 
 	for (int i = 0; i < MAX_ARMOR_LAYERS; i++) {
 		if (prepareArmor(mob, i, a) < 0) continue;
 
+		copyModelStateToArmor();
 		armor->prepareMobModel(mob, wp, ws, a);
 		armor->render(e, wp, ws, bob, headRot - bodyRot, headRotx, ascale);
 		glDisable2(GL_BLEND);

@@ -10,11 +10,19 @@ I18n::Map I18n::_strings;
 
 void I18n::loadLanguage( AppPlatform* platform, const std::string& languageCode )
 {
+	std::string resolvedLanguage = languageCode;
+	if (resolvedLanguage == "origin")
+		resolvedLanguage = "en_US";
+	else if (resolvedLanguage == "system")
+		resolvedLanguage = platform != NULL ? platform->getLanguageCode() : "en_US";
+	if (resolvedLanguage != "zh_CN")
+		resolvedLanguage = "en_US";
+
 	_strings.clear();
 	fillTranslations(platform, "lang/en_US.lang", true);
 
-	if (languageCode != "en_US")
-		fillTranslations(platform, "lang/" + languageCode + ".lang", true);
+	if (resolvedLanguage != "en_US")
+		fillTranslations(platform, "lang/" + resolvedLanguage + ".lang", true);
 }
 
 bool I18n::get( const std::string& id, std::string& out ) {
@@ -38,6 +46,12 @@ std::string I18n::get( const std::string& id )
 	struct FallbackText { const char* id; const char* text; };
 	static const FallbackText fallbackTexts[] = {
 		{ "options.category.additional", "Additional" },
+		{ "options.category.language", "Language" },
+		{ "options.language.mode.origin", "Original" },
+		{ "options.language.mode.system", "Follow System" },
+		{ "options.language.mode.english", "English" },
+		{ "options.language.mode.simplifiedChinese", "Simplified Chinese" },
+		{ "options.language.mode.origin.description", "Minecraft PE 0.6.1 Sample text" },
 		{ "options.extraWorldType", "Extra World Type" },
 		{ "options.dynamicTile", "Dynamic Tile (Win10 only)" },
 		{ "options.dynamicTile.off", "Off" },
@@ -58,6 +72,7 @@ std::string I18n::get( const std::string& id )
 		{ "options.importSkin", "Import Skin" },
 		{ "options.touchSneak", "Touch Sneak" },
 		{ "options.debugScreen", "Debug Function" },
+		{ "options.achievements", "Achievements" },
 		{ "options.fullscreen", "Fullscreen" },
 		{ "options.skinArmType", "Arm Type" },
 		{ "options.skinArmType.classic", "Classic" },
@@ -92,7 +107,7 @@ void I18n::fillTranslations( AppPlatform* platform, const std::string& filename,
 			continue;
 
 		std::string value = Util::stringTrim(line.substr(spos + 1));
-		_strings.insert( std::make_pair(key, value ) );
+		_strings[key] = value;
 	}
 
 	delete[] blob.data;

@@ -39,6 +39,8 @@ public:
 
 	void drop(ItemInstance* item, bool randomly);
     void take(Entity* e, int orgCount);
+	virtual void awardAchievement(int achievementId);
+	virtual void recordOverkillMob(int mobType);
 
 	void startCrafting(int x, int y, int z, int tableSize);
 	void startStonecutting(int x, int y, int z);
@@ -100,6 +102,7 @@ private:
 
 	int sentInventoryItemId;
 	int sentInventoryItemData;
+	bool sentSneaking;
 
 	int armorTypeHash;
 

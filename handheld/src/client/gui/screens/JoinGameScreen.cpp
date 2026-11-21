@@ -3,54 +3,14 @@
 #include "ProgressScreen.h"
 #include "../Font.h"
 #include "../../../network/RakNetInstance.h"
+#include "../../../locale/I18n.h"
 #include <vector>
 
-namespace
-{
-	void drawCenteredWrappedInfo(GuiComponent* component, Font* font, const std::string& text,
-		int centerX, int centerY, int maxWidth)
-	{
-		std::vector<std::string> lines;
-		std::string line;
-		size_t wordStart = 0;
-		while (wordStart < text.size())
-		{
-			size_t wordEnd = text.find(' ', wordStart);
-			if (wordEnd == std::string::npos)
-				wordEnd = text.size();
-
-			const std::string word = text.substr(wordStart, wordEnd - wordStart);
-			const std::string candidate = line.empty()
-				? word
-				: line + " " + word;
-			if (!line.empty() && font->width(candidate) > maxWidth)
-			{
-				lines.push_back(line);
-				line = word;
-			}
-			else
-			{
-				line = candidate;
-			}
-			wordStart = wordEnd + 1;
-		}
-		if (!line.empty())
-			lines.push_back(line);
-
-		const int lineHeight = 9;
-		const int firstY = centerY - static_cast<int>((lines.size() - 1) * lineHeight) / 2;
-		for (unsigned int i = 0; i < lines.size(); ++i)
-			component->drawCenteredString(font, lines[i], centerX,
-				firstY + static_cast<int>(i) * lineHeight, 0xffc0c0c0);
-	}
-}
-
 JoinGameScreen::JoinGameScreen()
-:	bJoin(  2, "Join Game"),
-	bBack(  3, "Back"),
+:	bBack(  3, I18n::get("gui.back")),
+	bMode(  4, I18n::get("multiplayer.switchMode")),
 	gamesList(NULL)
 {
-	bJoin.active = false;
 	//gamesList->yInertia = 0.5f;
 }
 
@@ -61,20 +21,9 @@ JoinGameScreen::~JoinGameScreen()
 
 void JoinGameScreen::buttonClicked(Button* button)
 {
-	if (button->id == bJoin.id)
+	if (button->id == bMode.id)
 	{
-		if (isIndexValid(gamesList->selectedItem))
-		{
-			PingedCompatibleServer selectedServer = gamesList->copiedServerList[gamesList->selectedItem];
-			minecraft->joinMultiplayer(selectedServer);
-			{
-				bJoin.active = false;
-				bBack.active = false;
-				minecraft->setScreen(new ProgressScreen());
-			}
-		}
-		//minecraft->locateMultiplayer();
-		//minecraft->setScreen(new JoinGameScreen());
+		minecraft->setExtendedMultiplayer(!minecraft->isExtendedMultiplayer());
 	}
 	if (button->id == bBack.id)
 	{
@@ -99,8 +48,28 @@ bool JoinGameScreen::isIndexValid( int index )
 	return gamesList && index >= 0 && index < gamesList->getNumberOfItems();
 }
 
+void AvailableGamesList::selectItem(int item, bool)
+{
+	selectedItem = item;
+}
+
+void JoinGameScreen::joinSelectedServer()
+{
+	if (!isIndexValid(gamesList->selectedItem)) return;
+	PingedCompatibleServer selectedServer = gamesList->copiedServerList[gamesList->selectedItem];
+	minecraft->joinMultiplayer(selectedServer);
+	bMode.active = false;
+	bBack.active = false;
+	minecraft->setScreen(new ProgressScreen());
+}
+
 void JoinGameScreen::tick()
 {
+	if (isIndexValid(gamesList->selectedItem)) {
+		joinSelectedServer();
+		return;
+	}
+
 	const ServerList& orgServerList = minecraft->raknetInstance->getServerList();
 	ServerList serverList;
 	for (unsigned int i = 0; i < orgServerList.size(); ++i)
@@ -141,19 +110,17 @@ void JoinGameScreen::tick()
 		}
 	}
 
-	bJoin.active = isIndexValid(gamesList->selectedItem);
 }
 
 void JoinGameScreen::init()
 {
-	buttons.push_back(&bJoin);
 	buttons.push_back(&bBack);
+	buttons.push_back(&bMode);
 
 	minecraft->raknetInstance->clearServerList();
 	gamesList = new AvailableGamesList(minecraft, width, height);
 
 #ifdef ANDROID
-	tabButtons.push_back(&bJoin);
 	tabButtons.push_back(&bBack);
 #endif
 }
@@ -162,14 +129,16 @@ void JoinGameScreen::setupPositions() {
 	int yBase = height - 26;
 
 	//#ifdef ANDROID
-	bJoin.y =	yBase;
+	bMode.y =	yBase;
 	bBack.y =   yBase;
 
-	bBack.width = bJoin.width = 120;
+	bBack.width = bMode.width = 120;
+	bMode.height = bBack.height = 24;
 	//#endif
 
-	// Center buttons
-	bJoin.x = width / 2 - 4 - bJoin.width;
+	// Server selection continues to start joining; Switch occupies the old
+	// Join Game button position.
+	bMode.x = width / 2 - 4 - bMode.width;
 	bBack.x = width / 2 + 4;
 }
 
@@ -186,9 +155,9 @@ void JoinGameScreen::render( int xm, int ym, float a )
 
 	if (hasNetwork) {
 #ifdef RPI
-		std::string s = "Scanning for Local Network Games...";
+		std::string s = I18n::get("multiplayer.scanningLocal");
 #else
-		std::string s = "Scanning for WiFi Games...";
+		std::string s = I18n::get("multiplayer.scanningWifi");
 #endif
 		drawCenteredString(minecraft->font, s, width / 2, 8, 0xffffffff);
 
@@ -199,14 +168,26 @@ void JoinGameScreen::render( int xm, int ym, float a )
 		int n = ((int)(5.5f * getTimeS()) % 4);
 		drawCenteredString(minecraft->font, spinnerTexts[n], spinnerX, 8, 0xffffffff);
 	} else {
-		std::string s = "WiFi is disabled";
+		std::string s = I18n::get("multiplayer.wifiDisabled");
 		const int yy = height / 2 - 8;
 		drawCenteredString(minecraft->font, s, width / 2, yy, 0xffffffff);
 	}
 
-	drawCenteredWrappedInfo(this, minecraft->font,
-		"Only finite worlds are supported. Compatible with original PE.",
-		width / 2, height - 40, width > 20 ? width - 20 : width);
+	const bool extended = minecraft->isExtendedMultiplayer();
+	const std::string modeLine = extended
+		? (width < 360 ? I18n::get("multiplayer.extendedMode.short")
+			: I18n::get("multiplayer.extendedMode.long"))
+		: (width < 360 ? I18n::get("multiplayer.compatibleMode.short")
+			: I18n::get("multiplayer.compatibleMode.long"));
+	const int modeLineX = (width - minecraft->font->width(modeLine)) / 2;
+	minecraft->font->draw(modeLine, (float)modeLineX,
+		(float)(height - 54), 0xffc0c0c0);
+	drawCenteredString(minecraft->font,
+		extended ? (width < 360 ? I18n::get("multiplayer.projectClients.short")
+			: I18n::get("multiplayer.projectClients.long"))
+			: I18n::get("multiplayer.originalClients"),
+		width / 2, height - 44, 0xffc0c0c0);
+
 }
 
 bool JoinGameScreen::isInGameScreen() { return false; }

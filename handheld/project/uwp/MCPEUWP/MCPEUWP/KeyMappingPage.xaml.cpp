@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "KeyMappingPage.xaml.h"
+#include "XamlLocalization.h"
 #include "../../../../src/client/Minecraft.h"
 #include "../../../../src/client/Options.h"
 #include "../../../../src/platform/input/Keyboard.h"
@@ -32,6 +33,7 @@ namespace
 		Craft,
 		HideHud,
 		DebugScreen,
+		Screenshot,
 		ThirdPerson,
 		Pause,
 		Hotbar1,
@@ -65,6 +67,7 @@ namespace
 		{ L"Crafting (Survival)", Craft },
 		{ L"Toggle Hide HUD", HideHud },
 		{ L"Toggle Debug Function", DebugScreen },
+		{ L"Take Screenshot", Screenshot },
 		{ L"Toggle Third-person View", ThirdPerson },
 		{ L"Pause / Back", Pause },
 		{ L"Hotbar Slot 1", Hotbar1 },
@@ -88,6 +91,7 @@ namespace
 KeyMappingPage::KeyMappingPage()
 {
 	InitializeComponent();
+	UwpXamlLocalization::install(this);
 
 	for (const BindingRow& row : kKeyboardRows)
 	{
@@ -108,7 +112,7 @@ KeyMappingPage::KeyMappingPage()
 		TextBlock^ label = ref new TextBlock();
 		label->Text = ref new String(row.label);
 		label->FontFamily = ref new Windows::UI::Xaml::Media::FontFamily(
-			L"ms-appx:///data/fonts/minecraft.ttf#Minecraft");
+			L"ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont");
 		label->Foreground = ref new Windows::UI::Xaml::Media::SolidColorBrush(
 			Windows::UI::Colors::White);
 		label->FontSize = 17;
@@ -125,7 +129,7 @@ KeyMappingPage::KeyMappingPage()
 		button->Margin = Thickness(0, 5, 14, 5);
 		button->FontSize = 16;
 		button->FontFamily = ref new Windows::UI::Xaml::Media::FontFamily(
-			L"ms-appx:///data/fonts/minecraft.ttf#Minecraft");
+			L"ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont");
 		button->Foreground = ref new Windows::UI::Xaml::Media::SolidColorBrush(
 			Windows::UI::Colors::White);
 		button->Click += ref new RoutedEventHandler(this, &KeyMappingPage::OnBindingClick);
@@ -153,7 +157,7 @@ KeyMappingPage::KeyMappingPage()
 		TextBlock^ label = ref new TextBlock();
 		label->Text = ref new String(labelText);
 		label->FontFamily = ref new Windows::UI::Xaml::Media::FontFamily(
-			L"ms-appx:///data/fonts/minecraft.ttf#Minecraft");
+			L"ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont");
 		label->Foreground = ref new Windows::UI::Xaml::Media::SolidColorBrush(
 			Windows::UI::Colors::White);
 		label->FontSize = 17;
@@ -168,7 +172,7 @@ KeyMappingPage::KeyMappingPage()
 			std::wstring(labelText) == L"Mine / Attack" ? L"Mouse Left" :
 			std::wstring(labelText) == L"Place Block / Interact" ? L"Mouse Right" : L"Mouse Wheel");
 		mouse->FontFamily = ref new Windows::UI::Xaml::Media::FontFamily(
-			L"ms-appx:///data/fonts/minecraft.ttf#Minecraft");
+			L"ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont");
 		mouse->Foreground = ref new Windows::UI::Xaml::Media::SolidColorBrush(
 			Windows::UI::ColorHelper::FromArgb(220, 255, 208, 128));
 		mouse->FontSize = 16;
@@ -214,6 +218,7 @@ int KeyMappingPage::GetBindingKey(int bindingId)
 	case Craft: return options.keyCraft.key;
 	case HideHud: return options.keyHideHud.key;
 	case DebugScreen: return options.keyDebugScreen.key;
+	case Screenshot: return options.keyScreenshot.key;
 	case ThirdPerson: return options.keyThirdPerson.key;
 	case Pause: return options.keyPause.key;
 	case Hotbar1: case Hotbar2: case Hotbar3: case Hotbar4:
@@ -244,6 +249,7 @@ void KeyMappingPage::SetBindingKey(int bindingId, int keyCode)
 	case Craft: options.keyCraft.key = keyCode; break;
 	case HideHud: options.keyHideHud.key = keyCode; break;
 	case DebugScreen: options.keyDebugScreen.key = keyCode; break;
+	case Screenshot: options.keyScreenshot.key = keyCode; break;
 	case ThirdPerson: options.keyThirdPerson.key = keyCode; break;
 	case Pause: options.keyPause.key = keyCode; break;
 	case Hotbar1: case Hotbar2: case Hotbar3: case Hotbar4:

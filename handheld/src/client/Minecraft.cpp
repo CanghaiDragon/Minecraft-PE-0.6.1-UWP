@@ -1,4 +1,5 @@
 #include "Minecraft.h"
+#include <ctime>
 #ifndef STANDALONE_SERVER
 #include "gui/screens/DisconnectionScreen.h"
 #include "gui/screens/WelcomeScreen.h"
@@ -49,6 +50,7 @@ extern void setWin32GuiInputEnabled(bool enabled);
 #include "../LicenseCodes.h"
 #include "../util/PerfTimer.h"
 #include "../util/PerfRenderer.h"
+#include "../locale/I18n.h"
 #include "player/input/MouseBuildInput.h"
 #include "../platform/input/TouchTrace.h"
 
@@ -214,6 +216,10 @@ Minecraft::Minecraft()
 	_uwpBorrowedWorld(false),
 	_uwpSavedTouchscreen(false),
 	_uwpTouchscreenSaved(false),
+	_debugScreenshotRequested(false),
+	_debugScreenshotKeyHeld(false),
+	_debugScreenshotSaving(false),
+	_extendedMultiplayer(false),
 	_lightPriorityChunkValid(false),
 	_lightPriorityChunkX(0),
 	_lightPriorityChunkZ(0),
@@ -499,18 +505,25 @@ void Minecraft::leaveGame(bool renameLevel /*=false*/)
     if (!_running || level == NULL || isGeneratingLevel || !_hasSignaledGeneratingLevelFinished)
         return;
 
-	LOGI("leaveGame: begin rename=%d\n", renameLevel ? 1 : 0);
+	LOGI("[COPY_MAP] leave begin rename=%d clientSide=%d level=%p storage=%p playerPos=%.2f,%.2f,%.2f\n",
+		renameLevel ? 1 : 0, level->isClientSide ? 1 : 0, level,
+		level->getLevelStorage(), player != NULL ? player->x : 0.0f,
+		player != NULL ? player->y : 0.0f, player != NULL ? player->z : 0.0f);
 	isGeneratingLevel = false;
 	bool saveLevel = level && (!level->isClientSide || renameLevel);
+	#if defined(MCPE_UWP)
+	const bool copyClientMap = level && level->isClientSide && renameLevel;
+	#endif
+	LOGI("[COPY_MAP] save decision=%d\n", saveLevel ? 1 : 0);
 
 	LOGI("leaveGame: disconnect\n");
 	if (raknetInstance)
 		raknetInstance->disconnect();
 	if (saveLevel) {
 		// If server or wanting to save level as client, save all unsaved chunks!
-		LOGI("leaveGame: save chunks begin\n");
+		LOGI("[COPY_MAP] save chunks begin\n");
 		level->getChunkSource()->saveAll(true);
-		LOGI("leaveGame: save chunks end\n");
+		LOGI("[COPY_MAP] save chunks end\n");
 	}
 
 	LOGI("Clearing levels\n");
@@ -540,7 +553,29 @@ void Minecraft::leaveGame(bool renameLevel /*=false*/)
 	LOGI("leaveGame: cleanup complete\n");
 #ifndef STANDALONE_SERVER
 	if (renameLevel) {
-		setScreen(new RenameMPLevelScreen(LevelStorageSource::TempLevelId));
+	#if defined(MCPE_UWP)
+		if (copyClientMap) {
+			// A guest world is stored under LocalCache/_LastJoinedServer. The
+			// old rename screen performs this transfer from render(), but the
+			// UWP host can replace that screen while returning to its menu. Move
+			// the saved directory here, after the LevelStorage has been closed.
+			LOGI("[COPY_MAP] direct transfer begin levelId=%s name=Downloaded World\n",
+				LevelStorageSource::TempLevelId.c_str());
+			if (storageSource != NULL) {
+				storageSource->renameLevel(LevelStorageSource::TempLevelId,
+					"Downloaded World");
+				LOGI("[COPY_MAP] direct transfer requested\n");
+			} else {
+				LOGE("[COPY_MAP] direct transfer failed: storage source is null\n");
+			}
+			screenChooser.setScreen(SCREEN_STARTMENU);
+		} else
+	#endif
+		{
+			LOGI("[COPY_MAP] entering rename screen levelId=%s\n",
+				LevelStorageSource::TempLevelId.c_str());
+			setScreen(new RenameMPLevelScreen(LevelStorageSource::TempLevelId));
+		}
 	}
 	else
 		screenChooser.setScreen(SCREEN_STARTMENU);
@@ -609,8 +644,11 @@ void Minecraft::prepareLevelFor(Level* targetLevel, const std::string& title) {
 	progressStageStatusId = 3;
 	if (level->isNew()) {
 		level->setInitialSpawn(); // @note: should obviously be called from Level itself
-		if (level->getLevelData()->getWorldType() == WorldType::Sky
-			&& level->getSharedSpawnPos().y < 0) return;
+		const bool floatingIndev =
+			level->getLevelData()->getWorldType() == WorldType::Indev &&
+			level->getLevelData()->getIndevType() == IndevType::Floating;
+		if ((level->getLevelData()->getWorldType() == WorldType::Sky || floatingIndev) &&
+			level->getSharedSpawnPos().y < 0) return;
 		level->saveLevelData();
 		level->getChunkSource()->saveAll(false);
 		level->saveGame();
@@ -800,9 +838,49 @@ void Minecraft::renderFrame(float alpha)
 	if (gameRenderer != NULL &&
 		(level != NULL || screen != NULL))
 		gameRenderer->render(alpha);
+	if (_debugScreenshotSaving && platform() != NULL) {
+		const int result = platform()->consumeDebugScreenshotResult();
+		if (result != 0) {
+			_debugScreenshotSaving = false;
+			gui.displayClientMessage(result > 0
+				? "message.screenshot.saved"
+				: "message.screenshot.failed");
+		}
+	}
+	if (_debugScreenshotRequested) {
+		_debugScreenshotRequested = false;
+		char filename[64];
+		const time_t captureTime = time(NULL);
+		tm localCaptureTime = {};
+#if defined(_WIN32)
+		const bool haveLocalTime = localtime_s(&localCaptureTime, &captureTime) == 0;
+#else
+		const bool haveLocalTime = localtime_r(&captureTime, &localCaptureTime) != NULL;
+#endif
+		if (!haveLocalTime || strftime(filename, sizeof(filename),
+			"Screenshot_%Y-%m-%d_%H.%M.%S.png", &localCaptureTime) == 0)
+			sprintf(filename, "Screenshot_%lld.png",
+				static_cast<long long>(captureTime));
+		const bool queued = platform() != NULL &&
+			platform()->saveDebugScreenshot(filename, width, height);
+		if (queued) {
+			_debugScreenshotSaving = true;
+			gui.displayClientMessage("message.screenshot.saving");
+		} else {
+			gui.displayClientMessage("message.screenshot.failed");
+		}
+	}
 #else
 	(void)alpha;
 #endif
+}
+
+void Minecraft::requestDebugScreenshot()
+{
+	if (!options.debugScreenEnabled || level == NULL || player == NULL ||
+		_debugScreenshotSaving)
+		return;
+	_debugScreenshotRequested = true;
 }
 
 bool Minecraft::attachUwpWorld(Level* world, LocalPlayer* localPlayer)
@@ -859,6 +937,18 @@ bool Minecraft::attachUwpWorld(Level* world, LocalPlayer* localPlayer)
 	_running = true;
 	timer.skipTime();
 	_uwpBorrowedWorld = true;
+	if (level->getLevelData()->takeAlphaWinterDiscoveryMessage()) {
+		std::string goldColor(1, static_cast<char>(0xA7));
+		goldColor += "6";
+		gui.addMessage(goldColor + I18n::get("message.discovery.winter"));
+		level->saveLevelData();
+	}
+	if (level->getLevelData()->takeInfdevDiscoveryMessage()) {
+		std::string goldColor(1, static_cast<char>(0xA7));
+		goldColor += "6";
+		gui.addMessage(goldColor + I18n::get("message.discovery.infdev"));
+		level->saveLevelData();
+	}
 	return true;
 #else
 	(void)world;
@@ -1034,6 +1124,8 @@ public:
 void Minecraft::tickInput() {
 #ifndef STANDALONE_SERVER
 	InputRAII raiiInput;
+	if (!Keyboard::isKeyDown(options.keyScreenshot.key))
+		_debugScreenshotKeyHeld = false;
 	// Spectator flight is an opt-in debug feature.  If the F3 debug screen is
 	// disabled from the options menu while flight is active, clear the movement
 	// state before the next gameplay input frame so it cannot become stranded.
@@ -1091,7 +1183,10 @@ void Minecraft::tickInput() {
 			Inventory* v = player->inventory;
 			int numSlots = gui.getNumSlots() - 1;
 			int slot = (v->selected - e.dy + numSlots) % numSlots;
-			v->selectSlot(slot);
+			if (slot != v->selected) {
+				v->selectSlot(slot);
+				gui.showSelectedItemName();
+			}
 		}
 		/*
 		if (mouseDiggable && options.useMouseForDigging) {
@@ -1111,6 +1206,15 @@ void Minecraft::tickInput() {
 	while (Keyboard::next()) {
 		int key = Keyboard::getEventKey();
 		bool isPressed = (Keyboard::getEventKeyState() == KeyboardAction::KEYDOWN);
+		if (key == options.keyScreenshot.key) {
+			if (!isPressed) {
+				_debugScreenshotKeyHeld = false;
+			} else if (!_debugScreenshotKeyHeld) {
+				_debugScreenshotKeyHeld = true;
+				if (!screen)
+					requestDebugScreenshot();
+			}
+		}
 		// In Touch mode keyboard input is reserved for text fields in Screens
 		// (which return above).  It must not also move or act in the world.
 		if (useTouchscreen())
@@ -1126,8 +1230,10 @@ void Minecraft::tickInput() {
 			// special cases in the input loop.
 			for (int hotbarSlot = 0; hotbarSlot < 8; ++hotbarSlot) {
 				if (key == options.keyHotbar[hotbarSlot].key) {
-					if (hotbarSlot < gui.getNumSlots() - 1)
+					if (hotbarSlot < gui.getNumSlots() - 1 && player->inventory->selected != hotbarSlot) {
 						player->inventory->selectSlot(hotbarSlot);
+						gui.showSelectedItemName();
+					}
 					break;
 				}
 			}
@@ -1679,6 +1785,7 @@ void Minecraft::init()
 	// installations keep their current setup and never see the welcome page.
 	const bool firstRun = !options.hasSavedOptions();
 	reloadOptions();
+	I18n::loadLanguage(platform(), options.languageCode);
 	if (firstRun && !isMobileDevice) {
 		setScreen(new WelcomeScreen());
 	}
@@ -1875,6 +1982,16 @@ void Minecraft::hostMultiplayer(int port) {
     raknetInstance->disconnect();
     delete netCallback;
     netCallback = NULL;
+	if (isExtendedMultiplayer() && player != NULL && textures != NULL) {
+		player->multiplayerSkinPixels.clear();
+		const TextureId skinId = textures->loadTexture("skins/local.png");
+		const TextureData* skin = Textures::isTextureIdValid(skinId)
+			? textures->getTemporaryTextureData(skinId) : NULL;
+		if (skin != NULL && skin->w == 64 && skin->h == 64 &&
+			skin->data != NULL && skin->format == TEXF_UNCOMPRESSED_8888 &&
+			skin->numBytes >= 64 * 64 * 4)
+			player->multiplayerSkinPixels.assign(skin->data, skin->data + 64 * 64 * 4);
+	}
 
 #if !defined(NO_NETWORK)
 	netCallback = new ServerSideNetworkHandler(this, raknetInstance);

@@ -16,13 +16,15 @@
 #include "../../renderer/gles.h"
 #include "../../../platform/input/Mouse.h"
 #include "../../../util/Mth.h"
-OptionsScreen::OptionsScreen()
+OptionsScreen::OptionsScreen(int initialCategory)
 : btnClose(NULL),
   bHeader(NULL),
   currentOptionPane(NULL),
   usernameBox(NULL),
-  selectedCategory(0),
+	selectedCategory(initialCategory),
   _resettingOptions(false),
+	_languageChangePending(false),
+	_pendingLanguageMode(),
   _catScrollY(0),
   _catScrollVelocity(0),
   _catContentHeight(0),
@@ -60,7 +62,7 @@ OptionsScreen::~OptionsScreen() {
 }
 
 void OptionsScreen::init() {
-	bHeader = new Touch::THeader(0, "Options");
+	bHeader = new Touch::THeader(0, I18n::get("options.title"));
 	btnClose = new ImageButton(1, "");
 	ImageDef def;
 	def.name = "gui/touchgui.png";
@@ -70,13 +72,16 @@ void OptionsScreen::init() {
 	def.setSrc(IntRectangle(150, 0, (int)def.width, (int)def.height));
 	btnClose->setImageDef(def, true);
 
-	// Category order follows Options.md.  Audio sits directly above Additional.
+	// Category order follows Options.md, with Language after Additional.
 	Touch::TButton* b;
 	b = new Touch::TButton(2, I18n::get("options.category.game"));       b->width = 80; b->height = 28; categoryButtons.push_back(b);
 	b = new Touch::TButton(3, I18n::get("options.category.controls"));   b->width = 80; b->height = 28; categoryButtons.push_back(b);
 	b = new Touch::TButton(4, I18n::get("options.category.graphics"));   b->width = 80; b->height = 28; categoryButtons.push_back(b);
 	b = new Touch::TButton(5, I18n::get("options.category.audio"));      b->width = 80; b->height = 28; categoryButtons.push_back(b);
 	b = new Touch::TButton(6, I18n::get("options.category.additional")); b->width = 80; b->height = 28; categoryButtons.push_back(b);
+	#if defined(MCPE_UWP)
+	b = new Touch::TButton(7, I18n::get("options.category.language")); b->width = 80; b->height = 28; categoryButtons.push_back(b);
+	#endif
 	// Skin editing remains the original optionPanes[5] implementation, but
 	// is no longer exposed as a first-level sidebar category.  It is opened by
 	// the dedicated skin button on the UWP start menu.
@@ -230,12 +235,15 @@ void OptionsScreen::generateOptionScreens() {
 	optionPanes.push_back(new OptionsPane());
 	optionPanes.push_back(new OptionsPane());
 	optionPanes.push_back(new OptionsPane());
+	#if defined(MCPE_UWP)
+	optionPanes.push_back(new OptionsPane());
+	#endif
 	optionPanes.push_back(new OptionsPane());
 	optionPanes.push_back(new OptionsPane());
 	optionPanes.push_back(new OptionsPane());
 	// Game
 	OptionsGroup& gameGroup = optionPanes[0]->createOptionsGroup("options.group.game");
-	usernameBox = gameGroup.addTextInput("Username", "Username", minecraft->options.username);
+	usernameBox = gameGroup.addTextInput(I18n::get("options.username"), I18n::get("options.username"), minecraft->options.username);
 	gameGroup.addOptionItem(&Options::Option::DIFFICULTY, minecraft)
 		.addOptionItem(&Options::Option::THIRD_PERSON, minecraft)
 		.addOptionItem(&Options::Option::SERVER_VISIBLE, minecraft)
@@ -281,17 +289,27 @@ void OptionsScreen::generateOptionScreens() {
 		.addOptionItem(&Options::Option::TOUCH_SNEAK, minecraft)
 		.addOptionItem(&Options::Option::BETA_VISUALS, minecraft)
 		.addOptionItem(&Options::Option::DEBUG_SCREEN, minecraft)
-		.addDisabledItem("Chinese", "Coming soon");
+		.addOptionItem(&Options::Option::ACHIEVEMENTS, minecraft);
+
+#if defined(MCPE_UWP)
+	optionPanes[5]->createOptionsGroup("options.category.language")
+		.addDescription(I18n::get("options.language.mode.origin.description"))
+		.addLanguageModes(minecraft, this);
+#endif
 
 	// Skin: choose the model explicitly; imported skins are always 64x64.
+#if defined(MCPE_UWP)
+	OptionsGroup& skinGroup = optionPanes[6]->createOptionsGroup("options.category.skin");
+#else
 	OptionsGroup& skinGroup = optionPanes[5]->createOptionsGroup("options.category.skin");
+#endif
 	skinGroup
 		.addOptionItem(&Options::Option::SKIN_ARM_TYPE, minecraft)
-		.addDescription("Choose Classic or Slim model")
+		.addDescription(I18n::get("options.skinArmDescription"))
 		.addImportSkinItem(minecraft)
-		.addDescription("Use a 64x64 PNG skin")
+		.addDescription(I18n::get("options.skinPngDescription"))
 		.addClearSkinCacheItem(minecraft)
-		.addDescription("Restart the game to apply skin changes");
+		.addDescription(I18n::get("options.skinRestartDescription"));
 // 	int mojangGroup = optionPanes[0]->createOptionsGroup("Mojang");
 // 	static const int arr[] = {5,4,3,15};
 // 	std::vector<int> vec (arr, arr + sizeof(arr) / sizeof(arr[0]) );
@@ -403,6 +421,15 @@ void OptionsScreen::keyboardNewChar(char inputChar)
 }
 
 void OptionsScreen::tick() {
+	if (_languageChangePending) {
+		const int category = selectedCategory;
+		saveUsername();
+		minecraft->options.languageCode = _pendingLanguageMode;
+		minecraft->options.save();
+		I18n::loadLanguage(minecraft->platform(), minecraft->options.languageCode);
+		minecraft->setScreen(new OptionsScreen(category));
+		return;
+	}
 	if (minecraft->consumeOptionsResetRequest()) {
 		// Reset before replacing this screen.  OptionsScreen::removed() normally
 		// saves the text box value, so suppress that cleanup for this path; this
@@ -448,4 +475,20 @@ void OptionsScreen::tick() {
 	if(currentOptionPane != NULL)
 		currentOptionPane->tick(minecraft);
 	super::tick();
+}
+
+void OptionsScreen::requestLanguageChange(const std::string& languageMode)
+{
+	if (languageMode != "origin" && languageMode != "system" &&
+		languageMode != "en_US" && languageMode != "zh_CN")
+		return;
+	if (minecraft == nullptr || minecraft->options.languageCode == languageMode)
+		return;
+	_pendingLanguageMode = languageMode;
+	_languageChangePending = true;
+}
+
+const std::string& OptionsScreen::getLanguageMode() const
+{
+	return minecraft->options.languageCode;
 }

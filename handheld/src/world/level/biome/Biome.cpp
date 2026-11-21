@@ -20,6 +20,8 @@ Biome* Biome::iceDesert		 = NULL;
 Biome* Biome::tundra		 = NULL;
 Biome* Biome::sky			 = NULL;
 Biome* Biome::alpha			 = NULL;
+Biome* Biome::indev			 = NULL;
+Biome* Biome::earlyInfdev		 = NULL;
 Biome* Biome::winter			 = NULL;
 
 /*static*/
@@ -147,6 +149,10 @@ void Biome::initBiomes() {
 	// average Alpha grass and leaf pixels.
 	alpha				= (new Biome())->setColor(0x77C14E)->setName("Alpha")
 					->setGrassColor(0x77C14E)->setLeafColor(0x40B524);
+	indev				= (new Biome())->setColor(0x77C14E)->setName("Indev")
+					->setGrassColor(0x77C14E)->setLeafColor(0x40B524);
+	earlyInfdev		= (new Biome())->setColor(0x77C14E)->setName("Infdev")
+					->setGrassColor(0x77C14E)->setLeafColor(0x40B524);
 	winter				= (new Biome())->setColor(0x77C14E)->setName("Winter")
 						->setGrassColor(0x77C14E)->setLeafColor(0x40B524)->setSnowCovered();
 	
@@ -168,6 +174,10 @@ void Biome::teardownBiomes() {
 	delete sky;				sky		 = NULL;
 	delete alpha;
 	alpha = NULL;
+	delete indev;
+	indev = NULL;
+	delete earlyInfdev;
+	earlyInfdev = NULL;
 	delete winter;
 	winter = NULL;
 }
@@ -239,6 +249,9 @@ float Biome::adjustDepth( float depth )
 
 int Biome::getSkyColor( float temp )
 {
+	if (this == earlyInfdev)
+		return 0x0000ff;
+
 	// Java Beta's BiomeGenBase.getSkyColorByTemp.  The ordinary PE path does
 	// not call this method, so its original sky palette remains untouched.
 	temp /= 3.0f;

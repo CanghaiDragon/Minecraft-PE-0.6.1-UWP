@@ -13,6 +13,7 @@
 #include "../../../network/RakNetInstance.h"
 #include "../../renderer/entity/EntityRenderDispatcher.h"
 #include "../../../world/item/ArmorItem.h"
+#include "../../../locale/I18n.h"
 
 static void setIfNotSet(bool& ref, bool condition) {
 	ref = (ref || condition);
@@ -48,7 +49,7 @@ ArmorScreen::ArmorScreen():
 	btnArmor2(2),
 	btnArmor3(3),
 	btnClose(4, ""),
-	bHeader (5, "Armor"),
+	bHeader (5, I18n::get("container.armor")),
 	guiBackground(NULL),
 	guiSlot(NULL),
 	guiPaneFrame(NULL),

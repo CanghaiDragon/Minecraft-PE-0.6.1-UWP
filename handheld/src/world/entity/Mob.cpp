@@ -486,7 +486,11 @@ void Mob::knockback( Entity* source, int dmg, float xd, float zd )
 
 void Mob::die( Entity* source )
 {
-	if (deathScore > 0 && source != NULL) source->awardKillScore(this, deathScore);
+	// Hostile mobs in this PE build have no score value by default, but their
+	// deaths still need to reach the attacker for achievements such as Monster
+	// Hunter and Overkill.
+	if (source != NULL && (deathScore > 0 || getCreatureBaseType() == MobTypes::BaseEnemy))
+		source->awardKillScore(this, deathScore);
 
 	if (!level->isClientSide) {
 		if (!isBaby()) {

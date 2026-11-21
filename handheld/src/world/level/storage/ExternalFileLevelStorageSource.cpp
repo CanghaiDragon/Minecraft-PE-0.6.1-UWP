@@ -18,6 +18,7 @@
 #include "../../../nbt/NbtIo.h"
 #include "../../../util/RakDataIO.h"
 #include <cstdio>
+#include <cerrno>
 #include <cstdlib>
 #include <cstring>
 #include <algorithm>
@@ -711,12 +712,20 @@ static std::string getUniqueLevelName(const LevelSummaryList& levels, const std:
 
 void ExternalFileLevelStorageSource::renameLevel( const std::string& oldLevelId_, const std::string& newLevelName_ )
 {
-#define _renFULLPATH(s) ((basePath + "/" + s).c_str())
     bool isTempFile = (TempLevelId == oldLevelId_);
     std::string oldFolder = getFullPath(oldLevelId_);
+	LOGI("[COPY_MAP] rename begin id=%s temp=%d source=%s tempRoot=%s worldRoot=%s\n",
+		oldLevelId_.c_str(), isTempFile ? 1 : 0, oldFolder.c_str(),
+		tmpBasePath.c_str(), basePath.c_str());
 
 	if (_access(oldFolder.c_str(), 0) != 0) {
-		LOGI("Couldn't access %s\n", oldFolder.c_str());
+	#if defined(MCPE_UWP)
+		LOGE("[COPY_MAP] source directory missing path=%s errno=%d winerr=%lu\n",
+			oldFolder.c_str(), errno, (unsigned long)GetLastError());
+	#else
+		LOGE("[COPY_MAP] source directory missing path=%s errno=%d\n",
+			oldFolder.c_str(), errno);
+	#endif
 		return;
 	}
 
@@ -730,23 +739,50 @@ void ExternalFileLevelStorageSource::renameLevel( const std::string& oldLevelId_
 	levelId = getUniqueLevelName(levels, levelId);
 
 	bool couldRename = false;
+	std::string newFolder = basePath + "/" + levelId;
+	LOGI("[COPY_MAP] rename target=%s requestedName=%s\n",
+		newFolder.c_str(), newLevelName_.c_str());
 	if (hasTempDirectory() && isTempFile) {
 #ifdef __APPLE__
-		std::string newFolder = basePath + "/" + levelId;
 		moveFolder(oldFolder, newFolder);
         couldRename = (_access(newFolder.c_str(), 0) == 0);
+#elif defined(MCPE_UWP)
+		const std::wstring sourcePath = utf8ToWidePath(oldFolder);
+		const std::wstring targetPath = utf8ToWidePath(newFolder);
+		if (!sourcePath.empty() && !targetPath.empty())
+			couldRename = MoveFileExW(sourcePath.c_str(), targetPath.c_str(),
+				MOVEFILE_WRITE_THROUGH) != 0;
+		if (!couldRename)
+			LOGW("[COPY_MAP] MoveFileExW failed winerr=%lu source=%s target=%s\n",
+				(unsigned long)GetLastError(), oldFolder.c_str(), newFolder.c_str());
 #endif
 	}
 
-    couldRename = couldRename || rename(_renFULLPATH(oldLevelId_), _renFULLPATH(levelId)) == 0;
+	if (!couldRename) {
+		errno = 0;
+		couldRename = rename(oldFolder.c_str(), newFolder.c_str()) == 0;
+		if (!couldRename)
+			LOGW("[COPY_MAP] rename fallback failed errno=%d source=%s target=%s\n",
+				errno, oldFolder.c_str(), newFolder.c_str());
+	}
+	LOGI("[COPY_MAP] directory transfer result=%s finalId=%s\n",
+		couldRename ? "success" : "failed",
+		couldRename ? levelId.c_str() : oldLevelId_.c_str());
 	if (!couldRename) // != 0: fail
 		levelId = oldLevelId_; // Try to rewrite the level name anyway
 
 	// Rename the level name and write back to file
 	LevelData levelData;
-	ExternalFileLevelStorage::readLevelData(_renFULLPATH(levelId), levelData);
-	levelData.setLevelName(newLevelName_);
-	ExternalFileLevelStorage::saveLevelData(_renFULLPATH(levelId), levelData, NULL);
+	const std::string renamedFolder = getFullPath(levelId);
+	if (ExternalFileLevelStorage::readLevelData(renamedFolder, levelData)) {
+		levelData.setLevelName(newLevelName_);
+		ExternalFileLevelStorage::saveLevelData(renamedFolder, levelData, NULL);
+		LOGI("[COPY_MAP] level metadata updated path=%s name=%s\n",
+			renamedFolder.c_str(), newLevelName_.c_str());
+	} else {
+		LOGE("[COPY_MAP] level metadata unreadable path=%s\n",
+			renamedFolder.c_str());
+	}
 #if defined(MCPE_UWP)
 	UwpLiveTileWorldsChanged();
 #endif
@@ -879,6 +915,12 @@ bool ExternalFileLevelStorageSource::convertLevelWithProgress(
 		// metadata conversion.
 		ExternalFileLevelStorage::readPlayerData(
 			sourcePath + "/player.dat", levelData);
+		if (levelData.getWorldType() == WorldType::EarlyInfdev) {
+			// Keep the converted chunks, but move future generation to the
+			// current Infinite generator and carry Infdev's biome forward as Plains.
+			levelData.setWorldType(WorldType::Infinite);
+			levelData.setBiomeMapping(BiomeMapping::Plains);
+		}
 		levelData.setStorageVersion(SharedConstants::StorageVersion);
 		if (!ExternalFileLevelStorage::writeLevelData(
 			targetPath + "/level.dat", levelData, NULL)) {
@@ -1013,7 +1055,11 @@ bool ExternalFileLevelStorageSource::convertFiniteLevelToInfiniteWithProgress(
 		// but retain the old player.dat fallback if one is present. Set the new
 		// world type before reading the fallback so infinite coordinates are not
 		// clamped to the finite 256x256 boundary.
+		const bool indevSource = levelData.getWorldType() == WorldType::Indev;
 		levelData.setWorldType(WorldType::Infinite);
+		// Indev's finite terrain is copied unchanged; new biome queries use Plains.
+		if (indevSource)
+			levelData.setBiomeMapping(BiomeMapping::Plains);
 		ExternalFileLevelStorage::readPlayerData(
 			sourcePath + "/player.dat", levelData);
 		levelData.setStorageVersion(SharedConstants::StorageVersion);

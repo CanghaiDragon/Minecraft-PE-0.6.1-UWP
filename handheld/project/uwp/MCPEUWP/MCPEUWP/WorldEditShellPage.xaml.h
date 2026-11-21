@@ -40,10 +40,16 @@ namespace MCPEUWP
 			Windows::UI::Xaml::RoutedEventArgs^ e);
 		void OnConvertToNewFormatClick(Platform::Object^ sender,
 			Windows::UI::Xaml::RoutedEventArgs^ e);
+		void OnViewAchievementsClick(Platform::Object^ sender,
+			Windows::UI::Xaml::RoutedEventArgs^ e);
+		void OnAchievementsBackClick(Platform::Object^ sender,
+			Windows::UI::Xaml::RoutedEventArgs^ e);
 		void OnSecondaryDialogPrimaryClick(Platform::Object^ sender,
 			Windows::UI::Xaml::RoutedEventArgs^ e);
 		void OnSecondaryDialogCancelClick(Platform::Object^ sender,
 			Windows::UI::Xaml::RoutedEventArgs^ e);
+		void HideAchievements();
+		void AnimateAchievementsOverlay(bool entering);
 		void ScheduleLoadWorldData();
 		void LoadWorldData();
 		void ShowSecondaryDialog(int kind, Platform::String^ title,
@@ -56,6 +62,7 @@ namespace MCPEUWP
 		void ShowWorldConvertPage();
 		void HideWorldConvertPage();
 		void AnimateWorldConvertPage(bool entering);
+		void PopulateAchievements();
 		void PinWorldShortcut(Platform::String^ iconName);
 		void SetStatus(const std::wstring& text);
 		std::string WorldDirectory() const;
@@ -67,6 +74,8 @@ namespace MCPEUWP
 		WorldTileIconPage^ m_worldTileIconPage;
 		WorldConvertPage^ m_worldConvertPage;
 		int m_worldType = 0;
+		int m_worldIndevType = 0;
+		int m_gameType = -1;
 		long m_worldSeed = 0;
 		bool m_worldStorageFormatCurrent = false;
 		bool m_legacyFormatConversionAvailable = false;
@@ -80,5 +89,7 @@ namespace MCPEUWP
 		Windows::Foundation::EventRegistrationToken m_worldTileIconTransitionCompletedToken{};
 		Windows::UI::Xaml::Media::Animation::Storyboard^ m_worldConvertTransition;
 		Windows::Foundation::EventRegistrationToken m_worldConvertTransitionCompletedToken{};
+		Windows::UI::Xaml::Media::Animation::Storyboard^ m_achievementsTransition;
+		Windows::Foundation::EventRegistrationToken m_achievementsTransitionCompletedToken{};
 	};
 }

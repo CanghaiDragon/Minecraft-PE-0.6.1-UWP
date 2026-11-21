@@ -5,6 +5,8 @@
 #include "../levelgen/RandomLevelSource.h"
 #include "../levelgen/SkyLevelSource.h"
 #include "../levelgen/AlphaLevelSource.h"
+#include "../levelgen/IndevLevelSource.h"
+#include "../levelgen/EarlyInfdevLevelSource.h"
 #include "../Level.h"
 #include "../biome/BiomeSource.h"
 #include "../biome/FixedBiomeSource.h"
@@ -67,13 +69,19 @@ void Dimension::init( Level* level )
 
 void Dimension::init()
 {
-	if (level->getLevelData()->getWorldType() == WorldType::Sky)
+	if (level->getLevelData()->getBiomeMapping() == BiomeMapping::Plains)
+		biomeSource = new FixedBiomeSource(Biome::plains, 0.8f, 0.4f);
+	else if (level->getLevelData()->getWorldType() == WorldType::Sky)
 		biomeSource = new FixedBiomeSource(Biome::sky, 0.5f, 0.0f);
 	else if (level->getLevelData()->getWorldType() == WorldType::Alpha) {
 		const bool winter = WorldType::isAlphaWinter(level->getSeed());
 		biomeSource = new FixedBiomeSource(
 			winter ? Biome::winter : Biome::alpha, 0.84f, 0.70f);
 	}
+	else if (level->getLevelData()->getWorldType() == WorldType::Indev)
+		biomeSource = new FixedBiomeSource(Biome::indev, 0.84f, 0.70f);
+	else if (level->getLevelData()->getWorldType() == WorldType::EarlyInfdev)
+		biomeSource = new FixedBiomeSource(Biome::earlyInfdev, 0.84f, 0.70f);
 	else
 		biomeSource = new BiomeSource(level);
 }
@@ -81,7 +89,8 @@ void Dimension::init()
 /*virtual*/
 bool Dimension::isValidSpawn(int x, int z) {
 	if (level->getLevelData()->getWorldType() == WorldType::Sky ||
-		level->getLevelData()->getWorldType() == WorldType::Alpha) {
+		level->getLevelData()->getWorldType() == WorldType::Alpha ||
+		level->getLevelData()->getWorldType() == WorldType::Indev) {
         int y = level->getTopTileY(x, z);
         if (y < 0 || y > Level::DEPTH - 3) return false;
         int tile = level->getTile(x, y, z);
@@ -94,6 +103,12 @@ bool Dimension::isValidSpawn(int x, int z) {
             || tile == Tile::cactus->id
             || !Tile::tiles[tile] || !Tile::tiles[tile]->isSolidRender()) return false;
 
+        // Alpha and Sky keep their existing broad-platform spawn rule. Indev
+        // uses a bounded land search instead; its islands may not contain a
+        // 32-block plateau, and rejecting every smaller safe surface can make
+        // the finite world's randomized spawn loop run forever.
+        if (level->getLevelData()->getWorldType() == WorldType::Indev)
+            return true;
         return hasSkySpawnPlatform(level, x, y, z);
     }
     int topTile = level->getTopTile(x, z);
@@ -112,6 +127,13 @@ float Dimension::getTimeOfDay(long time, float a) {
 }
 
 ChunkSource* Dimension::createRandomLevelSource() {
+	if (level->getLevelData()->getWorldType() == WorldType::EarlyInfdev)
+		return new EarlyInfdevLevelSource(level, level->getSeed(),
+			!level->isClientSide && level->getLevelData()->getSpawnMobs());
+	if (level->getLevelData()->getWorldType() == WorldType::Indev)
+		return new IndevLevelSource(level, level->getSeed(),
+			level->getLevelData()->getIndevType(),
+			!level->isClientSide && level->getLevelData()->getSpawnMobs());
 	if (level->getLevelData()->getWorldType() == WorldType::Alpha)
 		return new AlphaLevelSource(level, level->getSeed(),
 			!level->isClientSide && level->getLevelData()->getSpawnMobs());

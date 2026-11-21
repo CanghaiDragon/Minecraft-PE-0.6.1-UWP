@@ -50,8 +50,13 @@ public:
         return (x >= 0 && z >= 0 && x < CHUNK_CACHE_WIDTH && z < CHUNK_CACHE_WIDTH);
     }
 
+	bool hasWorldBounds() const {
+		return level->getLevelData()->getWorldType() == WorldType::Old ||
+			level->getLevelData()->getWorldType() == WorldType::Indev;
+	}
+
     bool hasChunk(int x, int z) {
-        if (!fits(x, z)) return true;
+        if (!fits(x, z)) return !hasWorldBounds();
         if (x == xLast && z == zLast && last != NULL) return true;
         int64_t key = chunkKey(x, z);
         auto it = chunks.find(key);
@@ -75,7 +80,7 @@ public:
 
     LevelChunk* getChunk(int x, int z) {
 		if (x == xLast && z == zLast && last != NULL) return last;
-		if (!fits(x, z)) return emptyChunk;
+		if (!fits(x, z)) return hasWorldBounds() ? emptyChunk : source->getChunk(x, z);
 
         int64_t key = chunkKey(x, z);
         if (!hasChunk(x, z)) {

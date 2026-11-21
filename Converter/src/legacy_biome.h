@@ -56,10 +56,12 @@ public:
     // so no climate noise is sampled for those world types.  Alpha's fixed
     // biome is selected from the seed in the same way as the game: seeds whose
     // low two bits are zero use Winter, all other seeds use Alpha.
-    BiomeSource(std::int64_t seed, bool skyWorld, bool alphaWorld);
+    BiomeSource(std::int64_t seed, bool skyWorld, bool alphaWorld,
+                bool plainsWorld = false);
 
     std::uint8_t targetBiomeId(int blockX, int blockZ) const;
     std::uint32_t targetBiomeColor(std::uint8_t id) const;
+    bool isFixedPlainsWorld() const { return plainsWorld_; }
 
 private:
     PerlinNoise temperature_;
@@ -67,6 +69,7 @@ private:
     PerlinNoise noise_;
     bool skyWorld_ = false;
     bool alphaWorld_ = false;
+    bool plainsWorld_ = false;
     bool alphaWinter_ = false;
 
     static std::int32_t seedProduct(std::int64_t seed, std::int32_t multiplier);

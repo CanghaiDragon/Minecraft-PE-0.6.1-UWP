@@ -43,6 +43,7 @@ public:
 protected:
 	void setArmor(Model* armor);
 	Model* getArmor();
+	virtual void copyModelStateToArmor();
 	// PlayerRenderer switches only between its two owned player models after
 	// inspecting the selected skin's dimensions.
 	Model* model;

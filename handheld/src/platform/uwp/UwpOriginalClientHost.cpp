@@ -74,8 +74,11 @@ bool UwpOriginalClientHost::initializeLocale()
 	// This is the same original-client call made by NinecraftApp::init().
 	// It is safe before Minecraft::init(): it needs only AppPlatform's
 	// synchronous packaged asset contract, already verified by Stage 1.
-	I18n::loadLanguage(m_context->platform, "en_US");
-	m_localeInitialized = I18n::get("menu.singleplayer") == "Singleplayer";
+	const std::string languageCode = m_context->platform->getLanguageCode();
+	I18n::loadLanguage(m_context->platform, languageCode);
+	const std::string loadedLanguageCode = I18n::get("language.code");
+	m_localeInitialized = loadedLanguageCode == languageCode ||
+		loadedLanguageCode == "en_US";
 	return m_localeInitialized;
 }
 
@@ -195,10 +198,10 @@ bool UwpOriginalClientHost::clearImportedSkin()
 
 bool UwpOriginalClientHost::consumeLevelSelection(
 	std::string& levelId, std::string& levelName, long& seed,
-	int& gameType, int& worldType)
+	int& gameType, int& worldType, int& indevType)
 {
 	return m_client != nullptr && UwpOriginalClientConsumeLevelSelection(
-		m_client, levelId, levelName, seed, gameType, worldType);
+		m_client, levelId, levelName, seed, gameType, worldType, indevType);
 }
 
 void UwpOriginalClientHost::setLoopEnabled(bool enabled)

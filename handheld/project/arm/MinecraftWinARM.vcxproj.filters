@@ -251,6 +251,8 @@
     <ClCompile Include="..\..\src\world\level\levelgen\AlphaLevelSource.cpp">
       <Filter>Source Files\world\level\levelgen</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\world\level\levelgen\IndevLevelSource.cpp"><Filter>Source Files\world\level\levelgen</Filter></ClCompile>
+    <ClCompile Include="..\..\src\world\level\levelgen\EarlyInfdevLevelSource.cpp"><Filter>Source Files\world\level\levelgen</Filter></ClCompile>
     <ClCompile Include="..\..\src\world\level\levelgen\SkyLevelSource.cpp">
       <Filter>Source Files\world\level\levelgen</Filter>
     </ClCompile>
@@ -1372,6 +1374,8 @@
     <ClInclude Include="..\..\src\world\level\levelgen\AlphaLevelSource.h">
       <Filter>Source Files\world\level\levelgen</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\world\level\levelgen\IndevLevelSource.h"><Filter>Source Files\world\level\levelgen</Filter></ClInclude>
+    <ClInclude Include="..\..\src\world\level\levelgen\EarlyInfdevLevelSource.h"><Filter>Source Files\world\level\levelgen</Filter></ClInclude>
     <ClInclude Include="..\..\src\world\level\levelgen\TownFeature.h">
       <Filter>Source Files\world\level\levelgen</Filter>
     </ClInclude>

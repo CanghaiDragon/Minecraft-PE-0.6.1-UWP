@@ -32,6 +32,7 @@ namespace
 	long g_pendingLevelSeed = -1;
 	int g_pendingGameType = GameType::Undefined;
 	int g_pendingWorldType = WorldType::Old;
+	int g_pendingIndevType = IndevType::Inland;
 
 	class UwpStartMenuScreen final : public StartMenuScreen
 	{
@@ -683,6 +684,7 @@ bool UwpOriginalClientShowStartMenu(UwpOriginalClientHandle handle)
 	g_pendingLevelSeed = -1;
 	g_pendingGameType = GameType::Undefined;
 	g_pendingWorldType = WorldType::Old;
+	g_pendingIndevType = IndevType::Inland;
 	// The UWP world-list bridge may have queued key transitions while the
 	// original client loop was paused.  Do not replay those transitions into a
 	// newly created menu screen.
@@ -739,6 +741,7 @@ bool UwpOriginalClientShowSelectWorld(UwpOriginalClientHandle handle)
 		g_pendingLevelSeed = -1;
 		g_pendingGameType = GameType::Undefined;
 		g_pendingWorldType = WorldType::Old;
+		g_pendingIndevType = IndevType::Inland;
 	Keyboard::reset();
 	minecraft->screenChooser.setScreen(SCREEN_SELECTWORLD);
 	return minecraft->screen != nullptr;
@@ -806,6 +809,7 @@ bool UwpOriginalClientShowLaunchWorldError(
 	g_pendingLevelSeed = -1;
 	g_pendingGameType = GameType::Undefined;
 	g_pendingWorldType = WorldType::Old;
+	g_pendingIndevType = IndevType::Inland;
 	minecraft->setScreen(new UwpLaunchWorldErrorScreen(details));
 	return minecraft->screen != nullptr;
 }
@@ -916,6 +920,7 @@ void UwpOriginalClientRequestLevelSelection(const std::string& levelId,
 	g_pendingLevelSeed = settings.getSeed();
 	g_pendingGameType = settings.getGameType();
 	g_pendingWorldType = settings.getWorldType();
+	g_pendingIndevType = settings.getIndevType();
 	g_pendingMenuAction = UwpOriginalMenuAction::SelectWorld;
 }
 
@@ -929,6 +934,7 @@ void UwpOriginalClientRequestLeaveWorld()
 	g_pendingLevelSeed = -1;
 	g_pendingGameType = GameType::Undefined;
 	g_pendingWorldType = WorldType::Old;
+	g_pendingIndevType = IndevType::Inland;
 	g_pendingMenuAction = UwpOriginalMenuAction::LeaveWorld;
 }
 
@@ -961,7 +967,7 @@ void UwpOriginalClientRequestCloseWorldImport()
 
 bool UwpOriginalClientConsumeLevelSelection(UwpOriginalClientHandle handle,
 	std::string& levelId, std::string& levelName, long& seed,
-	int& gameType, int& worldType)
+	int& gameType, int& worldType, int& indevType)
 {
 	if (handle == nullptr || g_pendingMenuAction != UwpOriginalMenuAction::SelectWorld)
 		return false;
@@ -970,12 +976,14 @@ bool UwpOriginalClientConsumeLevelSelection(UwpOriginalClientHandle handle,
 	seed = g_pendingLevelSeed;
 	gameType = g_pendingGameType;
 	worldType = g_pendingWorldType;
+	indevType = g_pendingIndevType;
 	g_pendingLevelId.clear();
 	g_pendingLevelName.clear();
 	g_pendingWorldEditId.clear();
 	g_pendingLevelSeed = -1;
 	g_pendingGameType = GameType::Undefined;
 	g_pendingWorldType = WorldType::Old;
+	g_pendingIndevType = IndevType::Inland;
 	g_pendingMenuAction = UwpOriginalMenuAction::None;
 	return !levelId.empty();
 }

@@ -6,6 +6,7 @@
 #include "../../renderer/Tesselator.h"
 #include "../../../SharedConstants.h"
 #include "../../renderer/Textures.h"
+#include "../../../locale/I18n.h"
 
 ProgressScreen::ProgressScreen()
 :	ticks(0)
@@ -62,18 +63,24 @@ void ProgressScreen::render( int xm, int ym, float a )
 
     glEnable2(GL_BLEND);
 
-	const char* title = "Generating world";
+	const std::string title = I18n::get("progress.generatingWorld");
 	minecraft->font->drawShadow(title, (float)((width - minecraft->font->width(title)) / 2), (float)(height / 2 - 4 - 16), 0xffffff);
 
-	const char* status = minecraft->getProgressMessage();
+	static const char* const progressKeys[] = {
+		"progress.locatingServer", "progress.buildingTerrain",
+		"progress.preparing", "progress.savingChunks"
+	};
+	const int progressId = minecraft->getProgressStatusId();
+	const std::string status = progressId >= 0 && progressId < 4
+		? I18n::get(progressKeys[progressId]) : std::string();
 	const int progressWidth = minecraft->font->width(status);
 	const int progressLeft  = (width - progressWidth) / 2;
 	const int progressY = height / 2 - 4 + 8;
 	minecraft->font->drawShadow(status, (float)progressLeft, (float)progressY, 0xffffff);
 
 #if APPLE_DEMO_PROMOTION
-	drawCenteredString(minecraft->font, "This demonstration version", width/2, progressY + 36, 0xffffff);
-    drawCenteredString(minecraft->font, "does not allow saving games", width/2, progressY + 46, 0xffffff);
+	drawCenteredString(minecraft->font, I18n::get("progress.demoLine1"), width/2, progressY + 36, 0xffffff);
+	    drawCenteredString(minecraft->font, I18n::get("progress.demoLine2"), width/2, progressY + 46, 0xffffff);
 #endif
     
 	// If we're locating the server, show our famous spinner!
@@ -94,6 +101,6 @@ bool ProgressScreen::isInGameScreen() { return false; }
 void ProgressScreen::tick() {
 	// After 10 seconds of not connecting -> write an error message and go back
 	if (++ticks == 10 * SharedConstants::TicksPerSecond && minecraft->getProgressStatusId() == 0) {
-		minecraft->setScreen( new DisconnectionScreen("Could not connect to server. Try again.") );
+		minecraft->setScreen( new DisconnectionScreen(I18n::get("connect.tryAgain")) );
 	}
 }

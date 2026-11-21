@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug DEMO|Win32">
@@ -44,6 +44,7 @@
     <ClCompile Include="..\..\src\client\gui\GuiComponent.cpp" />
     <ClCompile Include="..\..\src\client\gui\Screen.cpp" />
     <ClCompile Include="..\..\src\client\gui\screens\ArmorScreen.cpp" />
+    <ClCompile Include="..\..\src\client\gui\screens\AchievementsScreen.cpp" />
     <ClCompile Include="..\..\src\client\gui\screens\ChatScreen.cpp" />
     <ClCompile Include="..\..\src\client\gui\screens\ChestScreen.cpp" />
     <ClCompile Include="..\..\src\client\gui\screens\ChooseLevelScreen.cpp" />
@@ -317,6 +318,8 @@
     <ClCompile Include="..\..\src\world\level\levelgen\LargeFeature.cpp" />
     <ClCompile Include="..\..\src\world\level\levelgen\RandomLevelSource.cpp" />
     <ClCompile Include="..\..\src\world\level\levelgen\AlphaLevelSource.cpp" />
+    <ClCompile Include="..\..\src\world\level\levelgen\IndevLevelSource.cpp" />
+    <ClCompile Include="..\..\src\world\level\levelgen\EarlyInfdevLevelSource.cpp" />
     <ClCompile Include="..\..\src\world\level\levelgen\SkyLevelSource.cpp" />
     <ClCompile Include="..\..\src\world\level\levelgen\synth\ImprovedNoise.cpp" />
     <ClCompile Include="..\..\src\world\level\levelgen\synth\PerlinNoise.cpp" />
@@ -923,6 +926,7 @@
     <ClInclude Include="..\..\src\world\level\levelgen\LargeCaveFeature.h" />
     <ClInclude Include="..\..\src\world\level\levelgen\LargeFeature.h" />
     <ClInclude Include="..\..\src\world\level\levelgen\RandomLevelSource.h" />
+    <ClInclude Include="..\..\src\world\level\levelgen\EarlyInfdevLevelSource.h" />
     <ClInclude Include="..\..\src\world\level\levelgen\SkyLevelSource.h" />
     <ClInclude Include="..\..\src\world\level\levelgen\synth\ImprovedNoise.h" />
     <ClInclude Include="..\..\src\world\level\levelgen\synth\PerlinNoise.h" />

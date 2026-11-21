@@ -5,6 +5,7 @@
 
 #include <string>
 #include <cctype>
+#include <map>
 
 #include "../renderer/gles.h"
 
@@ -30,12 +31,16 @@ public:
 
 	int width(const std::string& str);
 	int height(const std::string& str);
+	int lineHeightFor(const std::string& str) const;
 
 	static std::string sanitize(const std::string& str);
 private:
 	void buildChar(unsigned char i, float x = 0, float y = 0);
+	void buildUnicodeChar(unsigned int codepoint, float x = 0, float y = 0);
 	void drawSlow(const std::string& str, float x, float y, int color, bool darken = false);
 	void drawSlow(const char* str, float x, float y, int color, bool darken = false);
+	int codepointWidth(unsigned int codepoint) const;
+	GLuint getBrightenedUnifontPage(GLuint sourceTexture, unsigned int codepoint);
 public:
 	int fontTexture;
 	int lineHeight;
@@ -50,6 +55,7 @@ private:
 	GLuint lists[1024];
 
 	std::string fontName;
+	std::map<unsigned int, GLuint> brightenedUnifontPages;
 	Textures* _textures;
 
 	Options* options;

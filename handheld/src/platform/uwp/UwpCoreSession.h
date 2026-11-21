@@ -31,7 +31,7 @@ public:
 
 	void startSavedWorld(const std::wstring& worldId, const std::wstring& worldName);
 	void startNewWorld(const std::wstring& worldId, const std::wstring& worldName,
-		long seed, int gameType, int worldType);
+		long seed, int gameType, int worldType, int indevType);
 	// Flush the active original Level without leaving the world.  Used by the
 	// UWP suspension path; stop() remains the owner of final destruction.
 	void saveGame();
@@ -71,7 +71,7 @@ public:
 private:
 	bool initializeNativeCore();
 	void beginWorld(const std::wstring& worldId, const std::wstring& worldName,
-		long seed, int gameType, int worldType);
+		long seed, int gameType, int worldType, int indevType);
 
 	State m_state = State::Idle;
 	std::wstring m_worldName;

@@ -3,16 +3,21 @@
 #include "../../SharedConstants.h"
 #include "../../server/CreatorLevel.h"
 #include "../../world/entity/MobCategory.h"
+#include "../../world/Facing.h"
 #include "../../world/item/Item.h"
 #include "../../world/level/biome/Biome.h"
 #include "../../world/level/material/Material.h"
 #include "../../world/level/storage/ExternalFileLevelStorage.h"
 #include "../../world/level/storage/ExternalFileLevelStorageSource.h"
 #include "../../world/level/chunk/ChunkSource.h"
+#include "../../world/level/Level.h"
 #include "../../world/level/LevelSettings.h"
+#include "../../world/level/dimension/Dimension.h"
 #include "../../world/level/storage/LevelData.h"
+#include "../../world/item/ItemInstance.h"
 #include "../../world/level/tile/Tile.h"
 #include "../../world/level/tile/entity/TileEntity.h"
+#include "../../world/level/tile/entity/ChestTileEntity.h"
 #include "../../world/entity/player/Player.h"
 #include "../../client/player/LocalPlayer.h"
 #include "../../client/Minecraft.h"
@@ -22,6 +27,7 @@
 #include "UwpStoragePaths.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <exception>
 #include <chrono>
 #include <stdexcept>
@@ -125,6 +131,100 @@ namespace
 
 		worldName = Utf8ToWide(data.getLevelName());
 		return !worldName.empty();
+	}
+
+	bool placeSaplingSupplyChest(Level* level, int x, int y, int z, int facing,
+		bool includeOakSaplings = false)
+	{
+		if (level == nullptr || Tile::chest == nullptr || y <= 0 ||
+			y >= Level::DEPTH)
+			return false;
+		const Material* targetMaterial = level->getMaterial(x, y, z);
+		if (targetMaterial != Material::air &&
+			targetMaterial != Material::plant &&
+			targetMaterial != Material::replaceable_plant)
+			return false;
+
+		if (!level->setTile(x, y, z, Tile::chest->id))
+			return false;
+
+		ChestTileEntity* chest = dynamic_cast<ChestTileEntity*>(
+			level->getTileEntity(x, y, z));
+		if (chest == nullptr)
+		{
+			level->setTile(x, y, z, 0);
+			return false;
+		}
+		// Programmatically placed chests do not pass through setPlacedBy(),
+		// which normally initializes the direction of the latch/front texture.
+		level->setData(x, y, z, facing);
+
+		ItemInstance birchSaplings(Tile::sapling, 64, 2);
+		ItemInstance spruceSaplings(Tile::sapling, 64, 1);
+		chest->setItem(0, &birchSaplings);
+		chest->setItem(1, &spruceSaplings);
+		if (includeOakSaplings)
+		{
+			ItemInstance oakSaplings(Tile::sapling, 64, 0);
+			chest->setItem(2, &oakSaplings);
+		}
+		return true;
+	}
+
+	bool placeSaplingSupplyChestNearSpawn(Level* level,
+		bool includeOakSaplings = false)
+	{
+		if (level == nullptr || level->dimension == nullptr)
+			return false;
+
+		LevelData* data = level->getLevelData();
+		const int spawnX = data->getXSpawn();
+		const int spawnY = data->getYSpawn();
+		const int spawnZ = data->getZSpawn();
+		for (int radius = 1; radius <= 8; ++radius)
+			for (int dx = -radius; dx <= radius; ++dx)
+				for (int dz = -radius; dz <= radius; ++dz)
+				{
+					if (dx != -radius && dx != radius &&
+						dz != -radius && dz != radius)
+						continue;
+
+					const int x = spawnX + dx;
+					const int z = spawnZ + dz;
+					const int supportY = level->getTopTileY(x, z);
+					const int chestY = supportY + 1;
+					if (supportY < 0 || supportY >= Level::DEPTH - 1 ||
+						chestY <= 0 || chestY >= Level::DEPTH)
+						continue;
+					const int supportTile = level->getTile(x, supportY, z);
+					if (supportTile <= 0 || supportTile >= Tile::NUM_BLOCK_TYPES ||
+						!Tile::tiles[supportTile] || !Tile::solid[supportTile])
+						continue;
+					const Material* chestMaterial = level->getMaterial(x, chestY, z);
+					if (chestMaterial != Material::air &&
+						chestMaterial != Material::plant &&
+						chestMaterial != Material::replaceable_plant)
+						continue;
+
+					int facing;
+					if (std::abs(dz) >= std::abs(dx))
+						facing = dz < 0 ? Facing::SOUTH : Facing::NORTH;
+					else
+						facing = dx < 0 ? Facing::EAST : Facing::WEST;
+
+					const int verticalDistance = std::abs(supportY - spawnY);
+					// Never fall back to a lower shelf beneath a cliff. The chest is
+					// intended to be immediately reachable from the spawn area, so a
+					// candidate outside the three-block vertical band is invalid.
+					if (verticalDistance > 3)
+						continue;
+					if (placeSaplingSupplyChest(level, x, chestY, z, facing,
+						includeOakSaplings))
+						return true;
+				}
+		// A world without a reachable surface near spawn simply gets no supply
+		// chest; placing one far below a cliff is worse than omitting it.
+		return false;
 	}
 
 }
@@ -251,6 +351,13 @@ public:
 				m_level->getLevelData()->getGameType() == GameType::Creative);
 		}
 		m_level->loadPlayer(m_player, true);
+		// Match Minecraft::_levelGenerated(): after restoring player NBT, move
+		// the player out of any blocks intersecting the saved bounding box. This
+		// matters for finite Indev worlds too, where a one-block overlap at the
+		// spawn hut can otherwise start the player inside its floor and make the
+		// floor appear to have no collision on the first resumed ticks.
+		if (m_player != nullptr && !m_level->isClientSide)
+			m_player->resetPos(false);
 		m_worldGenerated = true;
 	}
 
@@ -502,7 +609,8 @@ bool UwpCoreSession::initializeNativeCore()
 }
 
 void UwpCoreSession::beginWorld(const std::wstring& worldId,
-	const std::wstring& worldName, long seed, int gameType, int worldType)
+	const std::wstring& worldName, long seed, int gameType, int worldType,
+	int indevType)
 {
 	m_worldName = worldName.empty() ? L"New World" : worldName;
 	m_tickCount = 0;
@@ -528,7 +636,7 @@ void UwpCoreSession::beginWorld(const std::wstring& worldId,
 		m_nativeCore->createWorld(
 			std::string(worldId.begin(), worldId.end()),
 			std::string(m_worldName.begin(), m_worldName.end()),
-			LevelSettings(seed, gameType, worldType));
+			LevelSettings(seed, gameType, worldType, indevType));
 		if (m_nativeCore->player() != nullptr)
 		{
 			m_playerX = m_nativeCore->player()->x;
@@ -587,13 +695,45 @@ void UwpCoreSession::startSavedWorld(const std::wstring& worldId, const std::wst
 	// reloads the corresponding level.dat through its normal construction path.
 	// Use the name stored in level.dat.  Passing the folder ID here would make
 	// Level::_init() overwrite a renamed world's display name on the next save.
-	beginWorld(worldId, savedWorldName, -1, GameType::Undefined, WorldType::Old);
+	beginWorld(worldId, savedWorldName, -1, GameType::Undefined,
+		WorldType::Old, IndevType::Inland);
 }
 
 void UwpCoreSession::startNewWorld(const std::wstring& worldId,
-	const std::wstring& worldName, long seed, int gameType, int worldType)
+	const std::wstring& worldName, long seed, int gameType, int worldType,
+	int indevType)
 {
-	beginWorld(worldId, worldName, seed, gameType, worldType);
+	const bool isNewWorld = !savedWorldFilesExist(worldId);
+	beginWorld(worldId, worldName, seed, gameType, worldType, indevType);
+	if (!isNewWorld || m_state != State::Running || gameType != GameType::Survival ||
+		(worldType != WorldType::Sky && worldType != WorldType::Alpha &&
+		 worldType != WorldType::Indev &&
+		 worldType != WorldType::EarlyInfdev) || m_nativeCore == nullptr ||
+		m_nativeCore->player() == nullptr || m_nativeCore->player()->inventory == nullptr)
+		return;
+
+	// These early generators do not reliably provide all tree saplings. Put
+	// them in a supply chest only for fresh survival worlds;
+	// startSavedWorld() never enters this path.
+	Level* level = m_nativeCore->level();
+	const int generatedWorldType = level != nullptr
+		? level->getLevelData()->getWorldType() : worldType;
+	bool chestPlaced = false;
+	if (generatedWorldType == WorldType::Indev && level != nullptr)
+	{
+		// Indev's new-world setup already builds the starting house around this
+		// support position. Put the supply chest in an interior corner, facing
+		// toward the room.
+		LevelData* data = level->getLevelData();
+		chestPlaced = placeSaplingSupplyChest(level,
+			data->getXSpawn() - 2, data->getYSpawn() + 1,
+			data->getZSpawn() - 2, Facing::EAST);
+	}
+	if (!chestPlaced)
+		chestPlaced = placeSaplingSupplyChestNearSpawn(level,
+			generatedWorldType == WorldType::EarlyInfdev);
+	if (!chestPlaced)
+		LOGE("Could not place the new-world sapling supply chest near spawn\n");
 }
 
 void UwpCoreSession::saveGame()
