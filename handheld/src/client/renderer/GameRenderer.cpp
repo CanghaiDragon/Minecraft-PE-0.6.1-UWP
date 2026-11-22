@@ -269,7 +269,7 @@ void GameRenderer::render(float a) {
 		renderCursor(xMouse, yMouse, mc);
 #endif
 		// Screen might have been removed, so check it again
-		if (mc->screen && !mc->screen->isInGameScreen())
+		if (mc->screen && mc->screen->shouldSleepAfterRender())
 			sleepMs(15);
     }
 

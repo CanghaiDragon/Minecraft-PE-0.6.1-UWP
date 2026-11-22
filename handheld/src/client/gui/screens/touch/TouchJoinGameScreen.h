@@ -67,6 +67,7 @@ private:
 	TButton bBack;
 	THeader bHeader;
 	TButton bMode;
+	TButton bServer;
 	AvailableGamesList* gamesList;
 };
 

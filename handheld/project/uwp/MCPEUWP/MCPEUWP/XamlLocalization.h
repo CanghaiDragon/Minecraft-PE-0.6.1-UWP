@@ -40,6 +40,7 @@ inline const TextEntry* entries(size_t& count)
 		{ L"Toggle Hide HUD", "uwp.key.hideHud" },
 		{ L"Toggle Debug Function", "uwp.key.debug" },
 		{ L"Take Screenshot", "uwp.key.screenshot" },
+		{ L"Open Chat", "uwp.key.chat" },
 		{ L"Toggle Third-person View", "uwp.key.thirdPerson" },
 		{ L"Pause / Back", "uwp.key.pause" },
 		{ L"Hotbar Slot 1", "uwp.key.hotbar1" },
@@ -312,6 +313,12 @@ inline const TextEntry* entries(size_t& count)
 		{ L"The saved world could not be attached to the game.", "uwp.main.worldAttachFailed" },
 		{ L"World editor could not be opened", "uwp.main.editorFailed" },
 		{ L"Achievements", "achievements.title" },
+		{ L"Language", "options.category.language" },
+		{ L"Original", "options.language.mode.origin" },
+		{ L"Follow System", "options.language.mode.system" },
+		{ L"English", "options.language.mode.english" },
+		{ L"Simplified Chinese", "options.language.mode.simplifiedChinese" },
+		{ L"Minecraft PE 0.6.1 Sample text", "options.language.mode.origin.description" },
 		{ L"World Edit", "uwp.worldEdit.title" },
 		{ L"Rename", "uwp.worldEdit.rename" },
 		{ L"Delete", "selectWorld.delete" },
@@ -566,6 +573,7 @@ inline void localizeComboItems(Windows::UI::Xaml::Controls::ComboBox^ comboBox)
 	static const char* renderDistance[] = { "options.renderDistance.tiny", "options.renderDistance.short", "options.renderDistance.normal", "options.renderDistance.far" };
 	static const char* guiScale[] = { "options.guiScale.auto", "options.guiScale.small", "options.guiScale.medium", "options.guiScale.normal", "options.guiScale.large" };
 	static const char* dpadSize[] = { "options.dpadSize.small", "options.dpadSize.normal", "options.dpadSize.large" };
+	static const char* language[] = { "options.language.mode.origin", "options.language.mode.system", "options.language.mode.english", "options.language.mode.simplifiedChinese" };
 	if (comboBox->Name == L"DifficultyComboBox") keys = difficulty;
 	else if (comboBox->Name == L"CameraComboBox") keys = camera;
 	else if (comboBox->Name == L"DynamicTileComboBox") keys = dynamicTile;
@@ -574,6 +582,7 @@ inline void localizeComboItems(Windows::UI::Xaml::Controls::ComboBox^ comboBox)
 	else if (comboBox->Name == L"RenderDistanceComboBox") keys = renderDistance;
 	else if (comboBox->Name == L"GuiScaleComboBox") keys = guiScale;
 	else if (comboBox->Name == L"DpadSizeComboBox") keys = dpadSize;
+	else if (comboBox->Name == L"LanguageComboBox") keys = language;
 	if (keys == nullptr)
 		return;
 	for (unsigned int i = 0; i < comboBox->Items->Size; ++i)
@@ -680,5 +689,11 @@ inline void install(Windows::UI::Xaml::FrameworkElement^ root)
 			if (target != nullptr)
 				localizeTree(target);
 		});
+}
+
+inline void refresh(Windows::UI::Xaml::FrameworkElement^ root)
+{
+	if (root != nullptr)
+		localizeTree(root);
 }
 }

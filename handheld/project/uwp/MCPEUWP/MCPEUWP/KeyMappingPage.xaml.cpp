@@ -34,6 +34,7 @@ namespace
 		HideHud,
 		DebugScreen,
 		Screenshot,
+		Chat,
 		ThirdPerson,
 		Pause,
 		Hotbar1,
@@ -68,6 +69,7 @@ namespace
 		{ L"Toggle Hide HUD", HideHud },
 		{ L"Toggle Debug Function", DebugScreen },
 		{ L"Take Screenshot", Screenshot },
+		{ L"Open Chat", Chat },
 		{ L"Toggle Third-person View", ThirdPerson },
 		{ L"Pause / Back", Pause },
 		{ L"Hotbar Slot 1", Hotbar1 },
@@ -219,6 +221,7 @@ int KeyMappingPage::GetBindingKey(int bindingId)
 	case HideHud: return options.keyHideHud.key;
 	case DebugScreen: return options.keyDebugScreen.key;
 	case Screenshot: return options.keyScreenshot.key;
+	case Chat: return options.keyChat.key;
 	case ThirdPerson: return options.keyThirdPerson.key;
 	case Pause: return options.keyPause.key;
 	case Hotbar1: case Hotbar2: case Hotbar3: case Hotbar4:
@@ -250,6 +253,7 @@ void KeyMappingPage::SetBindingKey(int bindingId, int keyCode)
 	case HideHud: options.keyHideHud.key = keyCode; break;
 	case DebugScreen: options.keyDebugScreen.key = keyCode; break;
 	case Screenshot: options.keyScreenshot.key = keyCode; break;
+	case Chat: options.keyChat.key = keyCode; break;
 	case ThirdPerson: options.keyThirdPerson.key = keyCode; break;
 	case Pause: options.keyPause.key = keyCode; break;
 	case Hotbar1: case Hotbar2: case Hotbar3: case Hotbar4:

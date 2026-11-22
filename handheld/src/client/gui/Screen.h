@@ -40,6 +40,7 @@ public:
     virtual void renderDirtBackground(int vo);
 	// query
 	virtual bool renderGameBehind();
+	virtual bool shouldSleepAfterRender();
 	virtual bool hasClippingArea(IntRectangle& out);
 
     virtual bool isPauseScreen();

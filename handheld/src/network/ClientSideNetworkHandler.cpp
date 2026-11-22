@@ -37,10 +37,18 @@
 
 static MultiPlayerLevel* mpcast(Level* l) { return (MultiPlayerLevel*) l; }
 
-ClientSideNetworkHandler::ClientSideNetworkHandler(Minecraft* minecraft, IRakNetInstance* raknetInstance)
+ClientSideNetworkHandler::ClientSideNetworkHandler(Minecraft* minecraft,
+IRakNetInstance* raknetInstance, bool forceCompatibleProtocol,
+	const std::string& serverAddress, int serverPort)
 :	minecraft(minecraft),
-	raknetInstance(raknetInstance),
 	level(NULL),
+	raknetInstance(raknetInstance),
+	rakPeer(NULL),
+	serverGuid(),
+	forceCompatibleProtocol(forceCompatibleProtocol),
+	pendingServerAddress(serverAddress),
+	pendingServerPort(serverPort),
+	bufferedBlockUpdates(),
 	requestNextChunkPosition(0),
     requestNextChunkIndex(0)
 {
@@ -88,11 +96,13 @@ void ClientSideNetworkHandler::onConnect(const RakNet::RakNetGUID& hostGuid)
 	serverGuid = hostGuid;
 
 	clearChunksLoaded();
-	const int protocolVersion = minecraft->isExtendedMultiplayer()
+	const bool useExtendedProtocol = minecraft->isExtendedMultiplayer() &&
+		!forceCompatibleProtocol;
+	const int protocolVersion = useExtendedProtocol
 		? SharedConstants::ExtendedNetworkProtocolVersion
 		: SharedConstants::NetworkProtocolVersion;
 	std::vector<unsigned char> skinPixels;
-	if (minecraft->isExtendedMultiplayer() && minecraft->textures != NULL) {
+	if (useExtendedProtocol && minecraft->textures != NULL) {
 		const TextureId skinId = minecraft->textures->loadTexture("skins/local.png");
 		const TextureData* skin = Textures::isTextureIdValid(skinId)
 			? minecraft->textures->getTemporaryTextureData(skinId) : NULL;
@@ -101,13 +111,16 @@ void ClientSideNetworkHandler::onConnect(const RakNet::RakNetGUID& hostGuid)
 			skinPixels.assign(skin->data, skin->data + 64 * 64 * 4);
 	}
 	LoginPacket packet(minecraft->user->name.c_str(), protocolVersion, skinPixels,
-		minecraft->isExtendedMultiplayer());
+		useExtendedProtocol);
 	raknetInstance->send(packet);
 }
 
 void ClientSideNetworkHandler::onUnableToConnect()
 {
 	LOGI("onUnableToConnect\n");
+#ifndef STANDALONE_SERVER
+	minecraft->setScreen(new DisconnectionScreen("Unable to connect to server."));
+#endif
 }
 
 void ClientSideNetworkHandler::onDisconnect(const RakNet::RakNetGUID& guid)
@@ -132,6 +145,12 @@ void ClientSideNetworkHandler::onDisconnect(const RakNet::RakNetGUID& guid)
 void ClientSideNetworkHandler::handle(const RakNet::RakNetGUID& source, LoginStatusPacket* packet) {
 	if (packet->status == LoginStatus::Success) {
 		raknetInstance->setIsLoggedIn(true);
+		if (!pendingServerAddress.empty() && pendingServerPort >= 1 &&
+			pendingServerPort <= 65535) {
+			minecraft->options.lastServerAddress = pendingServerAddress;
+			minecraft->options.lastServerPort = pendingServerPort;
+			minecraft->options.save();
+		}
 		return;
 	}
 
@@ -139,7 +158,7 @@ void ClientSideNetworkHandler::handle(const RakNet::RakNetGUID& source, LoginSta
 		LOGI("Disconnect! Client is outdated!\n");
 #ifndef STANDALONE_SERVER
 		minecraft->setScreen(new DisconnectionScreen(
-			!minecraft->isExtendedMultiplayer()
+			!(minecraft->isExtendedMultiplayer() && !forceCompatibleProtocol)
 				? "Could not connect: Server requires Extended multiplayer."
 				: "Could not connect: Outdated client!"));
 #endif
@@ -148,7 +167,7 @@ void ClientSideNetworkHandler::handle(const RakNet::RakNetGUID& source, LoginSta
 		LOGI("Disconnect! Server is outdated!\n");
 #ifndef STANDALONE_SERVER
 		minecraft->setScreen(new DisconnectionScreen(
-			minecraft->isExtendedMultiplayer()
+			(minecraft->isExtendedMultiplayer() && !forceCompatibleProtocol)
 				? "Could not connect: Server supports only PE-compatible multiplayer."
 				: "Could not connect: Outdated server!"));
 #endif

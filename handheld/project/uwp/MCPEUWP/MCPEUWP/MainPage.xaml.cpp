@@ -24,6 +24,7 @@
 #include "../../../../src/world/level/LevelSettings.h"
 #include <ppltasks.h>
 #include <windows.applicationmodel.core.h>
+#include <windows.applicationmodel.datatransfer.h>
 #include <windows.devices.input.h>
 #include <windows.graphics.imaging.h>
 #include <windows.storage.h>
@@ -2028,6 +2029,69 @@ void MainPage::OnKeyDown(Windows::UI::Core::CoreWindow^,
 		e->Handled = true;
 		return;
 	}
+	const auto coreWindow = Windows::UI::Core::CoreWindow::GetForCurrentThread();
+	const auto controlState = coreWindow != nullptr
+		? coreWindow->GetKeyState(VirtualKey::Control)
+		: Windows::UI::Core::CoreVirtualKeyStates::None;
+	const bool controlDown =
+		(static_cast<unsigned int>(controlState) &
+		 static_cast<unsigned int>(Windows::UI::Core::CoreVirtualKeyStates::Down)) != 0;
+	const auto shiftState = coreWindow != nullptr
+		? coreWindow->GetKeyState(VirtualKey::Shift)
+		: Windows::UI::Core::CoreVirtualKeyStates::None;
+	const bool shiftDown =
+		(static_cast<unsigned int>(shiftState) &
+		 static_cast<unsigned int>(Windows::UI::Core::CoreVirtualKeyStates::Down)) != 0;
+	if ((controlDown && e->VirtualKey == VirtualKey::V) ||
+		(shiftDown && e->VirtualKey == VirtualKey::Insert))
+	{
+		// Original client TextBoxes consume UTF-8 bytes from Keyboard's shared
+		// text queue. Read the clipboard asynchronously so this CoreWindow event
+		// never blocks the UI thread while the system clipboard responds.
+		e->Handled = true;
+		try
+		{
+			Windows::ApplicationModel::DataTransfer::DataPackageView^ clipboard =
+				Windows::ApplicationModel::DataTransfer::Clipboard::GetContent();
+			if (clipboard != nullptr && clipboard->Contains(
+				Windows::ApplicationModel::DataTransfer::StandardDataFormats::Text))
+			{
+				create_task(clipboard->GetTextAsync()).then(
+					[](task<String^> result)
+					{
+						try
+						{
+							String^ pastedText = result.get();
+							if (pastedText == nullptr || pastedText->Length() == 0)
+								return;
+							const int sourceLength = static_cast<int>(pastedText->Length());
+							const int byteCount = WideCharToMultiByte(CP_UTF8,
+								WC_ERR_INVALID_CHARS, pastedText->Data(), sourceLength,
+								nullptr, 0, nullptr, nullptr);
+							if (byteCount <= 0 || byteCount > 65536)
+								return;
+							std::string utf8(static_cast<size_t>(byteCount), '\0');
+							if (WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS,
+								pastedText->Data(), sourceLength, &utf8[0], byteCount,
+								nullptr, nullptr) != byteCount)
+								return;
+							for (std::string::const_iterator it = utf8.begin();
+								it != utf8.end(); ++it)
+								Keyboard::feedText(*it);
+						}
+						catch (...)
+						{
+							// Clipboard contents are optional; ignore unavailable data.
+						}
+					}, task_continuation_context::use_current());
+			}
+		}
+		catch (...)
+		{
+			// Clipboard access can be denied by the OS; leave the input screen open.
+		}
+		return;
+	}
 	if (!FeedOriginalKeyboard(e->VirtualKey, true))
 		return;
 	e->Handled = true;
@@ -2229,16 +2293,45 @@ void MainPage::OnCharacterReceived(Windows::UI::Core::CoreWindow^,
 		e->Handled = true;
 		return;
 	}
+	const unsigned int code = e->KeyCode;
+	if (code == 'v' || code == 'V')
+	{
+		const auto coreWindow = Windows::UI::Core::CoreWindow::GetForCurrentThread();
+		if (coreWindow != nullptr &&
+			(static_cast<unsigned int>(coreWindow->GetKeyState(
+				Windows::System::VirtualKey::Control)) &
+			 static_cast<unsigned int>(
+				Windows::UI::Core::CoreVirtualKeyStates::Down)) != 0)
+		{
+			// Ctrl+V was handled by OnKeyDown above; do not enqueue its literal V.
+			e->Handled = true;
+			return;
+		}
+	}
 
 	// The original Screen/TextBox path consumes Keyboard's text queue from
 	// Minecraft::tickInput() -> Screen::updateEvents().  KeyDown alone only
 	// carries a virtual key and therefore cannot populate names or seeds.
-	// CharacterReceived is the UWP equivalent of Win32 WM_CHAR; keep the
-	// original byte-oriented TextBox contract and ignore control/non-ASCII
-	// code points that the 0.6.1 client cannot represent in std::string.
-	const unsigned int code = e->KeyCode;
-	if (code >= 32u && code <= 0x7fu)
-		Keyboard::feedText(static_cast<char>(code));
+	// CharacterReceived supplies Unicode scalar values. Encode them as UTF-8
+	// because TextBox and Font store and render UTF-8 strings.
+	if (code >= 32u && code <= 0x10ffffu &&
+		!(code >= 0xd800u && code <= 0xdfffu)) {
+		if (code <= 0x7fu) {
+			Keyboard::feedText(static_cast<char>(code));
+		} else if (code <= 0x7ffu) {
+			Keyboard::feedText(static_cast<char>(0xc0u | (code >> 6)));
+			Keyboard::feedText(static_cast<char>(0x80u | (code & 0x3fu)));
+		} else if (code <= 0xffffu) {
+			Keyboard::feedText(static_cast<char>(0xe0u | (code >> 12)));
+			Keyboard::feedText(static_cast<char>(0x80u | ((code >> 6) & 0x3fu)));
+			Keyboard::feedText(static_cast<char>(0x80u | (code & 0x3fu)));
+		} else {
+			Keyboard::feedText(static_cast<char>(0xf0u | (code >> 18)));
+			Keyboard::feedText(static_cast<char>(0x80u | ((code >> 12) & 0x3fu)));
+			Keyboard::feedText(static_cast<char>(0x80u | ((code >> 6) & 0x3fu)));
+			Keyboard::feedText(static_cast<char>(0x80u | (code & 0x3fu)));
+		}
+	}
 }
 
 void MainPage::UpdateMoveInput()

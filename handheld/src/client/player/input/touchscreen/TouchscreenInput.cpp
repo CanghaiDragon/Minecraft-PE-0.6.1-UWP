@@ -22,6 +22,7 @@ static const int AREA_PAUSE = 106;
 static const int AREA_FLIGHT_UP = 107;
 static const int AREA_FLIGHT_DOWN = 108;
 static const int AREA_SCREENSHOT = 109;
+static const int AREA_CHAT = 110;
 
 static int cPressed = 0;
 static int cReleased = 0;
@@ -71,7 +72,7 @@ TouchscreenInput_TestFps::TouchscreenInput_TestFps( Minecraft* mc, Options* opti
 	_northJump(false),
 	_forward(false),
 	_boundingRectangle(0, 0, 1, 1),
-	_pauseAndScreenshotArea(0, 0, 0, 0),
+	_topRightControlsArea(0, 0, 0, 0),
 	_pressedJump(false),
 	_pauseIsDown(false),
 	_sneakTapTime(-999),
@@ -81,6 +82,7 @@ TouchscreenInput_TestFps::TouchscreenInput_TestFps( Minecraft* mc, Options* opti
 	aDown(0),
 	aPause(0),
 	aScreenshot(0),
+	aChat(0),
 	aJump(0),
 	aSneak(0),
 	aJumpRight(0),
@@ -117,7 +119,7 @@ void TouchscreenInput_TestFps::clear() {
 	// These areas are owned by TouchAreaModel.  Clear the non-owning pointers
 	// immediately so a render that races a layout rebuild cannot use freed
 	// storage.
-	aLeft = aRight = aUp = aDown = aPause = aScreenshot = NULL;
+	aLeft = aRight = aUp = aDown = aPause = aScreenshot = aChat = NULL;
 	aJump = aSneak = aJumpRight = NULL;
 
 	delete aUpLeft; aUpLeft = NULL; // @todo: SAFEDEL
@@ -229,10 +231,11 @@ void TouchscreenInput_TestFps::onConfigChanged(const Config& c) {
 	                                                          4 + btnSize));
 	_model.addArea(AREA_SCREENSHOT, aScreenshot = new RectangleArea(
 		w - 6 - 2 * btnSize, 4, w - 6 - btnSize, 4 + btnSize));
-	// Reserve both top-right controls from camera turning even while the
-	// optional screenshot control is hidden, so toggling the debug option
-	// takes effect immediately without rebuilding the touch areas.
-	_pauseAndScreenshotArea = RectangleArea(w - 6 - 2 * btnSize,
+	_model.addArea(AREA_CHAT, aChat = new RectangleArea(
+		w - 8 - 3 * btnSize, 4, w - 8 - 2 * btnSize, 4 + btnSize));
+	// Reserve all top-right controls from camera turning even while optional
+	// debug controls are hidden, so the setting takes effect immediately.
+	_topRightControlsArea = RectangleArea(w - 8 - 3 * btnSize,
 		4, w - 4, 4 + btnSize);
 	TOUCH_TRACE("touch-layout: screen=(%.0f,%.0f) sneak=%d dpad=(%.1f,%.1f,%.1f,%.1f) sneakArea=(%.1f,%.1f,%.1f,%.1f) jumpArea=(%.1f,%.1f,%.1f,%.1f) flightUp=(%.1f,%.1f,%.1f,%.1f) flightDown=(%.1f,%.1f,%.1f,%.1f)\n",
 		w, h, _options->touchSneak ? 1 : 0,
@@ -274,7 +277,7 @@ void TouchscreenInput_TestFps::releaseAllKeys()
 	xa = 0;
 	ya = 0;
 
-	for (int i = 0; i<10; ++i)
+	for (int i = 0; i<11; ++i)
 		_buttons[i] = false;
 #ifdef WIN32
 	for (int i = 0; i<NumKeys; ++i)
@@ -306,7 +309,7 @@ void TouchscreenInput_TestFps::tick( Player* player )
 	// Clear every touch-control slot, including the right-side flight buttons
 	// (indices 7 and 8).  Leaving those slots set makes ascent/descent persist
 	// after the finger is released and can destabilize the next world entry.
-	for (int i = 0; i < 10; ++i)
+	for (int i = 0; i < 11; ++i)
 		_buttons[i] = false;
 
 	const int* pointerIds;
@@ -372,7 +375,7 @@ void TouchscreenInput_TestFps::tick( Player* player )
 		// right-side jump contact, which must be accepted alongside the left
 		// movement contact even when the player is not flying.
 		const bool touchSneakJump = _options->touchSneak && areaId == AREA_DPAD_J;
-		if (areaId != AREA_PAUSE && areaId != AREA_SCREENSHOT && p != _dpadPointerId &&
+		if (areaId != AREA_PAUSE && areaId != AREA_SCREENSHOT && areaId != AREA_CHAT && p != _dpadPointerId &&
 			!flightControlsEnabled && !touchSneakJump)
 			continue;
 
@@ -485,6 +488,13 @@ void TouchscreenInput_TestFps::tick( Player* player )
 			setButton = true;
 			if (Multitouch::isReleased(p))
 				_minecraft->requestDebugScreenshot();
+		}
+		else if (areaId == AREA_CHAT && _options->debugScreenEnabled) {
+			setButton = true;
+			if (Multitouch::isReleased(p)) {
+				_minecraft->soundEngine->playUI("random.click", 1, 1);
+				_minecraft->screenChooser.setScreen(SCREEN_CHAT);
+			}
 		}
 		_buttons[areaId - AREA_DPAD_FIRST] = setButton;
 	}
@@ -652,7 +662,7 @@ const RectangleArea& TouchscreenInput_TestFps::getRectangleArea()
 }
 const RectangleArea& TouchscreenInput_TestFps::getPauseRectangleArea()
 {
-	return _pauseAndScreenshotArea;
+	return _topRightControlsArea;
 }
 
 void TouchscreenInput_TestFps::rebuild() {
@@ -744,6 +754,9 @@ void TouchscreenInput_TestFps::rebuild() {
 			if (isButtonDown(AREA_SCREENSHOT)) t.colorABGR(cPressedPause);
 			else t.colorABGR(cReleasedPause);
 			drawRectangleArea(t, aScreenshot, 200, 82, 18.0f);
+			if (isButtonDown(AREA_CHAT)) t.colorABGR(cPressedPause);
+			else t.colorABGR(cReleasedPause);
+			drawRectangleArea(t, aChat, 200, 100, 18.0f);
 		}
 		if (isButtonDown(AREA_PAUSE))  t.colorABGR(cPressedPause);
 		else						   t.colorABGR(cReleasedPause);

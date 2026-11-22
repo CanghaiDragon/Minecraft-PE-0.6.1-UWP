@@ -63,6 +63,8 @@ void Options::initDefaultValues(DefaultProfile profile) {
 
 	//skin     = "Default";
 	username = "Steve";
+	lastServerAddress.clear();
+	lastServerPort = 19132;
 	languageCode = minecraft && minecraft->platform()
 		? minecraft->platform()->getLanguageCode() : "en_US";
 #if defined(MCPE_UWP)
@@ -361,6 +363,12 @@ void Options::update()
 		// Multiplayer
 		if (key == OptionStrings::Multiplayer_Username) username = value;
 		if (key == OptionStrings::Multiplayer_ServerVisible) readBool(value, serverVisible);
+		if (key == "lastServerAddress") lastServerAddress = value;
+		if (key == "lastServerPort") {
+			int port = lastServerPort;
+			if (readInt(value, port) && port >= 1 && port <= 65535)
+				lastServerPort = port;
+		}
 		if (key == OptionStrings::Language &&
 			(value == "origin" || value == "system" || value == "en_US" || value == "zh_CN"))
 			languageCode = value;
@@ -517,6 +525,7 @@ void Options::update()
 		if (key == keyHideHud.name) readInt(value, keyHideHud.key);
 		if (key == keyDebugScreen.name) readInt(value, keyDebugScreen.key);
 		if (key == keyScreenshot.name) readInt(value, keyScreenshot.key);
+		if (key == keyChat.name) readInt(value, keyChat.key);
 		if (key == keyThirdPerson.name) readInt(value, keyThirdPerson.key);
 		if (key == keyPause.name) readInt(value, keyPause.key);
 		for (int hotbarSlot = 0; hotbarSlot < 8; ++hotbarSlot)
@@ -622,6 +631,8 @@ void Options::save()
 	// Game
 	addOptionToSaveOutput(stringVec, OptionStrings::Multiplayer_Username, username);
 	addOptionToSaveOutput(stringVec, OptionStrings::Multiplayer_ServerVisible, serverVisible);
+	addOptionToSaveOutput(stringVec, "lastServerAddress", lastServerAddress);
+	addOptionToSaveOutput(stringVec, "lastServerPort", lastServerPort);
 	addOptionToSaveOutput(stringVec, OptionStrings::Language, languageCode);
 	addOptionToSaveOutput(stringVec, OptionStrings::Game_DifficultyLevel, difficulty);
 	addOptionToSaveOutput(stringVec, OptionStrings::Game_ThirdPerson, thirdPersonView);
@@ -660,6 +671,7 @@ void Options::save()
 	addOptionToSaveOutput(stringVec, keyHideHud.name, keyHideHud.key);
 	addOptionToSaveOutput(stringVec, keyDebugScreen.name, keyDebugScreen.key);
 	addOptionToSaveOutput(stringVec, keyScreenshot.name, keyScreenshot.key);
+	addOptionToSaveOutput(stringVec, keyChat.name, keyChat.key);
 	addOptionToSaveOutput(stringVec, keyThirdPerson.name, keyThirdPerson.key);
 	addOptionToSaveOutput(stringVec, keyPause.name, keyPause.key);
 	for (int hotbarSlot = 0; hotbarSlot < 8; ++hotbarSlot)

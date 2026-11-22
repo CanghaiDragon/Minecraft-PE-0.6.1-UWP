@@ -2,6 +2,7 @@
 #include "StartMenuScreen.h"
 #include "SelectWorldScreen.h"
 #include "JoinGameScreen.h"
+#include "ChatScreen.h"
 #include "PauseScreen.h"
 #include "AchievementsScreen.h"
 #include "RenameMPLevelScreen.h"
@@ -34,6 +35,12 @@ Screen* ScreenChooser::createScreen( ScreenId id )
 	case SCREEN_JOINGAME:
 		screen = useJavaUi ? static_cast<Screen*>(new JoinGameScreen())
 		                        : static_cast<Screen*>(new Touch::JoinGameScreen());
+		break;
+	case SCREEN_SERVERCONNECT:
+		screen = new DirectConnectScreen();
+		break;
+	case SCREEN_CHAT:
+		screen = new ChatScreen();
 		break;
 	case SCREEN_PAUSE:
 		screen = new PauseScreen(false);

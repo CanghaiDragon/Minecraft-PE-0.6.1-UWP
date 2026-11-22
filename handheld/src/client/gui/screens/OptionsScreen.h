@@ -24,6 +24,7 @@ public:
 	void render(int xm, int ym, float a);
 	void removed();
 	void selectCategory(int index);
+	int getSelectedCategory() const { return selectedCategory; }
 	void requestLanguageChange(const std::string& languageMode);
 	const std::string& getLanguageMode() const;
 

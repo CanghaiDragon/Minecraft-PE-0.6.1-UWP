@@ -22,7 +22,7 @@ enum class UwpOptionId
 	LeftHanded, SplitTouch, InvertMouse, DestroyVibration, FancyGraphics,
 	AmbientOcclusion, RenderDistance, GuiScale, ViewBobbing, FieldOfView,
 	HideGui, Music, Sound, InfiniteWorlds, JavaUi, SkinArmType, SkinMenu, TouchSneak,
-	BetaVisuals, DebugScreen, Fullscreen
+	BetaVisuals, DebugScreen, Fullscreen, Achievements
 };
 
 enum class UwpOriginalMenuAction
@@ -115,8 +115,11 @@ bool UwpOriginalClientGetOptionBool(UwpOriginalClientHandle handle, UwpOptionId 
 int UwpOriginalClientGetOptionInt(UwpOriginalClientHandle handle, UwpOptionId id);
 float UwpOriginalClientGetOptionFloat(UwpOriginalClientHandle handle, UwpOptionId id);
 std::string UwpOriginalClientGetUsername(UwpOriginalClientHandle handle);
+std::string UwpOriginalClientGetLanguageMode(UwpOriginalClientHandle handle);
 void UwpOriginalClientSetUsername(UwpOriginalClientHandle handle,
 	const std::string& username);
+void UwpOriginalClientSetLanguageMode(UwpOriginalClientHandle handle,
+	const std::string& languageMode);
 void UwpOriginalClientSetOptionBool(UwpOriginalClientHandle handle, UwpOptionId id, bool value);
 void UwpOriginalClientSetOptionInt(UwpOriginalClientHandle handle, UwpOptionId id, int value);
 void UwpOriginalClientSetOptionFloat(UwpOriginalClientHandle handle, UwpOptionId id, float value);

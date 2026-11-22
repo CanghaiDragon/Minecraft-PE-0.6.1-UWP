@@ -1,9 +1,11 @@
 #ifndef NET_MINECRAFT_CLIENT_GUI_SCREENS__JoinGameScreen_H__
 #define NET_MINECRAFT_CLIENT_GUI_SCREENS__JoinGameScreen_H__
 
+#include <string>
 #include "../Screen.h"
 #include "../components/Button.h"
 #include "../components/SmallButton.h"
+#include "../components/TextBox.h"
 #include "../components/ScrolledSelectionList.h"
 #include "../../Minecraft.h"
 #include "../../../network/RakNetInstance.h"
@@ -69,8 +71,33 @@ public:
 private:
 	Button bBack;
 	Button bMode;
+	Button bServer;
 	AvailableGamesList* gamesList;
 	void joinSelectedServer();
+};
+
+// Manual address entry is shared by Java and PE layouts; button styles are
+// selected at runtime to match the active UI.
+class DirectConnectScreen: public Screen
+{
+public:
+	DirectConnectScreen();
+	virtual ~DirectConnectScreen();
+	void init();
+	void setupPositions();
+	void tick();
+	void render(int xm, int ym, float a);
+	void buttonClicked(Button* button);
+	void keyPressed(int eventKey);
+	bool handleBackEvent(bool isDown);
+	bool isInGameScreen();
+private:
+	Button* bBack;
+	Button* bTitle;
+	Button* bConnect;
+	TextBox addressBox;
+	TextBox portBox;
+	std::string errorMessage;
 };
 
 #endif /*NET_MINECRAFT_CLIENT_GUI_SCREENS__JoinGameScreen_H__*/

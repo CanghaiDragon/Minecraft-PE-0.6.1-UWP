@@ -213,6 +213,9 @@ public:
 	int dpadSize;
 	std::string username;
 	std::string languageCode;
+	// Most recently connected server, restored by the direct-connect screen.
+	std::string lastServerAddress;
+	int lastServerPort;
 
 	bool serverVisible;
 	int dynamicTileMode;

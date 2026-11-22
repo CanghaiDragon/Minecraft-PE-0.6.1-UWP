@@ -1,6 +1,7 @@
 #ifndef NET_MINECRAFT_CLIENT__Minecraft_H__
 #define NET_MINECRAFT_CLIENT__Minecraft_H__
 
+#include <string>
 #include "Options.h"
 #ifndef STANDALONE_SERVER
 #include "MouseHandler.h"
@@ -93,6 +94,7 @@ public:
 	void locateMultiplayer();
 	void cancelLocateMultiplayer();
 	bool joinMultiplayer(const PingedCompatibleServer& server);
+	bool joinMultiplayer(const std::string& host, int port, bool forceCompatibleProtocol);
 	void hostMultiplayer(int port=19132);
 	Player* respawnPlayer(int playerId);
 	void respawnPlayer();

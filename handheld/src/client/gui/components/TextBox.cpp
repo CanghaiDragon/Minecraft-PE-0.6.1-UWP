@@ -16,7 +16,8 @@ TextBox::TextBox(int id, int x, int y, const std::string& msg)
 #endif
 
 TextBox::TextBox(int id, int x, int y, int w, int h, const std::string& msg)
- : GuiElement(true, true, x, y, w, h), id(id), hint(msg), focused(false), blink(false), blinkTicks(0) {}
+ : GuiElement(true, true, x, y, w, h), hint(msg), text(), id(id), maxLength(48),
+	focused(false), blink(false), blinkTicks(0) {}
 
 void TextBox::setFocus(Minecraft* minecraft) {
 	if(!focused) {
@@ -48,12 +49,18 @@ void TextBox::mouseClicked(Minecraft* minecraft, int x, int y, int buttonNum) {
 }
 
 void TextBox::keyPressed(Minecraft* minecraft, int key) {
-	if (focused && key == Keyboard::KEY_BACKSPACE && !text.empty())
-		text.erase(text.length() - 1);
+	if (focused && key == Keyboard::KEY_BACKSPACE && !text.empty()) {
+		size_t start = text.length() - 1;
+		while (start > 0 &&
+			(static_cast<unsigned char>(text[start]) & 0xc0) == 0x80)
+			--start;
+		text.erase(start);
+	}
 }
 
 void TextBox::charPressed(Minecraft* minecraft, char c) {
-	if (focused && c >= 32 && c < 127 && text.length() < 48)
+	const unsigned char value = static_cast<unsigned char>(c);
+	if (focused && value >= 32 && value != 127 && text.length() < maxLength)
 		text += c;
 }
 

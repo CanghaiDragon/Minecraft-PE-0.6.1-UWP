@@ -6,6 +6,7 @@
 #include "../raknet/RakNetTypes.h"
 #include "../world/level/LevelConstants.h"
 
+#include <string>
 #include <vector>
 
 class Minecraft;
@@ -29,7 +30,9 @@ typedef struct IntPair {
 class ClientSideNetworkHandler : public NetEventCallback
 {
 public:
-	ClientSideNetworkHandler(Minecraft* minecraft, IRakNetInstance* raknetInstance);
+	ClientSideNetworkHandler(Minecraft* minecraft, IRakNetInstance* raknetInstance,
+		bool forceCompatibleProtocol = false,
+		const std::string& serverAddress = std::string(), int serverPort = 19132);
 	virtual ~ClientSideNetworkHandler();
 
 	virtual void levelGenerated(Level* level);
@@ -93,6 +96,9 @@ private:
 	RakNet::RakPeerInterface* rakPeer;
 
 	RakNet::RakNetGUID serverGuid;
+	bool forceCompatibleProtocol;
+	std::string pendingServerAddress;
+	int pendingServerPort;
 
 	BlockUpdateList	bufferedBlockUpdates;
 	int	requestNextChunkPosition;

@@ -109,6 +109,15 @@ void SettingsPage::RefreshFromOriginalOptions()
 		if (dynamicTileMode > 2) dynamicTileMode = 2;
 		DynamicTileComboBox->SelectedIndex = dynamicTileMode;
 	}
+	if (LanguageComboBox != nullptr)
+	{
+		const std::string languageMode = UwpOriginalClientGetLanguageMode(m_clientHandle);
+		int index = 1; // Follow System is the default and safe fallback.
+		if (languageMode == "origin") index = 0;
+		else if (languageMode == "en_US") index = 2;
+		else if (languageMode == "zh_CN") index = 3;
+		LanguageComboBox->SelectedIndex = index;
+	}
 
 	if (InputModeComboBox != nullptr)
 		InputModeComboBox->SelectedIndex = ClampIndex(
@@ -161,6 +170,8 @@ void SettingsPage::RefreshFromOriginalOptions()
 		BetaVisualsCheckBox->IsChecked = getBool(UwpOptionId::BetaVisuals);
 	if (DebugScreenCheckBox != nullptr)
 		DebugScreenCheckBox->IsChecked = getBool(UwpOptionId::DebugScreen);
+	if (AchievementsCheckBox != nullptr)
+		AchievementsCheckBox->IsChecked = getBool(UwpOptionId::Achievements);
 	m_refreshingOptions = false;
 }
 
@@ -205,6 +216,19 @@ void SettingsPage::OnOptionSelectionChanged(
 		UwpOriginalClientSetOptionInt(m_clientHandle, UwpOptionId::GuiScale, index);
 	else if (comboBox == DynamicTileComboBox)
 		UwpOriginalClientSetOptionInt(m_clientHandle, UwpOptionId::DynamicTile, index);
+	else if (comboBox == LanguageComboBox)
+	{
+		static const char* const languageModes[] = {
+			"origin", "system", "en_US", "zh_CN"
+		};
+		if (index >= 0 && index < 4)
+		{
+			UwpOriginalClientSetLanguageMode(m_clientHandle, languageModes[index]);
+			m_refreshingOptions = true;
+			UwpXamlLocalization::refresh(this);
+			m_refreshingOptions = false;
+		}
+	}
 }
 
 void SettingsPage::OnOptionSliderChanged(
@@ -270,6 +294,8 @@ void SettingsPage::OnOptionCheckBoxChanged(
 		UwpOriginalClientSetOptionBool(m_clientHandle, UwpOptionId::BetaVisuals, value);
 	else if (checkBox == DebugScreenCheckBox)
 		UwpOriginalClientSetOptionBool(m_clientHandle, UwpOptionId::DebugScreen, value);
+	else if (checkBox == AchievementsCheckBox)
+		UwpOriginalClientSetOptionBool(m_clientHandle, UwpOptionId::Achievements, value);
 }
 
 void SettingsPage::OnBackClick(Object^, Windows::UI::Xaml::RoutedEventArgs^)
@@ -301,6 +327,7 @@ void SettingsPage::ShowCategory(Border^ panel)
 	GraphicsPanel->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
 	AudioPanel->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
 	AdditionalPanel->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
+	LanguagePanel->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
 	if (panel != nullptr)
 		panel->Visibility = Windows::UI::Xaml::Visibility::Visible;
 }
@@ -310,3 +337,4 @@ void SettingsPage::OnControlsCategoryClick(Object^, Windows::UI::Xaml::RoutedEve
 void SettingsPage::OnGraphicsCategoryClick(Object^, Windows::UI::Xaml::RoutedEventArgs^) { ShowCategory(GraphicsPanel); }
 void SettingsPage::OnAudioCategoryClick(Object^, Windows::UI::Xaml::RoutedEventArgs^) { ShowCategory(AudioPanel); }
 void SettingsPage::OnAdditionalCategoryClick(Object^, Windows::UI::Xaml::RoutedEventArgs^) { ShowCategory(AdditionalPanel); }
+void SettingsPage::OnLanguageCategoryClick(Object^, Windows::UI::Xaml::RoutedEventArgs^) { ShowCategory(LanguagePanel); }

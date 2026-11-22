@@ -68,6 +68,7 @@ JoinGameScreen::JoinGameScreen()
 	bBack(  3, I18n::get("gui.back")),
 	bHeader(0, I18n::get("menu.multiplayer")),
 	bMode(4, I18n::get("multiplayer.switchMode")),
+	bServer(5, I18n::get("multiplayer.server")),
 	gamesList(NULL)
 {
 	bJoin.active = false;
@@ -85,10 +86,11 @@ void JoinGameScreen::init()
 	buttons.push_back(&bBack);
 	buttons.push_back(&bHeader);
 	buttons.push_back(&bMode);
+	buttons.push_back(&bServer);
 
 	minecraft->raknetInstance->clearServerList();
-	// Leave only the bottom two text lines outside the dark server-list pane.
-	gamesList = new AvailableGamesList(minecraft, width, height > 46 ? height - 28 : height);
+	// Reserve the bottom strip for the mode button and its two description lines.
+	gamesList = new AvailableGamesList(minecraft, width, height > 88 ? height - 64 : height);
 
 #ifdef ANDROID
 	//tabButtons.push_back(&bJoin);
@@ -102,15 +104,19 @@ void JoinGameScreen::setupPositions() {
 	bBack.y = 0;
 	bBack.width = topButtonWidth;
 	bBack.height = 26;
-	bMode.width = topButtonWidth;
-	bMode.height = 26;
-	bMode.x = width - bMode.width;
-	bMode.y = 0;
-	// Keep the title between Back and the Switch button at the top right.
+	bServer.width = topButtonWidth;
+	bServer.height = 26;
+	bServer.x = width - bServer.width;
+	bServer.y = 0;
+	// Keep the title between Back and the Server button at the top right.
 	bHeader.x = bBack.width;
 	bHeader.y = 0;
-	bHeader.width = width - bBack.width - bMode.width;
+	bHeader.width = width - bBack.width - bServer.width;
 	bHeader.height = 26;
+	bMode.width = width >= 220 ? 128 : width - 16;
+	bMode.height = 24;
+	bMode.x = (width - bMode.width) / 2;
+	bMode.y = height - 58;
 }
 
 void JoinGameScreen::buttonClicked(Button* button)
@@ -119,6 +125,8 @@ void JoinGameScreen::buttonClicked(Button* button)
 	{
 		minecraft->setExtendedMultiplayer(!minecraft->isExtendedMultiplayer());
 	}
+	if (button->id == bServer.id)
+		minecraft->screenChooser.setScreen(SCREEN_SERVERCONNECT);
 	if (button->id == bJoin.id)
 	{
 		if (isIndexValid(gamesList->selectedItem))
@@ -245,12 +253,12 @@ void JoinGameScreen::render( int xm, int ym, float a )
 			: I18n::get("multiplayer.compatibleMode.long"));
 	const int modeLineX = (width - minecraft->font->width(modeLine)) / 2;
 	minecraft->font->draw(modeLine, (float)modeLineX,
-		(float)(height - 20), 0xffc0c0c0);
+		(float)(height - 26), 0xffc0c0c0);
 	drawCenteredString(minecraft->font,
 		extended ? (width < 360 ? I18n::get("multiplayer.projectClients.short")
 			: I18n::get("multiplayer.projectClients.long"))
 			: I18n::get("multiplayer.originalClients"),
-		width / 2, height - 10, 0xffc0c0c0);
+		width / 2, height - 12, 0xffc0c0c0);
 
 }
 

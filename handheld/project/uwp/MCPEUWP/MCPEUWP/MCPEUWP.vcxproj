@@ -235,11 +235,11 @@
     <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
     <PackageCertificateThumbprint>454A3461584CC671165F8430913FD684E4324B69</PackageCertificateThumbprint>
     <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
-    <AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
+    <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
     <AppxPackageDir>$(SolutionDir)..\..\..\AppPackages\</AppxPackageDir>
     <GenerateTestArtifacts>True</GenerateTestArtifacts>
     <AppxBundle>Always</AppxBundle>
-    <AppxBundlePlatforms>arm64</AppxBundlePlatforms>
+    <AppxBundlePlatforms>x86|x64|arm|arm64</AppxBundlePlatforms>
     <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
@@ -482,12 +482,16 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="data\images\**\*">
+    <!-- Package the canonical game assets from handheld/data/images.  Keeping
+         a second project-local copy made edits to gui.png invisible in UWP. -->
+    <Content Include="..\..\..\..\data\images\**\*">
+      <Link>data\images\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <DeploymentContent>true</DeploymentContent>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\..\..\..\data\images\font\unifont\**\*">
-      <Link>data\images\font\unifont\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    <!-- This app-specific logo is the only image kept outside the canonical
+         client image tree. -->
+    <Content Include="data\images\gui\mojang_logo.png">
       <DeploymentContent>true</DeploymentContent>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

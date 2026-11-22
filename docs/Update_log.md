@@ -14,7 +14,13 @@ New features:
   
   - Hidden world: Infdev 20100227.
 
-- Screenshots (Part of Debug Function, with key F2)
+- Screenshots (Part of Debug Function, with key F2).
+
+- Chatting (Part of Debug Function, with key T. Only English is supported).
+
+- Extended Multiplayer Mode (with optimized skin and more world types avaliable).
+
+- Server avaliable. Now the game is able to join server in MCPE 0.1-0.8.
 
 Bug fix:
 
@@ -35,10 +41,6 @@ Improvements:
 - Bedrock is added to creative player's inventory.
 
 - Items on hand now shows their name in Keyboard input.
-
-- Extended Multiplayer Mode (with optimized skin and more world types avaliable)
-
-- 
 
 ## 1.1.3
 

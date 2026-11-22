@@ -2,7 +2,7 @@
 
 <div align="center"><a href="README.md">English</a></div>
 
-本项目是基于泄露的 Minecraft Pocket Edition 0.6.1 源代码开发的、以 Windows 为主要目标平台的延续项目。项目在 Windows 通用平台（UWP）上对游戏进行现代化移植与维护，并改进了输入、渲染、世界生成和用户界面。本项目面向运行 Windows 10 和 Windows 11 的 UWP 设备，包括台式电脑、平板电脑及 Windows 10 Mobile 设备。
+本项目是基于泄露的 Minecraft Pocket Edition 0.6.1 源代码开发的、以 Windows 为主要目标平台的延续项目。项目在 Windows 通用平台（UWP）上对游戏进行现代化移植与维护，并改进了输入、渲染、世界生成和用户界面。与许多将后续版本内容加入 MCPE 0.6.1 的修改项目不同，本项目选择了另一条路线：不引入任何新方块，而是通过重现早期 Java 版的世界生成机制，探索 Minecraft 更早期的历史。本项目面向运行 Windows 10 和 Windows 11 的 UWP 设备，包括电脑、平板及 Windows 10 Mobile 设备。
 
 如果你对 Win32 版本感兴趣，请访问 [Minecraft PE 0.6.1 Windows Universal](https://github.com/CanghaiDragon/Minecraft-PE-0.6.1-Windows-Universal)。
 
@@ -19,6 +19,8 @@
 ![Gallery3](docs/gallery3.png)
 
 ![Gallery4](docs/gallery4.png)
+
+![Gallery5](docs/gallery5.png)
 
 ---
 
@@ -43,13 +45,13 @@
 
 本 UWP 项目由我此前的 Win32 版本 [Minecraft-PE-0.6.1-Windows-Universal](https://github.com/CanghaiDragon/Minecraft-PE-0.6.1-Windows-Universal) 移植而来，主要功能基本相同。
 
-2026 年 3 月，Minecraft Pocket Edition v0.6.1 的源代码在互联网上泄露，可以在 [Minecraft PE Source Code](https://archive.org/details/Minecraftpesorucecode) 找到。这也是 GitHub 等网站上出现多个 MCPE 0.6.1 修改版本的原因。本项目同样是基于原始代码开发的修改版本。这些修改版本均**未获得 Mojang 的直接授权**。
+2026 年初，Minecraft Pocket Edition v0.6.1 的源代码在互联网上泄露，可以在 [Minecraft PE Source Code](https://archive.org/details/Minecraftpesorucecode) 找到。这也是 GitHub 等网站上出现多个 MCPE 0.6.1 修改版本的原因。本项目同样是基于原始代码开发的修改版本。这些修改版本均**未获得 Mojang 的直接授权**。
 
 本项目源自 [programmer1o1/MinecraftPE-v0.6.1](https://github.com/programmer1o1/MinecraftPE-v0.6.1)，下文称为 **Project B**。Project B 提供了主要的现代化源码基础以及多平台移植工作。
 
 部分 Java Beta 视觉效果的思路和相关实现参考了 [minecraft-pe-0.6.1-on-all](https://github.com/Minecraft-PE-0-6-1/minecraft-pe-0.6.1-on-all)，下文称为 **Project A**。
 
-天域世界以及部分视觉效果参考了通过 Mod Coder Pack 4.3 反编译的 Minecraft Java Edition Beta 1.7.3 源代码。Alpha 世界则参考了通过 Mod Coder Pack 1.6 反编译的 Java Edition Alpha 1.1.2_01 源代码。这些参考并不意味着本项目与 Mojang 存在任何官方关联或获得其授权。
+天域世界以及部分视觉效果参考了使用 Mod Coder Pack 4.3 处理的 Minecraft Java Edition Beta 1.7.3 源代码。Alpha 世界则参考了使用 Mod Coder Pack 1.6 处理的 Java Edition Alpha 1.1.2_01 源代码。Indev 和 Infdev 世界生成器参考了 [RetroMCP-Java](https://github.com/MCPHackers/RetroMCP-Java)。这些参考并不意味着本项目与 Mojang 存在任何官方关联或获得其授权。
 
 部分图片来自 [Minecraft Wiki](https://minecraft.wiki/)。AppX 资源来自官方 [Windows Phone 8.1 版 Minecraft PE](https://microsoft.com/p/-/9wzdncrdzsbb)。
 
@@ -62,36 +64,39 @@
 ### 原版 MCPE 功能
 
 - 原版有限世界生成
-- 生物、光照、天空渲染以及下界反应塔
+- 生物、光照、天空渲染以及下界反应堆
 - 触摸屏操作
 
 ![下界反应堆](docs/nether_reactor.png)
 
-<div align="center">运行结束后的下界反应堆塔</div>
+<div align="center">失活后的下界反应堆</div>
 
 ### 额外游戏功能
 
 以下功能可通过“Options（选项）”→“Additional（附加设置）”中的对应设置体验。如果希望获得接近原版 MCPE 0.6.1 的游戏体验，可以保持这些选项关闭。
 
-- 更多世界类型（Infinite 无限世界、Sky 天域世界和 Alpha 世界）
-
+- 更多世界类型（Infinite 无限世界、Sky 天域世界、Alpha 世界和 Indev 世界）
 - Java Edition Beta 风格视觉效果
-
 - 皮肤设置和皮肤导入支持
-
 - 触摸屏潜行选项
-
-- F3 调试界面
-
+- 调试功能
 - Java Edition 风格 UI
+- 成就系统
 
-![Debug](docs/debug_cn.png)
+调试功能包括四项内容：Java Edition 风格的调试界面（通过 F3 切换）、旁观模式、截图以及聊天功能。这些功能在原版 MCPE 0.6.1 中并不存在。对应的操作入口如下图所示。
 
-<div align="center">F3 调试界面</div>
+![调试功能](docs/debug_cn.png)
+
+<img title="" src="docs/debug_game_cn.png" alt="" data-align="center" style="zoom:100%;">
+
+<div align="center">调试功能</div>
+
+各世界类型的详细介绍见下文。
 
 ### 改进
 
 - 键盘和鼠标操作及相关改进
+- 支持加入服务器
 - 可选择触摸或键盘/鼠标输入模式
 - 创造模式下的疾跑
 - 多种按键映射选项
@@ -106,23 +111,24 @@
 
 ### 界面与自定义
 
-- 欢迎界面，可选择输入模式、性能设置和 GUI 缩放比例
-- 可调整 GUI 和方向键大小
-- 自适应不同屏幕分辨率，从 Windows Phone 屏幕到桌面窗口均可适配
+- 欢迎界面，可选择语言、输入模式、性能设置和 GUI 缩放比例。
+- 可调整 GUI 和方向键大小。
+- 自适应不同屏幕分辨率，从 Windows Phone 屏幕到桌面窗口均可适配。
+- 多语言支持框架，现已支持简体中文。
 
 ---
 
 <h2 align="center">世界类型</h2>
 
-**重要提醒：** Infinite（无限）、Sky（天域）和Alpha世界采用的存档格式既不同于原版 MCPE 0.6.1，也不同于 MCPE 0.9 等后续版本的无限世界。请使用World Edit界面中的“Convert to PE 0.9+”选项来转换至原版支持的格式。请务必**在转换后用一个中间版本（已验证1.18效果较好）先打开存档**，因为直接将转换后存档用1.26打开可能出现兼容性问题。与此同时，经典有限世界保留了原版 MCPE 0.6.1 的存档格式，并支持原版 PE 0.1–0.8 的存档。
+**重要提醒：** Infinite（无限）、Sky（天域）和 Alpha 世界采用的存档格式既不同于原版 MCPE 0.6.1，也不同于 MCPE 0.9 等后续版本的无限世界。请使用世界编辑界面中的“Convert to PE 0.9+”选项来转换这些存档。对于 Old 和 Indev 世界，我仍然推荐使用此转换功能，因为它的效果优于原版 PE 的转换方式。我**强烈建议**先用一个中间版本打开转换后的存档（已验证 1.18 效果较好），因为直接使用 Bedrock 1.26.x 打开可能出现兼容性问题。与此同时，经典有限世界保留了原版 MCPE 0.6.1 的存档格式，并支持原版 PE 0.1–0.8 的存档。
 
 ### Old（有限）世界
 
-原版世界类型，使用与原版 MCPE 0.6.1 相同的生成机制。玩家可以在边界为 256×256 的世界中游玩，世界外围由隐形基岩包围。原版 0.6.1 不会生成洞穴，本项目保留了这一特性。需要注意的是，由于随机数的差异，原版 MCPE 0.6.1 中创造模式和生存模式的出生点并不相同。本项目保留了这一特性。
+原版世界类型，使用与原版 MCPE 0.6.1 相同的生成机制。玩家可以在边界为 256×256 的有限世界中游玩，世界外围由隐形基岩包围。原版 MCPE 0.6.1 不会生成洞穴，本项目保留了这一特性。需要注意的是，由于随机数的差异，原版 MCPE 0.6.1 中创造模式和生存模式的出生点并不相同。本项目也保留了这一特性。
 
 ### Infinite（无限）世界
 
-无限世界采用多 Region 区块存储，可以探索原版 256×256 世界边界之外的区域。其生成器由有限世界生成器改造而来，因此使用相同种子时，在有限世界边界范围内可以生成与有限世界完全相同的地形。生存模式与创造模式出生点不同的特性同样得到保留。无限世界会生成洞穴。
+无限世界采用多 Region 区块存储，可以探索原版 256×256 世界边界之外的区域。其生成器由有限世界生成器改造而来，因此使用相同种子时，在有限世界边界范围内可以生成与有限世界相同的基础地形。生存模式与创造模式出生点不同的特性同样得到保留。无限世界会生成洞穴。
 
 ### Sky（天域）世界
 
@@ -141,7 +147,7 @@
 
 ### Alpha 世界
 
-该世界类型基于 Minecraft Java Edition Alpha v1.1.2_01。世界中只会生成 Alpha 或 Winter 生物群系，以模拟早期 Java 版 Minecraft 的世界环境。树叶和草方块呈现与后续版本不同的鲜绿色。Alpha 世界会生成洞穴。创建 Alpha 世界时，有 25% 的概率生成特殊的冬天模式世界。
+该世界类型基于 Minecraft Java Edition Alpha v1.1.2_01。每个 Alpha 世界只会使用一种生物群系，即 Alpha 或 Winter，以重现早期 Java 版 Minecraft 的世界环境。树叶和草方块呈现与后续版本不同的鲜绿色。Alpha 世界会生成洞穴。创建 Alpha 世界时，有 25% 的概率生成特殊的 Winter（冬天模式）变体。
 
 ![Alpha 世界](docs/alpha.png)
 
@@ -149,13 +155,23 @@
 
 <div align="center">普通 Alpha 世界与特殊的“冬天模式”Alpha 世界</div>
 
+### Indev 世界
+
+Indev 世界重现了早期 Minecraft Java Edition Indev-20100223 的特色。它有四种子类型：Island（岛屿）、Floating（浮岛）、Flat（平坦）和 Inland（内陆）。Indev 世界使用 256×256 的有限世界格式，地形生成与世界外围环境均参考原版Indev。玩家会出生在一座由木板和石头建成的初始小屋中。世界使用 Indev 生物群系，其特点之一是生成更多沙子而非砂砾。与 Alpha 世界类似，树叶和草方块也呈现鲜绿色。
+
+作为彩蛋，创建 Indev 世界时，有 25% 的概率生成基于 Java Edition Infdev 20100227 的世界变体。该变体包含黑曜石墙、砖块金字塔等独特特征。
+
+![Indev 世界](docs/indev.png)
+
+![Infdev 世界](docs/infdev.png)
+
 ---
 
 <h2 align="center">UWP 相关功能</h2>
 
-为了适应 UWP 应用的使用方式，本项目新增了多个采用原生 XAML 界面的功能，包括皮肤优化、存档编辑、导入与导出，以及按键映射。玩家可以直接在游戏内导入和导出世界，无须访问 UWP 应用数据目录。
+为了适应 UWP 应用的使用方式，本项目新增了多个采用原生 XAML 界面的功能，包括优化的皮肤管理、存档编辑、导入与导出，以及按键映射。玩家可以直接在游戏内导入和导出世界，无须访问 UWP 应用数据目录。
 
-此外，还加入了动态磁贴功能，并适配了 UWP 返回键。存档也可以固定至开始菜单并直接打开。
+此外，还加入了动态磁贴功能，并适配了 UWP 导航栏。存档也可以固定至开始菜单并直接打开。
 
 ---
 
@@ -164,13 +180,14 @@
 - 将游戏移植至 Windows 通用平台（UWP），接入原生 UWP 应用生命周期与 XAML 界面。
 - 增加 x86、x64、ARM32 和 ARM64 构建配置。
 - 调整渲染后端，以适配不同平台的 OpenGL 和 ANGLE 路径。
+- 为 ARM32 和 ARM64 编译专用 ANGLE 依赖。
 - 增加键盘、鼠标和触摸屏输入抽象层。
-- 增加多 Region 存储，以及新的 Infinite/Sky/Alpha 世界生成系统。
+- 增加多 Region 存储，以及新的 Infinite/Sky 世界生成系统。
 - 改进扩展世界的区块加载、区块边界渲染和光照更新。
 - 保留原版有限世界格式及其与原版 PE 多人游戏的互通能力。
 - 增加针对不同处理器架构的打包和运行时依赖处理。
 
-若想了解技术细节和具体版本的变更请访问[更新日志](docs/Update_log.md)。
+若想了解历史修复和具体版本的变更，请参阅[更新日志](docs/Update_log.md)。
 
 ---
 
@@ -218,7 +235,7 @@ Add-AppxPackage -Path "appxbundle 文件名"
 
 ### 注意事项
 
-- 安装时请确保设备使用受支持的处理器架构。
+- 安装时请使用与你的设备 CPU 架构对应的安装包。
 - ARM32 版本主要面向兼容的 Windows 10 Mobile 和 Windows on ARM 设备。
 - 本 UWP 版本不支持 Windows 8（Metro）。
 - 如安装失败，请检查是否已启用侧载、签名证书是否受到信任，以及所需依赖是否均已安装。
@@ -264,9 +281,11 @@ ARM32 和 ARM64 配置所需的 ANGLE 头文件、导入库和运行时 DLL 位�
 | E          | 打开物品栏          |
 | Ctrl       | 切换疾跑状态（仅限创造模式） |
 | F          | 切换旁观模式（仅限创造模式） |
+| T          | 聊天             |
 | Q          | 丢弃物品           |
 | R          | 打开合成界面（仅限生存模式） |
 | F1         | 切换 HUD 显示/隐藏   |
+| F2         | 截图             |
 | F3         | 切换调试界面         |
 | F5         | 切换第三人称视角       |
 | Escape     | 暂停 / 返回        |
@@ -276,16 +295,6 @@ ARM32 和 ARM64 配置所需的 ANGLE 头文件、导入库和运行时 DLL 位�
 <h2 align="center">已知限制</h2>
 
 - 在已测试的 Lumia 640 上，破坏方块时的震动反馈目前无法正常工作。
-- 目前不支持 Infinite（无限）和 Sky（天域）世界的多人联机。
-
----
-
-<h2 align="center">未来计划</h2>
-
-- 中文支持
-- 
-- 可能加入成就系统
-- Infinite/Sky 世界多人联机
 
 ---
 

@@ -402,13 +402,7 @@ void SimpleChooseLevelScreen::buttonClicked( Button* button )
 
 		// The optional switch exposes the additional world generators.
 		if (!minecraft->options.infiniteWorlds) {
-		bTitle->msg = I18n::get("selectWorld.mapType");
-			bCreative->visible = false; bCreative->active = false;
-			bSurvival->visible = false; bSurvival->active = false;
-			bOldWorld->visible = true; bOldWorld->active = true;
-			bIndevWorld->visible = true; bIndevWorld->active = true;
-			setSeedControlsVisible(false);
-			resetScroll();
+			startLevel(WorldType::Old);
 			return;
 		}
 

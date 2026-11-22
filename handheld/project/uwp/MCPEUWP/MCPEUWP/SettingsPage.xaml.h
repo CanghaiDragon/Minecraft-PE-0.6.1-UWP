@@ -27,6 +27,7 @@ namespace MCPEUWP
 		void OnGraphicsCategoryClick(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
 		void OnAudioCategoryClick(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
 		void OnAdditionalCategoryClick(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
+		void OnLanguageCategoryClick(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
 		void ShowCategory(Windows::UI::Xaml::Controls::Border^ panel);
 		void RefreshFromOriginalOptions();
 	};

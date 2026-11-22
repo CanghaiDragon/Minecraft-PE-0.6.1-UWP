@@ -266,6 +266,10 @@ bool Screen::renderGameBehind() {
 	return true;
 }
 
+bool Screen::shouldSleepAfterRender() {
+	return !isInGameScreen();
+}
+
 bool Screen::hasClippingArea( IntRectangle& out )
 {
 	return false;

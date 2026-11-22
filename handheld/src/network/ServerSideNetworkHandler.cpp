@@ -779,6 +779,26 @@ void ServerSideNetworkHandler::tileEvent( int x, int y, int z, int b0, int b1 )
 	raknetInstance->send(packet);
 }
 
+void ServerSideNetworkHandler::handle(const RakNet::RakNetGUID& source,
+	ChatPacket* packet)
+{
+	if (!level || !packet || packet->message.empty())
+		return;
+	Player* sender = getPlayer(source);
+	if (!sender)
+		return;
+
+	const std::string message = sender->name + ": " + packet->message;
+#ifndef STANDALONE_SERVER
+	minecraft->gui.addMessage(message);
+#else
+	LOGI("%s\n", message.c_str());
+#endif
+	ChatPacket broadcast(message, false);
+	redistributePacket(&broadcast, source);
+	raknetInstance->send(source, broadcast);
+}
+
 Player* ServerSideNetworkHandler::getPlayer( const RakNet::RakNetGUID& source ) {
     for (unsigned int i = 0; i < level->players.size(); ++i)
         if (source == level->players[i]->owner) return level->players[i];

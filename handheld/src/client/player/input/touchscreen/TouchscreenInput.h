@@ -45,7 +45,7 @@ private:
 	void clear();
 
 	RectangleArea _boundingRectangle;
-	RectangleArea _pauseAndScreenshotArea;
+	RectangleArea _topRightControlsArea;
 
 	bool _keys[NumKeys];
 	Options* _options;
@@ -63,6 +63,7 @@ private:
 	RectangleArea* aDown;
 	RectangleArea* aPause;
 	RectangleArea* aScreenshot;
+	RectangleArea* aChat;
 	//RectangleArea* aUpJump;
 	RectangleArea* aJump;
 	RectangleArea* aSneak;
@@ -82,7 +83,7 @@ private:
 	bool _legacyFlightHeightMode;
 	int _legacyFlightPointer;
 
-	bool _buttons[10];
+	bool _buttons[11];
 	bool isButtonDown(int areaId);
 	void rebuild();
 };

@@ -1215,6 +1215,11 @@ void Minecraft::tickInput() {
 					requestDebugScreenshot();
 			}
 		}
+		if (isPressed && !screen && options.debugScreenEnabled &&
+			key == options.keyChat.key) {
+			screenChooser.setScreen(SCREEN_CHAT);
+			continue;
+		}
 		// In Touch mode keyboard input is reserved for text fields in Screens
 		// (which return above).  It must not also move or act in the world.
 		if (useTouchscreen())
@@ -1975,6 +1980,29 @@ bool Minecraft::joinMultiplayer( const PingedCompatibleServer& server )
 		return raknetInstance->connect(server.address.ToString(false), server.address.GetPort());
 	}
 	return false;
+}
+
+bool Minecraft::joinMultiplayer(const std::string& host, int port,
+	bool forceCompatibleProtocol)
+{
+#if defined(NO_NETWORK) || (defined(MCPE_UWP_CLIENT_LIFECYCLE_ONLY) && !defined(MCPE_UWP_ORIGINAL_CLIENT_LOOP))
+	(void)host;
+	(void)port;
+	(void)forceCompatibleProtocol;
+	return false;
+#else
+	if (host.empty() || port < 1 || port > 65535 || raknetInstance == NULL)
+		return false;
+	cancelLocateMultiplayer();
+	netCallback = new ClientSideNetworkHandler(this, raknetInstance,
+		forceCompatibleProtocol, host, port);
+	if (!raknetInstance->connect(host.c_str(), port)) {
+		delete netCallback;
+		netCallback = NULL;
+		return false;
+	}
+	return true;
+#endif
 }
 
 void Minecraft::hostMultiplayer(int port) {

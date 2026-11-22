@@ -55,6 +55,14 @@ public:
 			level->getLevelData()->getWorldType() == WorldType::Indev;
 	}
 
+	// A finite-world edge is a permanent boundary, not a missing chunk that
+	// must be generated. Population may proceed once all in-world neighbours
+	// are resident; feature placement beyond the boundary is rejected by Level.
+	bool hasPopulationChunk(int x, int z) {
+		if (hasWorldBounds() && !fits(x, z)) return true;
+		return hasChunk(x, z);
+	}
+
     bool hasChunk(int x, int z) {
         if (!fits(x, z)) return !hasWorldBounds();
         if (x == xLast && z == zLast && last != NULL) return true;
@@ -136,10 +144,10 @@ public:
             // so it rebuilds the faces at the boundary with already-rendered neighbours.
             level->setTilesDirty(x * 16, 0, z * 16, x * 16 + 15, 127, z * 16 + 15);
 
-            if (!chunks[key]->terrainPopulated && hasChunk(x + 1, z + 1) && hasChunk(x, z + 1) && hasChunk(x + 1, z)) postProcess(this, x, z);
-            if (hasChunk(x - 1, z) && !getChunk(x - 1, z)->terrainPopulated && hasChunk(x - 1, z + 1) && hasChunk(x, z + 1) && hasChunk(x - 1, z)) postProcess(this, x - 1, z);
-            if (hasChunk(x, z - 1) && !getChunk(x, z - 1)->terrainPopulated && hasChunk(x + 1, z - 1) && hasChunk(x, z - 1) && hasChunk(x + 1, z)) postProcess(this, x, z - 1);
-            if (hasChunk(x - 1, z - 1) && !getChunk(x - 1, z - 1)->terrainPopulated && hasChunk(x - 1, z - 1) && hasChunk(x, z - 1) && hasChunk(x - 1, z)) postProcess(this, x - 1, z - 1);
+            if (!chunks[key]->terrainPopulated && hasPopulationChunk(x + 1, z + 1) && hasPopulationChunk(x, z + 1) && hasPopulationChunk(x + 1, z)) postProcess(this, x, z);
+            if (hasChunk(x - 1, z) && !getChunk(x - 1, z)->terrainPopulated && hasPopulationChunk(x - 1, z + 1) && hasPopulationChunk(x, z + 1) && hasPopulationChunk(x - 1, z)) postProcess(this, x - 1, z);
+            if (hasChunk(x, z - 1) && !getChunk(x, z - 1)->terrainPopulated && hasPopulationChunk(x + 1, z - 1) && hasPopulationChunk(x, z - 1) && hasPopulationChunk(x + 1, z)) postProcess(this, x, z - 1);
+            if (hasChunk(x - 1, z - 1) && !getChunk(x - 1, z - 1)->terrainPopulated && hasPopulationChunk(x - 1, z - 1) && hasPopulationChunk(x, z - 1) && hasPopulationChunk(x - 1, z)) postProcess(this, x - 1, z - 1);
         }
         xLast = x;
         zLast = z;
@@ -223,9 +231,9 @@ public:
 				LevelChunk* chunk = entry.second;
 				if (chunk == NULL || chunk == emptyChunk || chunk->terrainPopulated)
 					continue;
-				if (hasChunk(chunk->x + 1, chunk->z + 1) &&
-					hasChunk(chunk->x, chunk->z + 1) &&
-					hasChunk(chunk->x + 1, chunk->z))
+				if (hasPopulationChunk(chunk->x + 1, chunk->z + 1) &&
+					hasPopulationChunk(chunk->x, chunk->z + 1) &&
+					hasPopulationChunk(chunk->x + 1, chunk->z))
 					ready.push_back(entry.first);
 			}
 			if (ready.empty())

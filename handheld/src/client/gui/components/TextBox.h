@@ -31,6 +31,7 @@ public:
 	std::string hint;
 	std::string text;
 	int id;
+	unsigned int maxLength;
 	bool focused;
 	bool blink;
 	int blinkTicks;

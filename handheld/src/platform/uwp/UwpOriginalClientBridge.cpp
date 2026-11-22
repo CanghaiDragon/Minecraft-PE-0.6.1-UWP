@@ -4,6 +4,7 @@
 #include "../../NinecraftApp.h"
 #include "../../client/Minecraft.h"
 #include "../../client/Options.h"
+#include "../../locale/I18n.h"
 #include "../../client/player/LocalPlayer.h"
 #include "../../client/renderer/Textures.h"
 #include "../../client/renderer/LevelRenderer.h"
@@ -483,6 +484,28 @@ namespace
 		Button* backButton;
 		std::string details;
 	};
+
+	void RefreshLocalizedNativeScreen(Minecraft* minecraft)
+	{
+		if (minecraft == nullptr || minecraft->screen == nullptr)
+			return;
+
+		Screen* current = minecraft->screen;
+		if (dynamic_cast<OptionsScreen*>(current) != nullptr)
+		{
+			OptionsScreen* optionsScreen = static_cast<OptionsScreen*>(current);
+			const int category = optionsScreen->getSelectedCategory();
+			minecraft->setScreen(new OptionsScreen(category));
+		}
+		else if (dynamic_cast<UwpStartMenuScreen*>(current) != nullptr)
+			minecraft->setScreen(new UwpStartMenuScreen());
+		else if (dynamic_cast<UwpTouchStartMenuScreen*>(current) != nullptr)
+			minecraft->setScreen(new UwpTouchStartMenuScreen());
+		else if (dynamic_cast<Touch::StartMenuScreen*>(current) != nullptr)
+			minecraft->setScreen(new Touch::StartMenuScreen());
+		else if (dynamic_cast<StartMenuScreen*>(current) != nullptr)
+			minecraft->setScreen(new StartMenuScreen());
+	}
 }
 
 namespace
@@ -522,6 +545,7 @@ namespace
 		case UwpOptionId::TouchSneak: return &Options::Option::TOUCH_SNEAK;
 		case UwpOptionId::BetaVisuals: return &Options::Option::BETA_VISUALS;
 		case UwpOptionId::DebugScreen: return &Options::Option::DEBUG_SCREEN;
+		case UwpOptionId::Achievements: return &Options::Option::ACHIEVEMENTS;
 		case UwpOptionId::Fullscreen: return &Options::Option::FULLSCREEN;
 		default: return nullptr;
 		}
@@ -548,6 +572,11 @@ std::string UwpOriginalClientGetUsername(UwpOriginalClientHandle h)
 	Minecraft* m = BridgeMinecraft(h);
 	return m != nullptr ? m->options.username : std::string();
 }
+std::string UwpOriginalClientGetLanguageMode(UwpOriginalClientHandle h)
+{
+	Minecraft* m = BridgeMinecraft(h);
+	return m != nullptr ? m->options.languageCode : std::string("system");
+}
 void UwpOriginalClientSetUsername(UwpOriginalClientHandle h, const std::string& username)
 {
 	Minecraft* m = BridgeMinecraft(h);
@@ -556,6 +585,20 @@ void UwpOriginalClientSetUsername(UwpOriginalClientHandle h, const std::string& 
 		m->options.username = username;
 		m->options.save();
 	}
+}
+void UwpOriginalClientSetLanguageMode(UwpOriginalClientHandle h,
+	const std::string& languageMode)
+{
+	Minecraft* m = BridgeMinecraft(h);
+	if (m == nullptr ||
+		(languageMode != "origin" && languageMode != "system" &&
+		 languageMode != "en_US" && languageMode != "zh_CN") ||
+		m->options.languageCode == languageMode)
+		return;
+	m->options.languageCode = languageMode;
+	m->options.save();
+	I18n::loadLanguage(m->platform(), languageMode);
+	RefreshLocalizedNativeScreen(m);
 }
 void UwpOriginalClientSetOptionBool(UwpOriginalClientHandle h, UwpOptionId id, bool v)
 {
@@ -567,8 +610,10 @@ void UwpOriginalClientSetOptionBool(UwpOriginalClientHandle h, UwpOptionId id, b
 		m->options.set(o, v ? Options::DYNAMIC_TILE_FULL : Options::DYNAMIC_TILE_OFF);
 		return;
 	}
-	if (m->options.getBooleanValue(o) != v)
+	if (m->options.getBooleanValue(o) != v) {
 		m->options.toggle(o, 1);
+		m->options.save();
+	}
 }
 void UwpOriginalClientSetOptionInt(UwpOriginalClientHandle h, UwpOptionId id, int v)
 {
