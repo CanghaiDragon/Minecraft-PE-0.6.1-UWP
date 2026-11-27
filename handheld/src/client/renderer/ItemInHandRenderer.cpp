@@ -142,6 +142,8 @@ void ItemInHandRenderer::renderItem(Mob* mob,  ItemInstance* item )
 			if (item->id < 256) {
 				renderObject.texture = "terrain.png";
 				//mc->textures->loadAndBindTexture("terrain.png");
+			} else if (Item::usesPE08ItemAtlas(item->id)) {
+				renderObject.texture = "gui/items_0.8.png";
 			} else {
 				renderObject.texture = "gui/items.png";
 				//mc->textures->loadAndBindTexture("gui/items.png");
@@ -152,10 +154,11 @@ void ItemInHandRenderer::renderItem(Mob* mob,  ItemInstance* item )
 			t.color(0xff, 0xff, 0xff);
 			const int up = itemIcon & 15;
 			const int vp = itemIcon >> 4;
+			const float iconAtlasHeight = item->id < 256 ? 512.0f : 256.0f;
 			float u1 = (up * 16 + 0.00f) / 256.0f;
 			float u0 = (up * 16 + 15.99f) / 256.0f;
-			float v0 = (vp * 16 + 0.00f) / 256.0f;
-			float v1 = (vp * 16 + 15.99f) / 256.0f;
+			float v0 = (vp * 16 + 0.00f) / iconAtlasHeight;
+			float v1 = (vp * 16 + 15.99f) / iconAtlasHeight;
 
 			float r = 1.0f;
 //			float xo = 0.0f;
@@ -202,7 +205,7 @@ void ItemInHandRenderer::renderItem(Mob* mob,  ItemInstance* item )
 			}
 			for (int i = 0; i < 16; i++) {
 				float p = i / 16.0f;
-				float vv = v1 + (v0 - v1) * p - 0.5f / 256.0f;
+				float vv = v1 + (v0 - v1) * p - 0.5f / iconAtlasHeight;
 				float yy = r * p + 1 / 16.0f;
 				t.vertexUV(0, yy, 0, u0, vv);
 				t.vertexUV(r, yy, 0, u1, vv);
@@ -211,7 +214,7 @@ void ItemInHandRenderer::renderItem(Mob* mob,  ItemInstance* item )
 			}
 			for (int i = 0; i < 16; i++) {
 				float p = i / 16.0f;
-				float vv = v1 + (v0 - v1) * p - 0.5f / 256.0f;
+				float vv = v1 + (v0 - v1) * p - 0.5f / iconAtlasHeight;
 				float yy = r * p;
 				t.vertexUV(r, yy, 0, u1, vv);
 				t.vertexUV(0, yy, 0, u0, vv);
@@ -450,11 +453,12 @@ void ItemInHandRenderer::renderTex( float a, int tex )
 	float y1 = +1;
 	float z0 = -0.5f;
 
-	float r = 2 / 256.0f;
-	float u0 = (tex % 16) / 256.0f - r;
-	float u1 = (tex % 16 + 15.99f) / 256.0f + r;
-	float v0 = (tex / 16) / 256.0f - r;
-	float v1 = (tex / 16 + 15.99f) / 256.0f + r;
+	const float rU = 2 / 256.0f;
+	const float rV = 2 / 512.0f;
+	float u0 = (tex % 16) / 256.0f - rU;
+	float u1 = (tex % 16 + 15.99f) / 256.0f + rU;
+	float v0 = (tex / 16) / 512.0f - rV;
+	float v1 = (tex / 16 + 15.99f) / 512.0f + rV;
 
 	t.begin();
 	t.vertexUV(x0, y0, z0, u1, v1);
@@ -515,12 +519,12 @@ void ItemInHandRenderer::renderFire( float a )
 		glPushMatrix2();
 		int tex = ((Tile*)Tile::fire)->tex + i * 16;
 		int xt = (tex & 0xf) << 4;
-		int yt = tex & 0xf0;
+		int yt = (tex >> 4) * 16;
 
 		float u0 = (xt) / 256.0f;
 		float u1 = (xt + 15.99f) / 256.0f;
-		float v0 = (yt) / 256.0f;
-		float v1 = (yt + 15.99f) / 256.0f;
+		float v0 = (yt) / 512.0f;
+		float v1 = (yt + 15.99f) / 512.0f;
 
 		float x0 = (0 - size) / 2;
 		float x1 = x0 + size;

@@ -8,7 +8,6 @@
 class ClothTile: public Tile
 {
 	typedef Tile super;
-	static const int COLOR_TEX_POS = 7 * 16 + 1;
 public:
     ClothTile(int id)
 	:	super(id, 4 * 16, Material::cloth)
@@ -20,14 +19,10 @@ public:
 	}
 
     int getTexture(int face, int data) {
-        if (data == 0) {
-            // un-colored cloth
-            return tex;
-        }
-
-        // invert bits (so 1111 becomes black)
-        data = ~(data & 0xf);
-        return COLOR_TEX_POS + ((data & 8) >> 3) + ((data & 7) * 16);
+		// The old color column in terrain.png does not contain a complete wool
+		// palette (notably yellow and brown resolve to dirt/grass-side cells).
+		// The extended 0.8 atlas stores the wool sprites in block metadata order.
+		return 268 + (data & 0xf);
     }
 
 	static int getTileDataForItemAuxValue(int auxValue) {
@@ -35,7 +30,7 @@ public:
 	}
 protected:
     int getSpawnResourcesAuxValue(int data) {
-        return data;
+        return (~data & 0xf);
     }
 	static int getItemAuxValueForTileData(int data) {
 		return (~data & 0xf);

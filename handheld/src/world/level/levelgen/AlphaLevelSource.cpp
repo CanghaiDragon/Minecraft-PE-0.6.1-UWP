@@ -2,6 +2,7 @@
 
 #include "feature/FeatureInclude.h"
 #include "../Level.h"
+#include "../LevelSettings.h"
 #include "../MobSpawner.h"
 #include "../biome/Biome.h"
 #include "../biome/BiomeSource.h"
@@ -103,7 +104,7 @@ AlphaLevelSource::AlphaLevelSource(Level* level, long seed, bool spawnMobs)
 	scaleNoise(&random, 10),
 	depthNoise(&random, 16),
 	forestNoise(&random, 8),
-	indevType(IndevType::Inland)
+	indevType(-1)
 {
 }
 
@@ -396,6 +397,17 @@ void AlphaLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
 			xo + populationRandom.nextInt(16), populationRandom.nextInt(128),
 			zo + populationRandom.nextInt(16));
 
+	const bool indevPopulation = indevType >= IndevType::Inland &&
+		indevType <= IndevType::Flat;
+	const bool floatingIndev = indevPopulation && indevType == IndevType::Floating;
+	// Indev terrain ends at Y=63. OreFeature raises each start by up to four,
+	// so starts in 0..59 keep the vein center within the terrain profile.
+	const int indevOreStartRange = 60;
+	const int coalHeightRange = indevPopulation ? indevOreStartRange : 128;
+	const int ironHeightRange = indevPopulation ? indevOreStartRange : 64;
+	const int goldVeinCount = floatingIndev ? 6 : 2;
+	const int diamondVeinCount = floatingIndev ? 3 : 1;
+
 	for (int i = 0; i < 20; ++i)
 		placeOre(populationRandom, level, xo + populationRandom.nextInt(16),
 			zo + populationRandom.nextInt(16), populationRandom.nextInt(128),
@@ -406,14 +418,15 @@ void AlphaLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
 			Tile::gravel->id, 32);
 	for (int i = 0; i < 20; ++i)
 		placeOre(populationRandom, level, xo + populationRandom.nextInt(16),
-			zo + populationRandom.nextInt(16), populationRandom.nextInt(128),
+			zo + populationRandom.nextInt(16), populationRandom.nextInt(coalHeightRange),
 			Tile::coalOre->id, 16);
 	for (int i = 0; i < 20; ++i)
 		placeOre(populationRandom, level, xo + populationRandom.nextInt(16),
-			zo + populationRandom.nextInt(16), populationRandom.nextInt(64),
+			zo + populationRandom.nextInt(16), populationRandom.nextInt(ironHeightRange),
 			Tile::ironOre->id, 8);
-	// Indev uses the same gold vein frequency as the Alpha/Infinite generator.
-	for (int i = 0; i < 2; ++i)
+	// Non-floating Indev presets retain Alpha's baseline; Floating gets a
+	// modest increase to account for its smaller volume of solid terrain.
+	for (int i = 0; i < goldVeinCount; ++i)
 		placeOre(populationRandom, level, xo + populationRandom.nextInt(16),
 			zo + populationRandom.nextInt(16), populationRandom.nextInt(32),
 			Tile::goldOre->id, 8);
@@ -421,7 +434,7 @@ void AlphaLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
 		placeOre(populationRandom, level, xo + populationRandom.nextInt(16),
 			zo + populationRandom.nextInt(16), populationRandom.nextInt(16),
 			Tile::redStoneOre->id, 7);
-	for (int i = 0; i < 1; ++i)
+	for (int i = 0; i < diamondVeinCount; ++i)
 		// PE 0.6.1's emeraldOre slot is the existing diamond equivalent.
 		placeOre(populationRandom, level, xo + populationRandom.nextInt(16),
 			zo + populationRandom.nextInt(16), populationRandom.nextInt(16),

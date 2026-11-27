@@ -169,7 +169,10 @@ void IngameBlockSelectionScreen::renderSlot(int slot, int x, int y, float a)
 	ItemInstance* item = minecraft->player->inventory->getItem(slot);
 	if (!item) return;
 
-	ItemRenderer::renderGuiItem(minecraft->font, minecraft->textures, item, (float)x, (float)y, true);
+	const ItemRenderer::GuiItemPreview preview = minecraft->isCreativeMode()
+		? ItemRenderer::PreviewCompatBlockModel : ItemRenderer::DefaultIcon;
+	ItemRenderer::renderGuiItem(minecraft->font, minecraft->textures, item,
+		(float)x, (float)y, 16, 16, true, preview);
 
 	if (minecraft->gameMode->isCreativeType()) return;
 	if (!isAllowed(slot - Inventory::MAX_SELECTION_SIZE)) return;

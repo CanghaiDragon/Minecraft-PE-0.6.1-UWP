@@ -51,11 +51,13 @@ public:
     }
 
     int getTexture(int face, int data) {
-        if (face == 1) return 21;
-        if (face == 0) return 21;
-        if (data == DARK_TRUNK)  return 4 + 7 * 16;
-        if (data == BIRCH_TRUNK) return 5 + 7 * 16;
-        return 20;
+		static const int sideTextures[4] = { 307, 311, 309, 313 };
+		static const int endTextures[4] = { 308, 312, 310, 314 };
+		int type = data & 3;
+		int side = sideTextures[type];
+		int end = endTextures[type];
+		if (face == 1 || face == 0) return end;
+		return side;
     }
 
 protected:

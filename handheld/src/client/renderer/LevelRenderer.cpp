@@ -1202,8 +1202,8 @@ void LevelRenderer::buildIndevFloatingSurfaceCache() {
 		float brightness) {
 		const float u0 = (float)((texture & 15) * 16) / 256.0f;
 		const float u1 = (float)((texture & 15) * 16 + 15.99f) / 256.0f;
-		const float v0 = (float)((texture >> 4) * 16) / 256.0f;
-		const float v1 = (float)((texture >> 4) * 16 + 15.99f) / 256.0f;
+		const float v0 = (float)((texture >> 4) * 16) / 512.0f;
+		const float v1 = (float)((texture >> 4) * 16 + 15.99f) / 512.0f;
 		Tesselator& t = Tesselator::instance;
 		for (int x = -radius; x < radius; ++x) {
 			if ((x + radius) % batchColumns == 0) {
@@ -1325,16 +1325,16 @@ void LevelRenderer::renderIndevGround(float alpha) {
 	const int dirtTexture = Tile::dirt->getTexture(2);
 	const float u0 = (float)((grassTexture & 15) * 16) / 256.0f;
 	const float u1 = (float)((grassTexture & 15) * 16 + 15.99f) / 256.0f;
-	const float v0 = (float)((grassTexture >> 4) * 16) / 256.0f;
-	const float v1 = (float)((grassTexture >> 4) * 16 + 15.99f) / 256.0f;
+	const float v0 = (float)((grassTexture >> 4) * 16) / 512.0f;
+	const float v1 = (float)((grassTexture >> 4) * 16 + 15.99f) / 512.0f;
 	const float sideU0 = (float)((grassSideTexture & 15) * 16) / 256.0f;
 	const float sideU1 = (float)((grassSideTexture & 15) * 16 + 15.99f) / 256.0f;
-	const float sideV0 = (float)((grassSideTexture >> 4) * 16) / 256.0f;
-	const float sideV1 = (float)((grassSideTexture >> 4) * 16 + 15.99f) / 256.0f;
+	const float sideV0 = (float)((grassSideTexture >> 4) * 16) / 512.0f;
+	const float sideV1 = (float)((grassSideTexture >> 4) * 16 + 15.99f) / 512.0f;
 	const float dirtU0 = (float)((dirtTexture & 15) * 16) / 256.0f;
 	const float dirtU1 = (float)((dirtTexture & 15) * 16 + 15.99f) / 256.0f;
-	const float dirtV0 = (float)((dirtTexture >> 4) * 16) / 256.0f;
-	const float dirtV1 = (float)((dirtTexture >> 4) * 16 + 15.99f) / 256.0f;
+	const float dirtV0 = (float)((dirtTexture >> 4) * 16) / 512.0f;
+	const float dirtV1 = (float)((dirtTexture >> 4) * 16 + 15.99f) / 512.0f;
 	const int renderRadius = floating ? 200 : 160;
 	const int batchColumns = floating ? 64 : 16;
 	if (floating) {
@@ -1497,8 +1497,8 @@ void LevelRenderer::renderIndevWater(float alpha) {
 	const int waterTexture = Tile::calmWater->getTexture(1);
 	const float u0 = (float)((waterTexture & 15) * 16) / 256.0f;
 	const float u1 = (float)((waterTexture & 15) * 16 + 15.99f) / 256.0f;
-	const float v0 = (float)((waterTexture >> 4) * 16) / 256.0f;
-	const float v1 = (float)((waterTexture >> 4) * 16 + 15.99f) / 256.0f;
+	const float v0 = (float)((waterTexture >> 4) * 16) / 512.0f;
+	const float v1 = (float)((waterTexture >> 4) * 16 + 15.99f) / 512.0f;
 	const int renderRadius = indevType == IndevType::Floating ? 200 : 160;
 	const int batchColumns = indevType == IndevType::Floating ? 64 : 16;
 	int minX = Mth::floor(cameraX) - renderRadius;

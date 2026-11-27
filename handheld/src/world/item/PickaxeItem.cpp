@@ -24,6 +24,7 @@ PickaxeItem::PickaxeItem( int id, const Tier& tier ) :   super(id, 2, tier)
 	d.push_back(Tile::lapisBlock);
 	d.push_back(Tile::redStoneOre);
 	d.push_back(Tile::redStoneOre_lit);
+	if (Tile::cobbleWallCompat) d.push_back(Tile::cobbleWallCompat);
 	//d.push_back(Tile::rail);
 	//d.push_back(Tile::detectorRail);
 	//d.push_back(Tile::goldenRail);

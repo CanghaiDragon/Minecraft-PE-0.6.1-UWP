@@ -70,9 +70,6 @@ public:
 	// Draw the platform startup surface while the original client is still
 	// loading its packaged textures and constructing the first Screen.
 	void renderStartupLoading(float width, float height);
-	// Draw the original-style dirt save transition before a synchronous world
-	// save/close.  MainPage remains the only EGL presentation owner.
-	void renderSavingWorld(float width, float height);
 	void setScreen(Screen screen);
 	// When enabled, the game screen leaves the full-viewport background and
 	// diagnostic terrain to UwpWorldRenderer while retaining only the temporary

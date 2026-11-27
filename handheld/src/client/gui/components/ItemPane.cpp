@@ -79,7 +79,8 @@ void ItemPane::renderBatch( std::vector<GridItem>& items, float alpha )
 
 		ItemRenderer::renderGuiItem(NULL, textures, &citem->item,
 			Gui::floorAlignToScreenPixel(item.xf + itemBbox.w - 16),
-			Gui::floorAlignToScreenPixel(2 + item.yf), 16, 16, false);
+			Gui::floorAlignToScreenPixel(2 + item.yf), 16, 16, false,
+			ItemRenderer::PreviewCompatBlockModel);
 	}
 	t.endOverrideAndDraw();
 

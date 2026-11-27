@@ -48,6 +48,7 @@ Entity::Entity( Level* level )
 	xo(0),yo(0),zo(0),xd(0),yd(0),zd(0),
 	xRot(0), yRot(0),
 	xRotO(0), yRotO(0),
+	ridingAt(NULL), rider(NULL),
 
 	xChunk(0), yChunk(0), zChunk(0),
 	inChunk(false),
@@ -790,6 +791,28 @@ void Entity::setEquippedSlot( int slot, int item, int auxValue )
 bool Entity::isSneaking()
 {
 	return false;
+}
+
+void Entity::ride(Entity* vehicle) {
+	if (ridingAt == vehicle) return;
+	if (ridingAt && ridingAt->rider == this) {
+		ridingAt->setRidingInput(0, 0);
+		ridingAt->rider = NULL;
+	}
+	ridingAt = vehicle;
+	if (ridingAt) {
+		if (ridingAt->rider && ridingAt->rider != this) {
+			ridingAt = NULL;
+			return;
+		}
+		ridingAt->rider = this;
+		ridingAt->positionRider(this);
+	}
+}
+
+void Entity::positionRider(Entity* passenger) {
+	if (passenger && rider == passenger)
+		passenger->setPos(x, bb.y0 + passenger->heightOffset + bbHeight * 0.5f, z);
 }
 
 bool Entity::isPlayer()

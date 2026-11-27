@@ -82,6 +82,8 @@ void ItemRenderer::render(Entity* itemEntity_, float x, float y, float z, float 
 		int icon = item->getIcon();
 		if (item->id < 256) {
 			bindTexture("terrain.png");
+		} else if (Item::usesPE08ItemAtlas(item->id)) {
+			bindTexture("gui/items_0.8.png");
 		} else {
 			bindTexture("gui/items.png");
 		}
@@ -89,8 +91,9 @@ void ItemRenderer::render(Entity* itemEntity_, float x, float y, float z, float 
 
 		float u0 = ((icon % 16) * 16 + 0) / 256.0f;
 		float u1 = ((icon % 16) * 16 + 16) / 256.0f;
-		float v0 = ((icon / 16) * 16 + 0) / 256.0f;
-		float v1 = ((icon / 16) * 16 + 16) / 256.0f;
+		const float iconAtlasHeight = item->id < 256 ? 512.0f : 256.0f;
+		float v0 = ((icon / 16) * 16 + 0) / iconAtlasHeight;
+		float v1 = ((icon / 16) * 16 + 16) / iconAtlasHeight;
 
 		float r = 1.0f;
 		float xo = 0.5f;
@@ -139,6 +142,45 @@ static const signed short _mapper[] = {-1, 7, 9, 8, 0, 5, -2, -1, -1, -1, -1, -1
 
 #define IRMAPCASE(x) case x: return  _##x [item->getAuxValue() & 15]
 
+static bool isPumpkinBlock(int id) {
+	return (Tile::pumpkinCompat && id == Tile::pumpkinCompat->id)
+		|| (Tile::litPumpkinCompat && id == Tile::litPumpkinCompat->id);
+}
+
+static bool usesPE08CompatTileSprite(const ItemInstance* item) {
+	if (!item) return false;
+	const int id = item->id;
+	return (Tile::wood && id == Tile::wood->id && (item->getAuxValue() == 1 || item->getAuxValue() == 2))
+		|| (Tile::stoneSlabHalf && id == Tile::stoneSlabHalf->id && item->getAuxValue() >= 4 && item->getAuxValue() <= 6)
+		|| (Tile::woodSlabCompat && id == Tile::woodSlabCompat->id && (item->getAuxValue() == 1 || item->getAuxValue() == 2))
+		|| (Tile::doubleWoodSlabCompat && id == Tile::doubleWoodSlabCompat->id && (item->getAuxValue() == 1 || item->getAuxValue() == 2))
+		|| isPumpkinBlock(id)
+		|| (Tile::carpetCompat && id == Tile::carpetCompat->id)
+		|| (Tile::cobbleWallCompat && id == Tile::cobbleWallCompat->id)
+		|| (Tile::hayBlockCompat && id == Tile::hayBlockCompat->id)
+		|| (Tile::coalBlockCompat && id == Tile::coalBlockCompat->id)
+		|| (Tile::ironBarsCompat && id == Tile::ironBarsCompat->id)
+		|| (Tile::railCompat && id == Tile::railCompat->id)
+		|| (Tile::goldenRailCompat && id == Tile::goldenRailCompat->id)
+		|| (Tile::carrotsCompat && id == Tile::carrotsCompat->id)
+		|| (Tile::potatoesCompat && id == Tile::potatoesCompat->id)
+		|| (Tile::stairsSpruceCompat && id == Tile::stairsSpruceCompat->id)
+		|| (Tile::stairsBirchCompat && id == Tile::stairsBirchCompat->id);
+}
+
+static Tile* getGuiItemTile(int id) {
+	return id > 0 && id < 256 ? Tile::tiles[id] : NULL;
+}
+
+static bool canPreviewCompatBlock(const ItemInstance* item, bool usesTileSprite) {
+	Tile* tile = getGuiItemTile(item->id);
+	if (!tile || !TileRenderer::canRender(tile->getRenderShape())) return false;
+
+	// These extra variants either had no atlas entry or used the oak icon.
+	return usesTileSprite || tile == Tile::woodSlabCompat || tile == Tile::doubleWoodSlabCompat
+		|| tile == Tile::stairsJungleCompat || (tile == Tile::wood && item->getAuxValue() == 3);
+}
+
 int ItemRenderer::getAtlasPos(const ItemInstance* item) {
 	int id = item->id;
 	if (id < 0 || id >= sizeof(_mapper) / sizeof(const signed short))
@@ -170,6 +212,9 @@ void ItemRenderer::renderGuiItem(Font* font, Textures* textures, const ItemInsta
 	renderGuiItem(font, textures, item, x, y, 16, 16, fancy);
 }
 void ItemRenderer::renderGuiItem(Font* font, Textures* textures, const ItemInstance* item, float x, float y, float w, float h, bool fancy) {
+	renderGuiItem(font, textures, item, x, y, w, h, fancy, DefaultIcon);
+}
+void ItemRenderer::renderGuiItem(Font* font, Textures* textures, const ItemInstance* item, float x, float y, float w, float h, bool fancy, GuiItemPreview preview) {
 	if (item == NULL) {
 		//LOGW("item is NULL @ ItemRenderer::renderGuiItem\n");
 		return;
@@ -181,33 +226,33 @@ void ItemRenderer::renderGuiItem(Font* font, Textures* textures, const ItemInsta
 	const bool alphaCobblestone = Tile::stoneBrick
 		&& id == Tile::stoneBrick->id
 		&& Tile::useAlphaTextures();
-	// Alpha cobblestone has its own pre-rendered cube in gui_blocks.png, so it
-	// follows the same 2D atlas path as ordinary block icons. Other listed
-	// blocks still use the terrain-tile fallback because they have no GUI icon.
+	// Alpha cobblestone has a dedicated pre-rendered cube in gui_blocks.png.
+	// Keep blocks without atlas entries on the terrain-tile fallback path.
 	const bool specialTileItem = (Tile::unbreakable && id == Tile::unbreakable->id)
 		|| (Tile::topSnow && id == Tile::topSnow->id)
 		|| (Tile::ice && id == Tile::ice->id)
 		|| (Tile::water && id == Tile::water->id)
 		|| (Tile::lava && id == Tile::lava->id);
+	// The legacy GUI block atlas has no entries for these 0.8 compatibility
+	// blocks, and its fixed wood-plank icon ignores the item's aux value.
+	const bool compatibilityTileItem = usesPE08CompatTileSprite(item);
+	const bool compatBlockPreview = preview == PreviewCompatBlockModel
+		&& canPreviewCompatBlock(item, compatibilityTileItem);
 	const int alphaCobblestoneAtlasIndex = 82;
 	int i = alphaCobblestone ? alphaCobblestoneAtlasIndex
-		: (specialTileItem ? -1 : getAtlasPos(item));
+		: ((specialTileItem || compatibilityTileItem || compatBlockPreview || Item::usesPE08ItemAtlas(id))
+			? -1 : getAtlasPos(item));
 
 	if (i < 0) {
 		Tesselator& t = Tesselator::instance;
 		if (!t.isOverridden())
-			renderGuiItemCorrect(font, textures, item, int(x), int(y));
+			renderGuiItemCorrect(font, textures, item, int(x), int(y), compatBlockPreview);
 		else {
 			// @huge @attn @todo @fix:	This is just guess-works..
 			//							it we're batching for saving the
 			//							buffer, this will fail miserably
 			t.endOverrideAndDraw();
-			if (!specialTileItem) {
-				glDisable2(GL_TEXTURE_2D);
-				fillRect(t, x, y, w, h, 0xff0000);
-				glEnable2(GL_TEXTURE_2D);
-			}
-			renderGuiItemCorrect(font, textures, item, int(x), int(y));
+			renderGuiItemCorrect(font, textures, item, int(x), int(y), compatBlockPreview);
 			t.beginOverride();
 		}
 		return;
@@ -277,23 +322,28 @@ void ItemRenderer::fillRect(Tesselator& t, float x, float y, float w, float h, i
 
 
 void ItemRenderer::renderGuiItemCorrect(Font* font, Textures* textures, const ItemInstance* item, int x, int y) {
+	renderGuiItemCorrect(font, textures, item, x, y, false);
+}
+
+void ItemRenderer::renderGuiItemCorrect(Font* font, Textures* textures, const ItemInstance* item, int x, int y, bool compatBlockPreview) {
 	if (item == NULL)
 		return;
-
-	//glDisable(GL_CULL_FACE);
-	if (item->id < 256 && TileRenderer::canRender(Tile::tiles[item->id]->getRenderShape()))
-	{
-		int paint = item->id;
+	// Rails, bars and crops use their terrain sprites. Models are enabled only
+	// in the GUI panes that opt into compatibility block previews.
+	if (!compatBlockPreview && usesPE08CompatTileSprite(item) && item->getIcon() >= 0) {
 		textures->loadAndBindTexture("terrain.png");
+		blit((float)x, (float)y, (float)(item->getIcon() % 16 * 16),
+			(float)(item->getIcon() / 16 * 16), 16, 16, 512.0f);
+		return;
+	}
 
-		static float ff = 0;// ff += 0.005f;
-		static float gg = 0;// gg += 0.01f;
-
-		Tile* tile = Tile::tiles[paint];
-		// GUI block icons use the same face geometry as world blocks.  On UWP,
-		// the chest/inventory screen can inherit a stale winding or depth state
-		// from the preceding world pass, which makes the Alpha cobblestone
-		// texture look transparent when back-face culling removes its faces.
+	Tile* tile = getGuiItemTile(item->id);
+	if (tile && TileRenderer::canRender(tile->getRenderShape()))
+	{
+		textures->loadAndBindTexture("terrain.png");
+		// UWP can carry GL state from the previous world pass into inventory
+		// previews. Establish the same opaque face/depth state used by the UWP
+		// renderer before drawing a block model.
 #if defined(MCPE_UWP)
 		glFrontFace(GL_CCW);
 		glCullFace(GL_BACK);
@@ -302,8 +352,23 @@ void ItemRenderer::renderGuiItemCorrect(Font* font, Textures* textures, const It
 		glDepthFunc(GL_LEQUAL);
 		glDepthMask(GL_TRUE);
 #endif
+
+		static float ff = 0;// ff += 0.005f;
+		static float gg = 0;// gg += 0.01f;
+
+		// The crafting background has already written depth at the GUI plane.
+		// Draw the preview over it with the model's back faces culled.
+		GLboolean restoreDepthTest = GL_FALSE;
+		GLboolean cullWasEnabled = GL_TRUE;
+		if (compatBlockPreview) {
+			glGetBooleanv(GL_DEPTH_TEST, &restoreDepthTest);
+			if (restoreDepthTest) glDisable2(GL_DEPTH_TEST);
+			glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
+			if (!cullWasEnabled) glEnable2(GL_CULL_FACE);
+		}
 		glPushMatrix2();
-		glTranslatef2((GLfloat)(x - 2), (GLfloat)(y + 3), -8);
+		// Leave room for the full model behind the desktop GUI near plane.
+		glTranslatef2((GLfloat)(x - 2), (GLfloat)(y + 3), compatBlockPreview ? -9.0f : -8.0f);
 		glScalef2(10.0f, 10.0f, 10.0f);
 		glTranslatef2(1.0f, 0.5f, 0.0f);
 		glRotatef2(ff + 180.0f + 30.0f, 1, 0, 0);
@@ -311,17 +376,21 @@ void ItemRenderer::renderGuiItemCorrect(Font* font, Textures* textures, const It
 
 		//glColor4f2(1, 1, 1, 1);
 		glScalef2(1, 1, 1);
-		tileRenderer->renderGuiTile(tile, item->getAuxValue());
+		// Metadata zero puts the carved face on the visible south side.
+		const bool showPumpkinFace = compatBlockPreview && isPumpkinBlock(item->id);
+		tileRenderer->renderGuiTile(tile, showPumpkinFace ? 0 : item->getAuxValue());
 		glPopMatrix2();
 #if defined(MCPE_UWP)
-		// Leave the renderer in its canonical opaque-world state for the next
-		// GUI element or frame.
 		glFrontFace(GL_CCW);
 		glCullFace(GL_BACK);
 		glEnable(GL_CULL_FACE);
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(GL_LEQUAL);
 		glDepthMask(GL_TRUE);
+#endif
+#if !defined(MCPE_UWP)
+		if (!cullWasEnabled) glDisable2(GL_CULL_FACE);
+		if (restoreDepthTest) glEnable2(GL_DEPTH_TEST);
 #endif
 	}
 	else if (item->getIcon() >= 0)
@@ -331,22 +400,24 @@ void ItemRenderer::renderGuiItemCorrect(Font* font, Textures* textures, const It
 		//}
 		if (item->id < 256) {
 			textures->loadAndBindTexture("terrain.png");
+		} else if (Item::usesPE08ItemAtlas(item->id)) {
+			textures->loadAndBindTexture("gui/items_0.8.png");
 		} else {
 			textures->loadAndBindTexture("gui/items.png");
 		}
 		//Tesselator& t = Tesselator::instance;
 		//t.scale2d(Gui::InvGuiScale, Gui::InvGuiScale);
-		blit((float)x, (float)y, (float)(item->getIcon() % 16 * 16), (float)(item->getIcon() / 16 * 16), 16, 16);
+		const float atlasHeight = item->id < 256 ? 512.0f : 256.0f;
+		blit((float)x, (float)y, (float)(item->getIcon() % 16 * 16), (float)(item->getIcon() / 16 * 16), 16, 16, atlasHeight);
 		//t.resetScale();
 	}
-	//glEnable(GL_CULL_FACE);
 }
 
 /*static*/
-void ItemRenderer::blit(float x, float y, float sx, float sy, float w, float h) {
+void ItemRenderer::blit(float x, float y, float sx, float sy, float w, float h, float atlasHeight) {
 	float blitOffset = 0;
 	const float us = 1 / 256.0f;
-	const float vs = 1 / 256.0f;
+	const float vs = 1 / atlasHeight;
 	Tesselator& t = Tesselator::instance;
 	t.begin();
 	t.vertexUV(x, y + h, blitOffset, sx * us, (sy + h) * vs);

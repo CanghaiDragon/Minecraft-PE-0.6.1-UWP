@@ -3,6 +3,8 @@
 
 //package net.minecraft.world.level;
 
+#include <string>
+
 namespace GameType {
 	const int Undefined = -1;
 	const int Survival = 0;
@@ -19,15 +21,9 @@ namespace WorldType {
 	const int Indev    = 4; // finite Java Indev-style terrain
 	const int EarlyInfdev = 5; // infinite world using the 20100227 generator
 
-	// Alpha's Winter Mode is selected once from the world seed.  Using the
-	// stable low two bits gives the requested 1/4 distribution while ensuring
-	// that reopening a world cannot reroll its biome or weather state.
-	inline bool isAlphaWinter(long seed) {
-		return ((unsigned long long)seed & 3ULL) == 0ULL;
-	}
-
-	// Indev's hidden Infdev variant is selected once from the world seed.
-	inline bool isIndevInfdev(long seed) {
+	// Legacy fallback used only when loading old Alpha saves or joining an
+	// extended server that predates the persisted/transmitted Winter flag.
+	inline bool legacyAlphaWinterFromSeed(long seed) {
 		return ((unsigned long long)seed & 3ULL) == 0ULL;
 	}
 }
@@ -48,12 +44,15 @@ class LevelSettings
 {
 public:
     LevelSettings(long seed, int gameType, int worldType = WorldType::Old,
-		int indevType = IndevType::Inland, bool resolveIndevInfdev = true)
+		int indevType = IndevType::Inland, bool resolveIndevInfdev = true,
+		bool alphaWinterModeResolved = false, bool alphaWinterMode = false)
     :   seed(seed),
         gameType(gameType),
         worldType(worldType),
 		indevType(indevType),
-		resolveIndevInfdev(resolveIndevInfdev)
+		resolveIndevInfdev(resolveIndevInfdev),
+		alphaWinterModeResolved(alphaWinterModeResolved),
+		alphaWinterMode(alphaWinterMode)
     {
     }
 	static LevelSettings None() {
@@ -74,6 +73,8 @@ public:
 
 	int getIndevType() const { return indevType; }
 	bool shouldResolveIndevInfdev() const { return resolveIndevInfdev; }
+	bool hasAlphaWinterMode() const { return alphaWinterModeResolved; }
+	bool getAlphaWinterMode() const { return alphaWinterMode; }
 
 	//
 	// Those two should actually not be here
@@ -100,6 +101,8 @@ private:
     const int worldType;
 	const int indevType;
 	const bool resolveIndevInfdev;
+	const bool alphaWinterModeResolved;
+	const bool alphaWinterMode;
 };
 
 #endif /*NET_MINECRAFT_WORLD_LEVEL__LevelSettings_H__*/

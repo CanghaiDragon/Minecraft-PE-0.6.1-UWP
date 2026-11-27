@@ -79,6 +79,7 @@ public:
 		static const Option TOUCH_SNEAK;
 		static const Option DEBUG_SCREEN;
 		static const Option ACHIEVEMENTS;
+		static const Option PE08_RECIPES;
 		static const Option JAVA_UI;
 
 		static const Option PIXELS_PER_MILLIMETER;
@@ -203,6 +204,8 @@ public:
 	// Enables the F3 debug screen and its touch/pause-screen button.
 	bool debugScreenEnabled;
 	bool achievementsEnabled;
+	// Opt-in display of PE 0.7/0.8 recipes in the separate multiplayer tab.
+	bool pe08RecipesEnabled;
 
     bool isFlying;
     bool smoothCamera;
@@ -374,6 +377,7 @@ public:
 			if (!debugScreenEnabled) renderDebug = false;
 		}
 		if (option == &Option::ACHIEVEMENTS) achievementsEnabled = !achievementsEnabled;
+		if (option == &Option::PE08_RECIPES) pe08RecipesEnabled = !pe08RecipesEnabled;
 		if (option == &Option::JAVA_UI) javaUi = !javaUi;
         if (option == &Option::VIEW_BOBBING)	bobView = !bobView;
 		if (option == &Option::THIRD_PERSON)	setThirdPersonViewMode((thirdPersonViewMode + 1) % 3);
@@ -480,6 +484,8 @@ public:
 			return debugScreenEnabled;
 		if (item == &Option::ACHIEVEMENTS)
 			return achievementsEnabled;
+		if (item == &Option::PE08_RECIPES)
+			return pe08RecipesEnabled;
 		if (item == &Option::JAVA_UI)
 			return javaUi;
 		if (item == &Option::FULLSCREEN)

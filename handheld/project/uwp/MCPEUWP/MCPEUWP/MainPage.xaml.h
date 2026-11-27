@@ -69,6 +69,11 @@ namespace MCPEUWP
 			Windows::UI::Core::BackRequestedEventArgs^ e);
 		void OnCharacterReceived(Windows::UI::Core::CoreWindow^ sender,
 			Windows::UI::Core::CharacterReceivedEventArgs^ e);
+		void OnChatImeTextChanged(Platform::Object^ sender,
+			Windows::UI::Xaml::Controls::TextChangedEventArgs^ e);
+		void OnChatImeKeyDown(Platform::Object^ sender,
+			Windows::UI::Xaml::Input::KeyRoutedEventArgs^ e);
+		void SyncChatImeHost();
 		void UpdateMoveInput();
 		void AttachKeyboard();
 		void DetachKeyboard();
@@ -84,7 +89,7 @@ namespace MCPEUWP
 		void OnGameTick(std::uint64_t tick);
 		void SyncDesktopFullScreenMode();
 		void OnGameRender(float alpha);
-		void RenderSavingWorldFrame(bool frameAlreadyBegun);
+		void RenderSavingWorldFrame();
 		void SyncOriginalMouseCursor();
 		void BeginWorldLoad(const std::wstring& worldId,
 			const std::wstring& worldName, bool createNew, long seed,
@@ -132,10 +137,13 @@ namespace MCPEUWP
 		std::chrono::steady_clock::time_point m_lastFrameTime{};
 		bool m_frameClockStarted = false;
 		bool m_worldCreationPending = false;
+		bool m_worldLeaveSavePending = false;
+		bool m_worldLeaveProgressRendered = false;
 		bool m_pendingLaunchWorldRequested = false;
 		bool m_exitAfterWorldSave = false;
 		std::wstring m_pendingLaunchWorldId;
 		bool m_originalMenuActive = false;
+		bool m_chatImeSessionActive = false;
 		bool m_skinPageVisible = false;
 		bool m_keyMappingPageVisible = false;
 		bool m_settingsPageVisible = false;

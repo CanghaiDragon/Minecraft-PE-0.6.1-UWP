@@ -3,6 +3,7 @@
 #include "ProgressScreen.h"
 #include "../Font.h"
 #include "../components/TextBox.h"
+#include "../components/ImageButton.h"
 #include "../../../network/RakNetInstance.h"
 #include "../../../locale/I18n.h"
 #include "../../../platform/input/Keyboard.h"
@@ -197,6 +198,7 @@ DirectConnectScreen::DirectConnectScreen()
 :	bBack(NULL),
 	bTitle(NULL),
 	bConnect(NULL),
+	bPe08Recipes(NULL),
 	addressBox(1, I18n::get("multiplayer.serverAddress.hint")),
 	portBox(2, I18n::get("multiplayer.serverPort.hint"))
 {
@@ -207,6 +209,7 @@ DirectConnectScreen::~DirectConnectScreen()
 	delete bBack;
 	delete bTitle;
 	delete bConnect;
+	delete bPe08Recipes;
 }
 
 void DirectConnectScreen::init()
@@ -223,11 +226,23 @@ void DirectConnectScreen::init()
 		bConnect = new Touch::TButton(12, I18n::get("multiplayer.connect"));
 		buttons.push_back(bTitle);
 	}
+	ImageDef toggleDef;
+	toggleDef.name = "gui/touchgui2.png";
+	toggleDef.width = 39 * 0.7f;
+	toggleDef.height = 18 * 0.7f;
+	// The PE option switch sits immediately above the eye icons: off is the
+	// left sprite and on is the adjacent right sprite.
+	toggleDef.setSrc(IntRectangle(160, 124, 39, 18));
+	bPe08Recipes = new OptionButton(&Options::Option::PE08_RECIPES);
+	bPe08Recipes->setImageDef(toggleDef, true);
+	bPe08Recipes->updateImage(&minecraft->options);
 	buttons.push_back(bBack);
+	buttons.push_back(bPe08Recipes);
 	buttons.push_back(bConnect);
 	textBoxes.push_back(&addressBox);
 	textBoxes.push_back(&portBox);
 	tabButtons.push_back(bBack);
+	tabButtons.push_back(bPe08Recipes);
 	tabButtons.push_back(bConnect);
 }
 
@@ -257,6 +272,16 @@ void DirectConnectScreen::setupPositions()
 	portBox.height = 24;
 	portBox.x = (width - portBox.width) / 2;
 	portBox.y = addressY + 48;
+
+	bPe08Recipes->width = 39 * 0.7f;
+	bPe08Recipes->height = 18 * 0.7f;
+	const int optionLabelWidth = minecraft->font->width(I18n::get("options.pe08Recipes"));
+	const int optionRowWidth = bPe08Recipes->width + 6 + optionLabelWidth;
+	int optionY = portBox.y + portBox.height + 18;
+	if (optionY + 34 > height - 34)
+		optionY = height - 68;
+	bPe08Recipes->x = (width - optionRowWidth) / 2;
+	bPe08Recipes->y = optionY;
 
 	bConnect->width = width >= 200 ? 128 : width - 24;
 	bConnect->height = javaUi ? 20 : 26;
@@ -289,10 +314,20 @@ void DirectConnectScreen::render(int xm, int ym, float a)
 		drawCenteredString(minecraft->font, errorMessage, width / 2,
 			bConnect->y - minecraft->font->lineHeight - 4, 0xffff6060);
 	}
+	drawString(minecraft->font, I18n::get("options.pe08Recipes"),
+		bPe08Recipes->x + bPe08Recipes->width + 6,
+		bPe08Recipes->y + (bPe08Recipes->height - minecraft->font->lineHeight) / 2,
+		0xffffffff);
+	drawCenteredString(minecraft->font, I18n::get("options.pe08Recipes.description"),
+		width / 2, bPe08Recipes->y + bPe08Recipes->height + 2, 0xffc0c0c0);
 }
 
 void DirectConnectScreen::buttonClicked(Button* button)
 {
+	if (button == bPe08Recipes) {
+		bPe08Recipes->toggle(&minecraft->options);
+		return;
+	}
 	if (button == bBack) {
 		minecraft->cancelLocateMultiplayer();
 		minecraft->screenChooser.setScreen(SCREEN_JOINGAME);

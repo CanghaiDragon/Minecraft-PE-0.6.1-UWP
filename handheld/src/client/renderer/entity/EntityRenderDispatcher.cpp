@@ -25,6 +25,35 @@
 #include "SheepRenderer.h"
 #include "ArrowRenderer.h"
 #include "PaintingRenderer.h"
+#include "../../../world/entity/Minecart.h"
+#include "../../model/geom/ModelPart.h"
+
+class CompatMinecartRenderer : public EntityRenderer {
+public:
+	CompatMinecartRenderer() : body(0, 10), wall0(0, 0), wall1(0, 0), wall2(0, 0), wall3(0, 0), inner(44, 10) {
+		shadowRadius = 0.5f;
+		body.addBox(-10, -8, -1, 20, 16, 2); body.setPos(0, 4, 0); body.xRot = 1.5707963f;
+		wall0.addBox(-8, -9, -1, 16, 8, 2); wall0.setPos(-9, 4, 0); wall0.yRot = 4.712389f;
+		wall1.addBox(-8, -9, -1, 16, 8, 2); wall1.setPos(9, 4, 0); wall1.yRot = 1.5707963f;
+		wall2.addBox(-8, -9, -1, 16, 8, 2); wall2.setPos(0, 4, -7); wall2.yRot = 3.1415926f;
+		wall3.addBox(-8, -9, -1, 16, 8, 2); wall3.setPos(0, 4, 7);
+		inner.addBox(-9, -7, -1, 18, 14, 1); inner.setPos(0, 4, 0); inner.xRot = -1.5707963f;
+	}
+	void render(Entity* entity, float x, float y, float z, float rot, float) {
+		glPushMatrix2();
+		glTranslatef2(x, y + 0.25f, z);
+		glRotatef2(180.0f - rot, 0, 1, 0);
+		glRotatef2(-entity->xRot, 0, 0, 1);
+		glScalef2(-1.0f, -1.0f, 1.0f);
+		bindTexture("entity/minecart.png");
+		const float scale = 0.0625f;
+		body.render(scale); wall0.render(scale); wall1.render(scale);
+		wall2.render(scale); wall3.render(scale); inner.render(scale);
+		glPopMatrix2();
+	}
+private:
+	ModelPart body, wall0, wall1, wall2, wall3, inner;
+};
 
 
 /*static*/
@@ -62,6 +91,7 @@ EntityRenderDispatcher::EntityRenderDispatcher()
 	assign( ER_SNOWBALL_RENDERER,   new ItemSpriteRenderer(Item::snowBall->getIcon(0)));
 	assign( ER_PAINTING_RENDERER,   new PaintingRenderer());
 	assign( ER_FALLINGTILE_RENDERER,new FallingTileRenderer());
+	assign( ER_MINECART_RENDERER,   new CompatMinecartRenderer());
 
 	for (RendererIterator it = _renderers.begin(); it != _renderers.end(); ++it) {
 		it->second->init(this);

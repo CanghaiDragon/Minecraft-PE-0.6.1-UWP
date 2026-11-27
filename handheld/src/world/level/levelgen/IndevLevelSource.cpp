@@ -44,6 +44,7 @@ IndevLevelSource::IndevLevelSource(Level* level, long seed, int type, bool spawn
 {
 	if (type < IndevType::Inland || type > IndevType::Flat)
 		this->type = IndevType::Inland;
+	decorationSource->setIndevType(this->type);
 	if (this->type != IndevType::Floating)
 		buildWaterConnectivity();
 }

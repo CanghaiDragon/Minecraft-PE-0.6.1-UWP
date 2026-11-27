@@ -26,8 +26,6 @@
 
 <h2 align="center">项目状态</h2>
 
-<div align="center">
-
 | 目标平台          | 状态                                 | 构建系统          |
 | ------------- | ---------------------------------- | ------------- |
 | Windows x86   | 支持                                 | Visual Studio |
@@ -38,24 +36,6 @@
 </div>
 
 本项目专注于 UWP。其他平台（Android、iOS）不属于本项目的目标平台。
-
----
-
-<h2 align="center">上游项目与参考资料</h2>
-
-本 UWP 项目由我此前的 Win32 版本 [Minecraft-PE-0.6.1-Windows-Universal](https://github.com/CanghaiDragon/Minecraft-PE-0.6.1-Windows-Universal) 移植而来，主要功能基本相同。
-
-2026 年初，Minecraft Pocket Edition v0.6.1 的源代码在互联网上泄露，可以在 [Minecraft PE Source Code](https://archive.org/details/Minecraftpesorucecode) 找到。这也是 GitHub 等网站上出现多个 MCPE 0.6.1 修改版本的原因。本项目同样是基于原始代码开发的修改版本。这些修改版本均**未获得 Mojang 的直接授权**。
-
-本项目源自 [programmer1o1/MinecraftPE-v0.6.1](https://github.com/programmer1o1/MinecraftPE-v0.6.1)，下文称为 **Project B**。Project B 提供了主要的现代化源码基础以及多平台移植工作。
-
-部分 Java Beta 视觉效果的思路和相关实现参考了 [minecraft-pe-0.6.1-on-all](https://github.com/Minecraft-PE-0-6-1/minecraft-pe-0.6.1-on-all)，下文称为 **Project A**。
-
-天域世界以及部分视觉效果参考了使用 Mod Coder Pack 4.3 处理的 Minecraft Java Edition Beta 1.7.3 源代码。Alpha 世界则参考了使用 Mod Coder Pack 1.6 处理的 Java Edition Alpha 1.1.2_01 源代码。Indev 和 Infdev 世界生成器参考了 [RetroMCP-Java](https://github.com/MCPHackers/RetroMCP-Java)。这些参考并不意味着本项目与 Mojang 存在任何官方关联或获得其授权。
-
-部分图片来自 [Minecraft Wiki](https://minecraft.wiki/)。AppX 资源来自官方 [Windows Phone 8.1 版 Minecraft PE](https://microsoft.com/p/-/9wzdncrdzsbb)。
-
-本项目的主要开发工作在 Codex 的协助下完成。
 
 ---
 
@@ -114,13 +94,19 @@
 - 欢迎界面，可选择语言、输入模式、性能设置和 GUI 缩放比例。
 - 可调整 GUI 和方向键大小。
 - 自适应不同屏幕分辨率，从 Windows Phone 屏幕到桌面窗口均可适配。
-- 多语言支持框架，现已支持简体中文。
+- 多语言支持框架，现已支持简体中文。（如果希望本项目支持你的母语，欢迎通过 Issue 或 Discussion 联系我。）
 
 ---
 
 <h2 align="center">世界类型</h2>
 
-**重要提醒：** Infinite（无限）、Sky（天域）和 Alpha 世界采用的存档格式既不同于原版 MCPE 0.6.1，也不同于 MCPE 0.9 等后续版本的无限世界。请使用世界编辑界面中的“Convert to PE 0.9+”选项来转换这些存档。对于 Old 和 Indev 世界，我仍然推荐使用此转换功能，因为它的效果优于原版 PE 的转换方式。我**强烈建议**先用一个中间版本打开转换后的存档（已验证 1.18 效果较好），因为直接使用 Bedrock 1.26.x 打开可能出现兼容性问题。与此同时，经典有限世界保留了原版 MCPE 0.6.1 的存档格式，并支持原版 PE 0.1–0.8 的存档。
+### 兼容性
+
+Infinite（无限）、Sky（天域）和 Alpha 世界采用的存档格式既不同于原版 MCPE 0.6.1，也不同于 MCPE 0.9 等后续版本的无限世界。如果希望在后续 MCPE/BE 版本中打开这些存档，请使用世界编辑界面中的“Convert to PE 0.9+”选项进行转换。对于 Old 和 Indev 世界，我仍然推荐使用此转换功能，因为它的效果优于原版 PE 的转换方式。我**强烈建议**先用一个中间版本打开转换后的存档（已验证 1.18 效果较好），因为直接使用 Bedrock 1.26.x 打开可能出现兼容性问题。
+
+本项目仍以 MCPE 0.6.1 为基础，原版 PE 0.1–0.6 的存档均可正常打开。同时，自 v1.2.1 起，本项目加入了 MCPE 0.7.x 和 0.8.x 的部分特性，因此也应当支持 PE 0.7–0.8 中新增的方块。
+
+需要注意的是，加入 MCPE 0.7.x 和 0.8.x 的部分特性主要是为了改善旧版多人游戏服务器及导入存档的兼容性，而非扩展原有的单人游戏玩法。这些内容仅作为基础兼容支持，**并不代表本项目完整实现了 MCPE 0.8.x**。部分特性（如动物繁殖）有意不予加入。**后续版本特性的缺失不应被视为 Bug。** 反馈或提出此类功能需求，并不意味着它们会在未来的更新中得到实现。完整兼容 MCPE 0.8.x 并非本项目的开发目标。
 
 ### Old（有限）世界
 
@@ -295,6 +281,26 @@ ARM32 和 ARM64 配置所需的 ANGLE 头文件、导入库和运行时 DLL 位�
 <h2 align="center">已知限制</h2>
 
 - 在已测试的 Lumia 640 上，破坏方块时的震动反馈目前无法正常工作。
+
+---
+
+<h2 align="center">上游项目与参考资料</h2>
+
+本 UWP 项目由我此前的 Win32 版本 [Minecraft-PE-0.6.1-Windows-Universal](https://github.com/CanghaiDragon/Minecraft-PE-0.6.1-Windows-Universal) 移植而来，主要功能基本相同。
+
+2026 年初，Minecraft Pocket Edition v0.6.1 的源代码在互联网上泄露，可以在 [Minecraft PE Source Code](https://archive.org/details/Minecraftpesorucecode) 找到。这也是 GitHub 等网站上出现多个 MCPE 0.6.1 修改版本的原因。本项目同样是基于原始代码开发的修改版本。这些修改版本均**未获得 Mojang 的直接授权**。
+
+本项目最初由 [programmer1o1/MinecraftPE-v0.6.1](https://github.com/programmer1o1/MinecraftPE-v0.6.1)Fork而来，我亦称其为 **Project B**。Project B 提供了主要的现代化源码基础以及多平台移植工作。
+
+部分 Java Beta 视觉效果的思路和相关实现参考了 [minecraft-pe-0.6.1-on-all](https://github.com/Minecraft-PE-0-6-1/minecraft-pe-0.6.1-on-all)，我亦称其为 **Project A**。
+
+天域世界以及部分视觉效果参考了使用 Mod Coder Pack 4.3 处理的 Minecraft Java Edition Beta 1.7.3 源代码。Alpha 世界则参考了使用 Mod Coder Pack 1.6 处理的 Java Edition Alpha 1.1.2_01 源代码。Indev 和 Infdev 世界生成器参考了 [RetroMCP-Java](https://github.com/MCPHackers/RetroMCP-Java)。这些参考并不意味着本项目与 Mojang 存在任何官方关联或获得其授权。
+
+对PE 0.8的特性兼容参考了反编译代码仓库[MCPE-0.8.1](https://github.com/oldminecraftcommunity/MCPE-0.8.1)。
+
+部分图片来自 [Minecraft Wiki](https://minecraft.wiki/)。AppX 资源来自官方 [Windows Phone 8.1 版 Minecraft PE](https://microsoft.com/p/-/9wzdncrdzsbb)。
+
+本项目的主要开发工作在 Codex 的协助下完成。
 
 ---
 

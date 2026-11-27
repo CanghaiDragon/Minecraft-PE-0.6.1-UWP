@@ -42,6 +42,7 @@ public:
 	static const char* Touch_Sneak;
 	static const char* Extra_DebugScreen;
 	static const char* Extra_Achievements;
+	static const char* Extra_PE08Recipes;
 	static const char* Extra_JavaUI;
 };
 

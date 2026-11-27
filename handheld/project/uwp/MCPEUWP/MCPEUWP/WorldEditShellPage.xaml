@@ -213,6 +213,7 @@
 
                 <TextBlock Grid.Row="8"
                            Grid.Column="0"
+                           x:Name="StorageVersionLabelText"
                            Text="StorageVersion"
                            Foreground="White"
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"

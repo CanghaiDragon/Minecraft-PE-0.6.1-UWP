@@ -203,21 +203,6 @@ namespace
 		return mask & (((1u << AchievementIds::Count) - 1u) | (0x0fu << 16));
 	}
 
-	std::wstring WorldTypeName(int worldType)
-	{
-		if (worldType == WorldType::Infinite)
-			return L"Infinite";
-		if (worldType == WorldType::Sky)
-			return L"Sky / Nether Reactor";
-		if (worldType == WorldType::Alpha)
-			return L"Alpha";
-		if (worldType == WorldType::Indev)
-			return L"Indev";
-		if (worldType == WorldType::EarlyInfdev)
-			return L"Early Infdev";
-		return L"Old / Finite";
-	}
-
 	enum class UwpStorageMarkerKind
 	{
 		Missing,
@@ -258,7 +243,7 @@ namespace
 		return UwpStorageMarkerKind::Unknown;
 	}
 
-	std::wstring WorldTypeDisplayName(
+	const char* WorldTypeDisplayNameKey(
 		int worldType,
 		UwpStorageMarkerKind marker)
 	{
@@ -266,16 +251,16 @@ namespace
 			marker == UwpStorageMarkerKind::V2Zlib;
 
 		if (worldType == WorldType::Infinite)
-			return isNewUwpFormat ? L"Infinite" : L"Infinite Legacy (Unsupported)";
+			return isNewUwpFormat ? "generator.infinite" : "uwp.worldEdit.infiniteLegacy";
 		if (worldType == WorldType::Sky)
-			return isNewUwpFormat ? L"Sky" : L"Sky Legacy (Unsupported)";
+			return isNewUwpFormat ? "generator.sky" : "uwp.worldEdit.skyLegacy";
 		if (worldType == WorldType::Alpha)
-			return isNewUwpFormat ? L"Alpha" : L"Alpha Legacy (Unsupported)";
+			return isNewUwpFormat ? "generator.alpha" : "uwp.worldEdit.alphaLegacy";
 		if (worldType == WorldType::Indev)
-			return L"Indev / Finite";
+			return "generator.indev";
 		if (worldType == WorldType::EarlyInfdev)
-			return isNewUwpFormat ? L"Early Infdev" : L"Early Infdev Legacy (Unsupported)";
-		return L"Old / Finite";
+			return isNewUwpFormat ? "uwp.worldEdit.earlyInfdev" : "uwp.worldEdit.earlyInfdevLegacy";
+		return "generator.old";
 	}
 
 	struct ZipEntry
@@ -591,7 +576,7 @@ void WorldEditShellPage::SetWorldId(Platform::String^ worldId)
 	m_worldId = worldId == nullptr ? ref new Platform::String(L"") : worldId;
 	m_worldType = WorldType::Old;
 	m_gameType = -1;
-	m_worldSeed = 0;
+	m_alphaWinterMode = false;
 	m_worldStorageFormatCurrent = false;
 	m_legacyFormatConversionAvailable = false;
 	m_finiteWorldUpgradeAvailable = false;
@@ -1053,16 +1038,12 @@ void WorldEditShellPage::LoadWorldData()
 		if (GameModeValueText != nullptr)
 			GameModeValueText->Text = ref new Platform::String(
 				GameModeName(data.getGameType()).c_str());
-		if (WorldTypeValueText != nullptr)
-			WorldTypeValueText->Text = ref new Platform::String(
-				WorldTypeName(data.getWorldType()).c_str());
-
 		const UwpStorageMarkerKind marker =
 			ReadUwpStorageMarker(WorldDirectory());
 		m_worldType = data.getWorldType();
 		m_worldIndevType = data.getIndevType();
 		m_gameType = data.getGameType();
-		m_worldSeed = data.getSeed();
+		m_alphaWinterMode = data.getAlphaWinterMode();
 		if (ViewAchievementsButton != nullptr)
 			ViewAchievementsButton->Visibility = m_gameType == GameType::Survival
 				? Windows::UI::Xaml::Visibility::Visible
@@ -1078,8 +1059,23 @@ void WorldEditShellPage::LoadWorldData()
 			(marker == UwpStorageMarkerKind::Missing ||
 			 marker == UwpStorageMarkerKind::Unknown);
 		if (WorldTypeValueText != nullptr)
-			WorldTypeValueText->Text = ref new Platform::String(
-				WorldTypeDisplayName(data.getWorldType(), marker).c_str());
+		{
+			const char* worldTypeKey = WorldTypeDisplayNameKey(
+				data.getWorldType(), marker);
+			Platform::String^ worldTypeName =
+				UwpXamlLocalization::get(worldTypeKey);
+			if (worldTypeName == nullptr)
+			{
+				worldTypeKey = "options.unavailable";
+				worldTypeName = UwpXamlLocalization::get(worldTypeKey);
+			}
+		if (worldTypeName != nullptr)
+		{
+			WorldTypeValueText->Text = worldTypeName;
+			UwpXamlLocalization::writeLocalizationTag(
+				WorldTypeValueText, worldTypeKey, worldTypeName);
+		}
+		}
 		if (PinToStartButton != nullptr)
 			PinToStartButton->Visibility = m_legacyFormatConversionAvailable
 				? Windows::UI::Xaml::Visibility::Collapsed
@@ -1451,8 +1447,7 @@ void WorldEditShellPage::ShowWorldConvertPage()
 		displayName,
 		m_worldType,
 		m_worldIndevType,
-		m_worldType == WorldType::Alpha &&
-			WorldType::isAlphaWinter(m_worldSeed),
+		m_worldType == WorldType::Alpha && m_alphaWinterMode,
 		m_worldStorageFormatCurrent);
 
 	WorldConvertFrame->Content = m_worldConvertPage;

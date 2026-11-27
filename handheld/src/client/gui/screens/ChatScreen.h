@@ -4,6 +4,7 @@
 #include "../Screen.h"
 #include "../components/Button.h"
 #include "../components/TextBox.h"
+#include <string>
 
 class ChatScreen: public Screen
 {
@@ -18,6 +19,9 @@ public:
 	void render(int xm, int ym, float a);
 	void buttonClicked(Button* button);
 	void keyPressed(int eventKey);
+	bool isMessageInputFocused() const;
+	const std::string& messageText() const;
+	void setMessageText(const std::string& text);
 	bool handleBackEvent(bool isDown);
 	bool isPauseScreen();
 	bool isInGameScreen();

@@ -200,13 +200,17 @@ void ClientSideNetworkHandler::handle(const RakNet::RakNetGUID& source, StartGam
 			indevType = packet->indevType;
 		levelVersion = packet->levelGeneratorVersion;
 	}
+	const bool alphaWinterMode = packet->hasAlphaWinterMode
+		? packet->alphaWinterMode
+		: (worldType == WorldType::Alpha &&
+			WorldType::legacyAlphaWinterFromSeed(packet->levelSeed));
 	MultiPlayerLevel* level = new MultiPlayerLevel(
 		storageSource->selectLevel(levelId, true),
 		"temp",
-		// The server sends the resolved world type. Do not reroll Indev's
-		// hidden Infdev variant locally from the same seed.
+		// The server sends the resolved world type and Alpha mode. Do not reroll
+		// either hidden mode on the client.
 		LevelSettings(packet->levelSeed, LevelSettings::validateGameType(packet->gameType),
-			worldType, indevType, false),
+			worldType, indevType, false, true, alphaWinterMode),
 		levelVersion);
 	level->isClientSide = true;
 
@@ -907,6 +911,9 @@ void ClientSideNetworkHandler::handle(const RakNet::RakNetGUID& source, Containe
 	if (packet->type == ContainerType::CONTAINER) {
 		ChestTileEntity* te = new ChestTileEntity();
 		te->clientSideOnly = true;
+		// The remote chest tile entity is only a UI mirror. Use the slot count
+		// announced by the server so a paired 0.8 chest keeps all 54 slots.
+		te->setRemoteContainerSize(packet->size);
 		#if defined(_DEBUG)
 		LOGI("[CONTAINER_OPEN] side=client direction=receive id=%d chest=%p\n",
 			packet->containerId, (void*)te);

@@ -40,6 +40,10 @@ public:
 
     void clearCache();
     void checkNeighbors();
+	ChestTileEntity* getLargeChestPartner() const;
+	void setRemoteContainerSize(int size);
+	int getLocalContainerSize() const;
+	ItemInstance* getLocalItem(int slot);
 
     /*@Override*/
     void tick();
@@ -63,7 +67,10 @@ public:
 
 private:
 	static const int ItemsSize = 9*3;
+	ChestTileEntity* findCompatibleNeighbor() const;
+	ChestTileEntity* getContainerForSlot(int& slot) const;
 	int tickInterval;
+	int remoteContainerSize;
 };
 
 #endif /*NET_MINECRAFT_WORLD_LEVEL_TILE_ENTITY__ChestTileEntity_H__*/

@@ -189,7 +189,7 @@ inline const TextEntry* entries(size_t& count)
 		{ L"World name", "selectWorld.enterName" },
 		{ L"Last opened", "uwp.worldEdit.lastOpened" },
 		{ L"Play time", "uwp.worldEdit.playTime" },
-		{ L"Seed", "selectWorld.enterSeed" },
+		{ L"Seed", "uwp.worldEdit.seed" },
 		{ L"Game mode", "selectWorld.gameMode" },
 		{ L"World type", "selectWorld.mapType" },
 		{ L"Size on disk", "uwp.worldEdit.sizeOnDisk" },
@@ -486,6 +486,8 @@ inline void setText(Windows::UI::Xaml::FrameworkElement^ element, Platform::Stri
 		dynamic_cast<Windows::UI::Xaml::Controls::TextBlock^>(element);
 	if (block == nullptr || value == nullptr)
 		return;
+	if (block->Name == L"StorageVersionLabelText")
+		block->FontSize = containsNonAscii(value) ? 18.0 : 14.0;
 	block->Text = L"";
 	block->Inlines->Clear();
 	block->FontFamily = ref new Windows::UI::Xaml::Media::FontFamily(

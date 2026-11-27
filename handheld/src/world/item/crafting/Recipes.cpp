@@ -143,6 +143,53 @@ Recipes::Recipes()
 		"###", //
 		definition('#', Tile::stoneBrickSmooth));
 
+	// Pocket Edition 0.7/0.8 recipes. These remain normal survival recipes;
+	// PaneCraftingScreen routes their results to the dedicated beta tab.
+	addShapedRecipe(ItemInstance(Tile::cobbleWallCompat, 6), //
+		"###", //
+		"###", //
+		definition('#', Tile::stoneBrick));
+	addShapedRecipe(ItemInstance(Tile::woodSlabCompat, 6, 1), "###", //
+		definition('#', ItemInstance(Tile::wood, 1, 1)));
+	addShapedRecipe(ItemInstance(Tile::woodSlabCompat, 6, 2), "###", //
+		definition('#', ItemInstance(Tile::wood, 1, 2)));
+	addShapedRecipe(ItemInstance(Tile::stoneSlabHalf, 6, 4), "###", //
+		definition('#', Tile::redBrick));
+	addShapedRecipe(ItemInstance(Tile::stoneSlabHalf, 6, 5), "###", //
+		definition('#', Tile::stoneBrickSmooth));
+	addShapedRecipe(ItemInstance(Tile::stoneSlabHalf, 6, StoneSlabTile::QUARTZ_SLAB), "###", //
+		definition('#', Tile::quartzBlock));
+	addShapedRecipe(ItemInstance(Tile::wood, 4, 1), "#", //
+		definition('#', ItemInstance(Tile::treeTrunk, 1, 1)));
+	addShapedRecipe(ItemInstance(Tile::wood, 4, 2), "#", //
+		definition('#', ItemInstance(Tile::treeTrunk, 1, 2)));
+	addShapedRecipe(ItemInstance(Item::cake, 1), //
+		"AAA", //
+		"BEB", //
+		"CCC", //
+		definition('A', Item::milk, 'B', Item::sugar, 'C', Item::wheat, 'E', Item::egg));
+	addShapedRecipe(ItemInstance(Tile::railCompat, 16), //
+		"X X", "X#X", "X X", //
+		definition('X', Item::ironIngot, '#', Item::stick));
+	addShapedRecipe(ItemInstance(Tile::goldenRailCompat, 6), //
+		"X X", "X#X", "XRX", //
+		definition('X', Item::goldIngot, 'R', Item::redStone, '#', Item::stick));
+	addShapedRecipe(ItemInstance(Item::minecart, 1), //
+		"# #", "###", //
+		definition('#', Item::ironIngot));
+	addShapedRecipe(ItemInstance(Tile::litPumpkinCompat, 1), "A", "B", //
+		definition('A', Tile::pumpkinCompat, 'B', Tile::torch));
+	addShapedRecipe(ItemInstance(Item::bucket_empty, 1), "# #", " # ", //
+		definition('#', Item::ironIngot));
+	addShapedRecipe(ItemInstance(Tile::stairsSpruceCompat, 4), "#  ", "## ", "###", //
+		definition('#', ItemInstance(Tile::wood, 1, 1)));
+	addShapedRecipe(ItemInstance(Tile::stairsBirchCompat, 4), "#  ", "## ", "###", //
+		definition('#', ItemInstance(Tile::wood, 1, 2)));
+	addShapedRecipe(ItemInstance(Tile::ironBarsCompat, 16), "###", "###", //
+		definition('#', Item::ironIngot));
+	addShapedRecipe(ItemInstance(Tile::carpetCompat, 3, 14), "##", //
+		definition('#', ItemInstance(Tile::cloth, 1, 14)));
+
 	addShapedRecipe(ItemInstance(Tile::ladder, 2), //
 		"# #", //
 		"###", //

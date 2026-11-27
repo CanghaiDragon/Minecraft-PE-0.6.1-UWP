@@ -384,9 +384,7 @@ void UwpUiRenderer::drawTiledBackground(float width, float height)
 	const GLfloat v1 = v;
 	Vertex vertices[4] = {
 		// Match Screen::renderDirtBackground()'s original 0x404040 tint.
-		// Keeping this value here makes the UWP transition surfaces identical
-		// to the original ProgressScreen instead of leaving Saving world
-		// visibly brighter than the loading screen.
+		// Keep the platform loading surface consistent with the original client.
 		{ 0.0f, 0.0f, width > 0 ? 0.25f : 0.0f, 0.25f, 0.25f, 1.0f, u0, v0 },
 		{ width, 0.0f, 0.25f, 0.25f, 0.25f, 1.0f, u1, v0 },
 		{ 0.0f, height, 0.25f, 0.25f, 0.25f, 1.0f, u0, v1 },
@@ -872,41 +870,6 @@ void UwpUiRenderer::renderStartupLoading(float width, float height)
 	// the logo; subsequent frames draw the stable loading caption.
 	drawCenteredText(L"Loading...", width * 0.5f, height * 0.64f,
 		m_uiScale * 2.0f, 0.20f, 0.20f, 0.20f, 1.0f);
-	glDisable(GL_BLEND);
-	glUseProgram(0);
-}
-
-void UwpUiRenderer::renderSavingWorld(float width, float height)
-{
-	if (!m_initialized || width <= 0.0f || height <= 0.0f)
-		return;
-
-	m_uiScale = height / 480.0f;
-	glViewport(0, 0, static_cast<GLsizei>(width), static_cast<GLsizei>(height));
-	glDisable(GL_SCISSOR_TEST);
-	glDisable(GL_STENCIL_TEST);
-	glDisable(GL_CULL_FACE);
-	glDisable(GL_DEPTH_TEST);
-	glDepthMask(GL_TRUE);
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-	glActiveTexture(GL_TEXTURE0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-	glUseProgram(m_program);
-	glUniform2f(m_viewport, width, height);
-	glUniform1i(m_texture, 0);
-	glUniform1f(m_useTexture, 0.0f);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	if (m_backgroundTexture)
-		drawTiledBackground(width, height);
-	else
-		drawGradient(0.0f, 0.0f, width, height,
-			0.10f, 0.07f, 0.05f, 0.20f, 0.12f, 0.08f);
-	drawCenteredText(L"Saving world...", width * 0.5f,
-		height * 0.48f, m_uiScale * 2.5f,
-		1.0f, 1.0f, 1.0f, 1.0f);
 	glDisable(GL_BLEND);
 	glUseProgram(0);
 }

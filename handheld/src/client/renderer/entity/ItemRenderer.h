@@ -18,18 +18,22 @@ class ItemRenderer: public EntityRenderer
 public:
     ItemRenderer();
 
+	enum GuiItemPreview { DefaultIcon, PreviewCompatBlockModel };
+
     void render(Entity* itemEntity_, float x, float y, float z, float rot, float a);
     static void renderGuiItem(Font* font, Textures* textures, const ItemInstance* item, float x, float y, bool fancy);
 	static void renderGuiItem(Font* font, Textures* textures, const ItemInstance* item, float x, float y, float w, float h, bool fancy);
+	static void renderGuiItem(Font* font, Textures* textures, const ItemInstance* item, float x, float y, float w, float h, bool fancy, GuiItemPreview preview);
 	static void renderGuiItemCorrect(Font* font, Textures* textures, const ItemInstance* item, int x, int y);
 	//void renderGuiItemDecorations(Font* font, Textures* textures, ItemInstance* item, int x, int y);
 	static void renderGuiItemDecorations(const ItemInstance* item, float x, float y);
 
-	static void blit(float x, float y, float sx, float sy, float w, float h);
+	static void blit(float x, float y, float sx, float sy, float w, float h, float atlasHeight = 256.0f);
 	static int  getAtlasPos(const ItemInstance* item);
 
 	static void teardown_static();
 private:
+	static void renderGuiItemCorrect(Font* font, Textures* textures, const ItemInstance* item, int x, int y, bool compatBlockPreview);
 	static void fillRect(Tesselator& t, float x, float y, float w, float h, int c);
 	static TileRenderer* tileRenderer;
 	Random random;

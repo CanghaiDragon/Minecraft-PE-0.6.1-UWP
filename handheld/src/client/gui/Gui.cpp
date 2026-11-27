@@ -828,7 +828,10 @@ void Gui::renderChatMessages( const int screenHeight, unsigned int max, bool isC
 				this->fill(x, y - 1, x + MAX_MESSAGE_WIDTH, y + 8, (alpha / 2) << 24);
 				glEnable(GL_BLEND);
 
-				font->drawShadow(msg, x, y, 0xffffff + (alpha << 24));
+				const unsigned int textColor = !msg.empty() && msg[0] == '/'
+					? 0x7f7f7f : 0xffffff;
+				font->drawShadow(msg, x, y,
+					textColor | (static_cast<unsigned int>(alpha) << 24));
 			}
 		}
 	}

@@ -76,7 +76,7 @@ namespace MCPEUWP
 		int m_worldType = 0;
 		int m_worldIndevType = 0;
 		int m_gameType = -1;
-		long m_worldSeed = 0;
+		bool m_alphaWinterMode = false;
 		bool m_worldStorageFormatCurrent = false;
 		bool m_legacyFormatConversionAvailable = false;
 		bool m_finiteWorldUpgradeAvailable = false;

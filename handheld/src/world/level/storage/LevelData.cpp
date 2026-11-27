@@ -1,96 +1,162 @@
 #include "LevelData.h"
+#include "../../../util/Random.h"
 
-static int getConfiguredWorldType(const LevelSettings& settings)
+namespace {
+
+bool rollOneInFour()
 {
+	// This generator has its own process RNG; the world's chosen seed is not
+	// used to decide either hidden mode.
+	static Random random;
+	return random.nextInt(4) == 0;
+}
+
+bool startsAtWorldOrigin(int worldType)
+{
+	return worldType == WorldType::Infinite || worldType == WorldType::Sky ||
+		worldType == WorldType::Alpha || worldType == WorldType::EarlyInfdev;
+}
+
+}
+
+LevelData::CreationModes LevelData::resolveCreationModes(
+	const LevelSettings& settings)
+{
+	CreationModes modes;
+	modes.worldType = settings.getWorldType();
+	modes.indevType = settings.getIndevType();
+	modes.alphaWinterMode = false;
+	modes.alphaWinterDiscoveryPending = false;
+	modes.infdevDiscoveryPending = false;
+
+	if (settings.getWorldType() == WorldType::Alpha) {
+		modes.alphaWinterMode = settings.hasAlphaWinterMode()
+			? settings.getAlphaWinterMode() : rollOneInFour();
+		modes.alphaWinterDiscoveryPending = modes.alphaWinterMode;
+	}
+
 	if (settings.shouldResolveIndevInfdev() &&
-		settings.getWorldType() == WorldType::Indev &&
-		WorldType::isIndevInfdev(settings.getSeed()))
-		return WorldType::EarlyInfdev;
-	return settings.getWorldType();
+		settings.getWorldType() == WorldType::Indev) {
+		modes.infdevDiscoveryPending = rollOneInFour();
+		if (modes.infdevDiscoveryPending)
+			modes.worldType = WorldType::EarlyInfdev;
+	}
+
+	return modes;
 }
 
 LevelData::LevelData()
-:	xSpawn(128),
-	ySpawn(64),
-	zSpawn(128),
-
-	seed(0),
-	lastPlayed(0),
-	generatorVersion(SharedConstants::GeneratorVersion),
-	time(0),
-	dimension(Dimension::NORMAL),
-	playerDataVersion(-1),
-	storageVersion(0),
-	gameType(GameType::Default),
-	worldType(WorldType::Old),
-	indevType(IndevType::Inland),
-	biomeMapping(BiomeMapping::None),
-	alphaWinterDiscoveryPending(false),
-	infdevDiscoveryPending(false),
-	loadedPlayerTag(NULL)
+	: playerDataVersion(-1),
+	  levelName(),
+	  seed(0),
+	  xSpawn(128),
+	  ySpawn(64),
+	  zSpawn(128),
+	  time(0),
+	  lastPlayed(0),
+	  sizeOnDisk(0),
+	  loadedPlayerTag(NULL),
+	  dimension(Dimension::NORMAL),
+	  gameType(GameType::Default),
+	  storageVersion(0),
+	  spawnMobs(false),
+	  alphaWinterMode(false),
+	  alphaWinterDiscoveryPending(false),
+	  infdevDiscoveryPending(false),
+	  worldType(WorldType::Old),
+	  indevType(IndevType::Inland),
+	  biomeMapping(BiomeMapping::None),
+	  generatorVersion(SharedConstants::GeneratorVersion)
 {
 	//LOGI("ctor 1: %p\n", this);
 	spawnMobs = (gameType == GameType::Survival);
 }
 
-LevelData::LevelData( const LevelSettings& settings, const std::string& levelName, int generatorVersion /*= -1*/ )
-:	seed(settings.getSeed()),
-	gameType(settings.getGameType()),
-	worldType(getConfiguredWorldType(settings)),
-	indevType(settings.getIndevType()),
-	biomeMapping(BiomeMapping::None),
-	alphaWinterDiscoveryPending(settings.getWorldType() == WorldType::Alpha &&
-		WorldType::isAlphaWinter(settings.getSeed())),
-	infdevDiscoveryPending(settings.shouldResolveIndevInfdev() &&
-		settings.getWorldType() == WorldType::Indev &&
-		WorldType::isIndevInfdev(settings.getSeed())),
-	levelName(levelName),
-	xSpawn((getConfiguredWorldType(settings) == WorldType::Infinite || getConfiguredWorldType(settings) == WorldType::Sky || getConfiguredWorldType(settings) == WorldType::Alpha || getConfiguredWorldType(settings) == WorldType::EarlyInfdev) ? 0 : 128),
-	ySpawn(64),
-	zSpawn((getConfiguredWorldType(settings) == WorldType::Infinite || getConfiguredWorldType(settings) == WorldType::Sky || getConfiguredWorldType(settings) == WorldType::Alpha || getConfiguredWorldType(settings) == WorldType::EarlyInfdev) ? 0 : 128),
-	lastPlayed(0),
-	time(0),
-	dimension(Dimension::NORMAL),
-	playerDataVersion(-1),
-	loadedPlayerTag(NULL)
+LevelData::LevelData(const LevelSettings& settings, const std::string& levelName,
+	int generatorVersion /*= -1*/)
+	: LevelData(settings, levelName, generatorVersion,
+		resolveCreationModes(settings))
+{
+}
+
+LevelData::LevelData(const LevelSettings& settings, const std::string& levelName,
+	int generatorVersion, const CreationModes& modes)
+	: playerDataVersion(-1),
+	  levelName(levelName),
+	  seed(settings.getSeed()),
+	  xSpawn(startsAtWorldOrigin(modes.worldType) ? 0 : 128),
+	  ySpawn(64),
+	  zSpawn(startsAtWorldOrigin(modes.worldType) ? 0 : 128),
+	  time(0),
+	  lastPlayed(0),
+	  sizeOnDisk(0),
+	  loadedPlayerTag(NULL),
+	  dimension(Dimension::NORMAL),
+	  gameType(settings.getGameType()),
+	  storageVersion(0),
+	  spawnMobs(settings.getGameType() == GameType::Survival),
+	  alphaWinterMode(modes.alphaWinterMode),
+	  alphaWinterDiscoveryPending(modes.alphaWinterDiscoveryPending),
+	  infdevDiscoveryPending(modes.infdevDiscoveryPending),
+	  worldType(modes.worldType),
+	  indevType(modes.indevType),
+	  biomeMapping(BiomeMapping::None),
+	  generatorVersion(generatorVersion < 0
+		? SharedConstants::GeneratorVersion : generatorVersion)
 {
 	//LOGI("ctor 2: %p\n", this);
-
-	if (generatorVersion < 0)
-		generatorVersion = SharedConstants::GeneratorVersion;
-
-	this->generatorVersion = generatorVersion;
-	spawnMobs = (gameType == GameType::Survival);
 }
 
 LevelData::LevelData( CompoundTag* tag )
-:	loadedPlayerTag(NULL)
+	: playerDataVersion(-1),
+	  levelName(),
+	  seed(0),
+	  xSpawn(128),
+	  ySpawn(64),
+	  zSpawn(128),
+	  time(0),
+	  lastPlayed(0),
+	  sizeOnDisk(0),
+	  loadedPlayerTag(NULL),
+	  dimension(Dimension::NORMAL),
+	  gameType(GameType::Default),
+	  storageVersion(0),
+	  spawnMobs(false),
+	  alphaWinterMode(false),
+	  alphaWinterDiscoveryPending(false),
+	  infdevDiscoveryPending(false),
+	  worldType(WorldType::Old),
+	  indevType(IndevType::Inland),
+	  biomeMapping(BiomeMapping::None),
+	  generatorVersion(SharedConstants::GeneratorVersion)
 {
 	//LOGI("ctor 3: %p (%p)\n", this, tag);
 	getTagData(tag);
 }
 
 LevelData::LevelData( const LevelData& rhs )
-:	seed(rhs.seed),
-	gameType(rhs.gameType),
-	worldType(rhs.worldType),
-	indevType(rhs.indevType),
-	biomeMapping(rhs.biomeMapping),
-	levelName(rhs.levelName),
-	xSpawn(rhs.xSpawn),
-	ySpawn(rhs.ySpawn),
-	zSpawn(rhs.zSpawn),
-	lastPlayed(rhs.lastPlayed),
-	time(rhs.time),
-	dimension(rhs.dimension),
-	storageVersion(rhs.storageVersion),
-	playerDataVersion(rhs.playerDataVersion),
-	generatorVersion(rhs.generatorVersion),
-	spawnMobs(rhs.spawnMobs),
-	alphaWinterDiscoveryPending(rhs.alphaWinterDiscoveryPending),
-	infdevDiscoveryPending(rhs.infdevDiscoveryPending),
-	loadedPlayerTag(NULL),
-	playerData(rhs.playerData)
+	: playerData(rhs.playerData),
+	  playerDataVersion(rhs.playerDataVersion),
+	  levelName(rhs.levelName),
+	  seed(rhs.seed),
+	  xSpawn(rhs.xSpawn),
+	  ySpawn(rhs.ySpawn),
+	  zSpawn(rhs.zSpawn),
+	  time(rhs.time),
+	  lastPlayed(rhs.lastPlayed),
+	  sizeOnDisk(rhs.sizeOnDisk),
+	  loadedPlayerTag(NULL),
+	  dimension(rhs.dimension),
+	  gameType(rhs.gameType),
+	  storageVersion(rhs.storageVersion),
+	  spawnMobs(rhs.spawnMobs),
+	  alphaWinterMode(rhs.alphaWinterMode),
+	  alphaWinterDiscoveryPending(rhs.alphaWinterDiscoveryPending),
+	  infdevDiscoveryPending(rhs.infdevDiscoveryPending),
+	  worldType(rhs.worldType),
+	  indevType(rhs.indevType),
+	  biomeMapping(rhs.biomeMapping),
+	  generatorVersion(rhs.generatorVersion)
 {
 	//LOGI("c-ctor: %p (%p)\n", this, &rhs);
 	setPlayerTag(rhs.loadedPlayerTag);
@@ -112,8 +178,10 @@ LevelData& LevelData::operator=( const LevelData& rhs )
 		zSpawn		= rhs.zSpawn;
 		lastPlayed	= rhs.lastPlayed;
 		time		= rhs.time;
+		sizeOnDisk = rhs.sizeOnDisk;
 		dimension	= rhs.dimension;
 		spawnMobs	= rhs.spawnMobs;
+		alphaWinterMode = rhs.alphaWinterMode;
 		alphaWinterDiscoveryPending = rhs.alphaWinterDiscoveryPending;
 		infdevDiscoveryPending = rhs.infdevDiscoveryPending;
 		playerData  = rhs.playerData;
@@ -205,6 +273,7 @@ void LevelData::setTagData( CompoundTag* tag, CompoundTag* playerTag )
 	tag->putInt("WorldType", worldType);
 	tag->putInt("IndevType", indevType);
 	tag->putInt("BiomeMapping", biomeMapping);
+	tag->putBoolean("AlphaWinterMode", alphaWinterMode);
 	tag->putBoolean("AlphaWinterDiscoveryPending", alphaWinterDiscoveryPending);
 	tag->putBoolean("InfdevDiscoveryPending", infdevDiscoveryPending);
 
@@ -231,6 +300,10 @@ void LevelData::getTagData( const CompoundTag* tag )
 		? tag->getInt("IndevType") : IndevType::Inland;
 	biomeMapping = tag->contains("BiomeMapping", Tag::TAG_Int)
 		? tag->getInt("BiomeMapping") : BiomeMapping::None;
+	alphaWinterMode = tag->contains("AlphaWinterMode", Tag::TAG_Byte)
+		? tag->getBoolean("AlphaWinterMode")
+		: (worldType == WorldType::Alpha &&
+			WorldType::legacyAlphaWinterFromSeed(seed));
 	alphaWinterDiscoveryPending = tag->contains("AlphaWinterDiscoveryPending", Tag::TAG_Byte) &&
 		tag->getBoolean("AlphaWinterDiscoveryPending");
 	infdevDiscoveryPending = tag->contains("InfdevDiscoveryPending", Tag::TAG_Byte) &&
@@ -407,6 +480,11 @@ bool LevelData::getSpawnMobs() const
 void LevelData::setSpawnMobs( bool doSpawn )
 {
 	spawnMobs = doSpawn;
+}
+
+bool LevelData::getAlphaWinterMode() const
+{
+	return alphaWinterMode;
 }
 
 bool LevelData::takeAlphaWinterDiscoveryMessage()

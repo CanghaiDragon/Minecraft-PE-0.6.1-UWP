@@ -33,12 +33,12 @@ public:
 	virtual bool shouldSave();
 	virtual std::string gatherStats();
 	virtual Biome::MobList getMobsAt(const MobCategory& category, int x, int y, int z);
+	void setIndevType(int type);
 
 protected:
 	virtual void adjustDensity(float* density, int x, int z, int xSize, int ySize, int zSize);
 	virtual bool isFlatTerrain() const;
 	virtual bool isFiniteIndev() const;
-	void setIndevType(int type);
 	int indevType;
 
 private:

@@ -25,7 +25,7 @@ public:
 
     /*@Override*/
     int getLevelDataForAuxValue(int auxValue) {
-        return auxValue;
+		return ClothTile::getTileDataForItemAuxValue(auxValue);
     }
 
     /*@Override*/

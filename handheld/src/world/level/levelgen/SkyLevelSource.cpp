@@ -16,11 +16,13 @@
 #include <cstdint>
 
 namespace {
-// OreFeature offsets its input height upward by up to four blocks. Keep its
-// starting coordinate below the top of the 128-block PE world.
+static const int SKY_MIN_ORE_Y = 18;
+
+// OreFeature offsets its input height upward by up to four blocks. Keep starts
+// above Sky's lower void and below the top of the 128-block PE world.
 static int getOreStartY(Random& random, int lowestRockY, int vanillaRange) {
     const int maximumStartY = Level::DEPTH - 5;
-    int baseY = lowestRockY >= vanillaRange ? lowestRockY : 0;
+    int baseY = lowestRockY > SKY_MIN_ORE_Y ? lowestRockY : SKY_MIN_ORE_Y;
     if (baseY > maximumStartY) return -1;
 
     int range = vanillaRange;
@@ -30,11 +32,11 @@ static int getOreStartY(Random& random, int lowestRockY, int vanillaRange) {
 
 static int getTriangularOreStartY(Random& random, int lowestRockY) {
     const int maximumStartY = Level::DEPTH - 5;
-    int baseY = lowestRockY >= 32 ? lowestRockY : 0;
+    int baseY = lowestRockY > SKY_MIN_ORE_Y ? lowestRockY : SKY_MIN_ORE_Y;
     if (baseY > maximumStartY) return -1;
     // Java's lapis band is nextInt(16) + nextInt(16), not a uniform 0..31
-    // band. Preserve that distribution and translate the whole band only when
-    // the island starts above it.
+    // band. Preserve that distribution while keeping starts above the Sky
+    // world's lower void and the lowest nearby rock layer.
     int offset = random.nextInt(16) + random.nextInt(16);
     if (baseY + offset > maximumStartY) offset = maximumStartY - baseY;
     return baseY + offset;
@@ -275,17 +277,20 @@ void SkyLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
         placeOre(random, level, xo + random.nextInt(16), zo + random.nextInt(16), random.nextInt(128), Tile::gravel->id, 32);
 
     for (int i = 0; i < 20; ++i)
-        placeOre(random, level, xo + random.nextInt(16), zo + random.nextInt(16), random.nextInt(128), Tile::coalOre->id, 16);
+        placeOre(random, level, xo + random.nextInt(16), zo + random.nextInt(16), getOreStartY(random, lowestRockY, Level::DEPTH), Tile::coalOre->id, 16);
     for (int i = 0; i < 20; ++i)
         placeOre(random, level, xo + random.nextInt(16), zo + random.nextInt(16), getOreStartY(random, lowestRockY, 64), Tile::ironOre->id, 8);
-    // Match iron's vein count while retaining gold's lower height band.
-    for (int i = 0; i < 20; ++i)
+    // Sky has fewer solid blocks than the Overworld. Use three times the normal
+    // gold frequency, while keeping the ore distribution tied to available rock.
+    for (int i = 0; i < 6; ++i)
         placeOre(random, level, xo + random.nextInt(16), zo + random.nextInt(16), getOreStartY(random, lowestRockY, 32), Tile::goldOre->id, 8);
     for (int i = 0; i < 8; ++i)
         placeOre(random, level, xo + random.nextInt(16), zo + random.nextInt(16), getOreStartY(random, lowestRockY, 16), Tile::redStoneOre->id, 7);
     // PE 0.6.1 stores the diamond ore block as emeraldOre (description id:
     // oreDiamond); this is the established PE equivalent of Java diamond.
-    placeOre(random, level, xo + random.nextInt(16), zo + random.nextInt(16), getOreStartY(random, lowestRockY, 16), Tile::emeraldOre->id, 7);
+    // Three attempts are a modest increase over the normal one-vein frequency.
+    for (int i = 0; i < 3; ++i)
+        placeOre(random, level, xo + random.nextInt(16), zo + random.nextInt(16), getOreStartY(random, lowestRockY, 16), Tile::emeraldOre->id, 7);
     int lapisY = getTriangularOreStartY(random, lowestRockY);
     placeOre(random, level, xo + random.nextInt(16), zo + random.nextInt(16), lapisY, Tile::lapisOre->id, 6);
 

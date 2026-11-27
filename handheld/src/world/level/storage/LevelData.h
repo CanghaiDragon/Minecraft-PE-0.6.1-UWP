@@ -71,6 +71,7 @@ public:
 	void		setGameType(int type);
 	bool		getSpawnMobs() const;
 	void		setSpawnMobs(bool doSpawn);
+	bool		getAlphaWinterMode() const;
 	bool		takeAlphaWinterDiscoveryMessage();
 	bool		takeInfdevDiscoveryMessage();
 	int			getWorldType() const;
@@ -86,6 +87,17 @@ public:
 	int playerDataVersion;
 	std::string levelName;
 private:
+	struct CreationModes {
+		int worldType;
+		int indevType;
+		bool alphaWinterMode;
+		bool alphaWinterDiscoveryPending;
+		bool infdevDiscoveryPending;
+	};
+	static CreationModes resolveCreationModes(const LevelSettings& settings);
+	LevelData(const LevelSettings& settings, const std::string& levelName,
+		int generatorVersion, const CreationModes& modes);
+
 	long seed;
 	int xSpawn;
 	int ySpawn;
@@ -98,6 +110,7 @@ private:
 	int gameType;
 	int storageVersion;
 	bool spawnMobs;
+	bool alphaWinterMode;
 	bool alphaWinterDiscoveryPending;
 	bool infdevDiscoveryPending;
 	int worldType;

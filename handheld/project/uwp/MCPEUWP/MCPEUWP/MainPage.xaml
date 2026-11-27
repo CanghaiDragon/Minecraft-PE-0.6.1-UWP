@@ -21,6 +21,36 @@
         </Grid.Resources>
         <SwapChainPanel x:Name="AnglePanel" />
 
+        <!-- Focused only while the original in-game chat box is active. Keep
+             a real text-editing area so UWP's IME can attach its composition
+             window and candidate list to the chat caret. -->
+        <TextBox x:Name="ChatImeHost"
+                 Width="560"
+                 Height="28"
+                 HorizontalAlignment="Center"
+                 VerticalAlignment="Bottom"
+                 Margin="0,0,0,28"
+                 Opacity="0.01"
+                 Background="Transparent"
+                 Foreground="Transparent"
+                 BorderBrush="Transparent"
+                 BorderThickness="0"
+                 Padding="0"
+                 Visibility="Collapsed"
+                 IsTabStop="False"
+                 AcceptsReturn="False"
+                 TextWrapping="NoWrap"
+                 TextChanged="OnChatImeTextChanged"
+                 KeyDown="OnChatImeKeyDown">
+            <TextBox.InputScope>
+                <InputScope>
+                    <InputScope.Names>
+                        <InputScopeName NameValue="Text" />
+                    </InputScope.Names>
+                </InputScope>
+            </TextBox.InputScope>
+        </TextBox>
+
         <!-- ARM32-only XAML reachability probe.  It is independent of the
              SwapChainPanel and remains above the game surface. -->
         <Border x:Name="Arm32XamlProbe"

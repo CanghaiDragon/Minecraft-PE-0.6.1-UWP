@@ -1,7 +1,85 @@
 #include "ItemInclude.h"
 #include "ItemCategory.h"
 #include "../level/tile/Tile.h"
+#include "../level/Level.h"
+#include "../level/material/Material.h"
+#include "../entity/player/Player.h"
+#include "../entity/player/Inventory.h"
 #include "ItemInstance.h"
+#include "../entity/Minecart.h"
+
+// Separate legacy item IDs are used for empty, water and lava buckets in this
+// port, but their interaction follows the 0.8 bucket item behavior.
+class CompatBucketItem : public Item {
+public:
+	CompatBucketItem(int id, int contentTile) : Item(id), contentTile(contentTile) {}
+	bool useOn(ItemInstance* item, Player* player, Level* level, int x, int y, int z,
+		int face, float clickX, float clickY, float clickZ) {
+		if (!item || !player || !level) return false;
+
+		if (contentTile == 0) {
+			const Material* material = level->getMaterial(x, y, z);
+			if ((material != Material::water && material != Material::lava) || level->getData(x, y, z) != 0) return false;
+			if (!player->abilities.instabuild && player->inventory->getNumEmptySlots() <= 0 && item->count != 1) return false;
+
+			int filledItemId = (material == Material::water) ? Item::bucket_water->id : Item::bucket_lava->id;
+			level->setTileAndData(x, y, z, 0, 0);
+			if (player->abilities.instabuild) return true;
+
+			ItemInstance filled(Item::items[filledItemId]);
+			if (item->count == 1) {
+				*item = filled;
+			} else {
+				--item->count;
+				player->inventory->add(&filled);
+			}
+			return true;
+		}
+
+		if (contentTile <= 0) return false; // Milk has no world placement action.
+		int tx = x, ty = y, tz = z;
+		switch (face) {
+		case 0: --ty; break;
+		case 1: ++ty; break;
+		case 2: --tz; break;
+		case 3: ++tz; break;
+		case 4: --tx; break;
+		case 5: ++tx; break;
+		default: return false;
+		}
+		if (level->getTile(tx, ty, tz) != 0 && level->getMaterial(tx, ty, tz)->isSolid()) return false;
+		if (!level->setTileAndData(tx, ty, tz, contentTile, 0)) return false;
+
+		if (!player->abilities.instabuild) {
+			ItemInstance empty(Item::bucket_empty);
+			if (item->count == 1) *item = empty;
+			else {
+				--item->count;
+				player->inventory->add(&empty);
+			}
+		}
+		return true;
+	}
+	virtual bool isLiquidClipItem(int) const {
+		return contentTile == 0;
+	}
+private:
+	int contentTile;
+};
+
+class CompatMinecartItem : public Item {
+public:
+	CompatMinecartItem(int id) : Item(id) {}
+	bool useOn(ItemInstance* item, Player*, Level* level, int x, int y, int z, int face, float, float, float) {
+		if (!item || !level || level->isClientSide || item->count <= 0) return false;
+		int id = level->getTile(x, y, z);
+		if (id != Tile::railCompat->id && id != Tile::goldenRailCompat->id) return false;
+		Minecart* cart = new Minecart(level, x + 0.5f, y + 0.5f, z + 0.5f);
+		if (level->addEntity(cart)) --item->count;
+		else delete cart;
+		return true;
+	}
+};
 
 const std::string Item::ICON_DESCRIPTION_PREFIX("item.");
 Random Item::random;
@@ -150,6 +228,25 @@ Item* Item::chicken_cooked = NULL;
 
 Item* Item::netherbrick = NULL;
 Item* Item::netherQuartz = NULL;
+Item* Item::bucket_empty = NULL;
+Item* Item::bucket_water = NULL;
+Item* Item::bucket_lava = NULL;
+Item* Item::minecart = NULL;
+Item* Item::saddle = NULL;
+Item* Item::redStone = NULL;
+Item* Item::milk = NULL;
+Item* Item::minecart_chest = NULL;
+Item* Item::minecart_furnace = NULL;
+Item* Item::cake = NULL;
+Item* Item::pumpkinSeedsCompat = NULL;
+Item* Item::carrotCompat = NULL;
+Item* Item::potatoCompat = NULL;
+Item* Item::bakedPotatoCompat = NULL;
+Item* Item::pumpkinPieCompat = NULL;
+Item* Item::beetrootCompat = NULL;
+Item* Item::beetrootSeedsCompat = NULL;
+Item* Item::beetrootSoupCompat = NULL;
+Item* Item::spawnEggCompat = NULL;
 
 //Item* Item::record_01 = NULL;
 //Item* Item::record_02 = NULL;
@@ -282,6 +379,29 @@ void Item::initItems() {
 
 	Item::netherbrick = (new Item(149))->setIcon(5, 9)->setDescriptionId("netherbrickItem")->setCategory(ItemCategory::Structures);
 	Item::netherQuartz = (new Item(150))->setIcon(5, 10)->setDescriptionId("netherquartz")->setCategory(ItemCategory::Mechanisms);
+
+	// PE 0.8 inventory IDs. Item(int) adds 256, so these arguments are
+	// saved IDs minus 256. Basic bucket use and crop planting are implemented;
+	// minecart, food and mob interactions remain outside this compatibility pass.
+	Item::bucket_empty = (new CompatBucketItem(69, 0))->setIcon(2, 2)->setMaxStackSize(16)->setCategory(ItemCategory::Tools)->setDescriptionId("bucket");
+	Item::bucket_water = (new CompatBucketItem(70, Tile::water->id))->setIcon(4, 2)->setMaxStackSize(1)->setCategory(ItemCategory::Tools)->setDescriptionId("bucketWater")->setCraftingRemainingItem(Item::bucket_empty);
+	Item::bucket_lava = (new CompatBucketItem(71, Tile::lava->id))->setIcon(5, 2)->setMaxStackSize(1)->setCategory(ItemCategory::Tools)->setDescriptionId("bucketLava")->setCraftingRemainingItem(Item::bucket_empty);
+	Item::minecart = (new CompatMinecartItem(72))->setIcon(10, 8)->setCategory(ItemCategory::Mechanisms)->setDescriptionId("minecart");
+	Item::saddle = (new Item(73))->setIcon(9, 11)->setCategory(ItemCategory::Mechanisms)->setDescriptionId("saddle");
+	Item::redStone = (new Item(75))->setIcon(4, 11)->setCategory(ItemCategory::Mechanisms)->setDescriptionId("redstone");
+	Item::milk = (new CompatBucketItem(79, -1))->setIcon(3, 2)->setMaxStackSize(1)->setCategory(ItemCategory::FoodArmor)->setDescriptionId("milk")->setCraftingRemainingItem(Item::bucket_empty);
+	Item::minecart_chest = (new Item(86))->setIcon(7, 8)->setCategory(ItemCategory::Mechanisms)->setDescriptionId("minecartChest");
+	Item::minecart_furnace = (new Item(87))->setIcon(8, 8)->setCategory(ItemCategory::Mechanisms)->setDescriptionId("minecartFurnace");
+	Item::cake = (new TilePlanterItem(98, Tile::cakeCompat))->setIcon(6, 2)->setMaxStackSize(1)->setCategory(ItemCategory::FoodArmor)->setDescriptionId("cake");
+	Item::pumpkinSeedsCompat = (new SeedItem(105, Tile::pumpkinStemCompat->id, Tile::farmland->id))->setIcon(11, 11)->setCategory(ItemCategory::FoodArmor)->setDescriptionId("seeds_pumpkin");
+	Item::carrotCompat = (new SeedItem(135, Tile::carrotsCompat->id, Tile::farmland->id))->setIcon(7, 2)->setCategory(ItemCategory::FoodArmor)->setDescriptionId("carrot");
+	Item::potatoCompat = (new SeedItem(136, Tile::potatoesCompat->id, Tile::farmland->id))->setIcon(12, 9)->setCategory(ItemCategory::FoodArmor)->setDescriptionId("potato");
+	Item::bakedPotatoCompat = (new Item(137))->setIcon(13, 9)->setCategory(ItemCategory::FoodArmor)->setDescriptionId("bakedPotato");
+	Item::pumpkinPieCompat = (new Item(144))->setIcon(4, 10)->setCategory(ItemCategory::FoodArmor)->setDescriptionId("pumpkinPie");
+	Item::spawnEggCompat = (new Item(127))->setIcon(13, 12)->setCategory(ItemCategory::Decorations)->setDescriptionId("spawnEgg");
+	Item::beetrootCompat = (new Item(201))->setIcon(10, 2)->setCategory(ItemCategory::FoodArmor)->setDescriptionId("beetroot");
+	Item::beetrootSeedsCompat = (new SeedItem(202, Tile::beetrootCompat->id, Tile::farmland->id))->setIcon(13, 11)->setCategory(ItemCategory::FoodArmor)->setDescriptionId("seedsBeetroot");
+	Item::beetrootSoupCompat = (new Item(203))->setIcon(13, 8)->setCategory(ItemCategory::FoodArmor)->setDescriptionId("beetrootSoup");
 
 	//Item::record_01 = (new RecordingItem(2000, "13"))->setIcon(0, 15)->setCategory(ItemCategory::Decorations)->setDescriptionId("record");
 	//Item::record_02 = (new RecordingItem(2001, "cat"))->setIcon(1, 15)->setCategory(ItemCategory::Decorations)->setDescriptionId("record");

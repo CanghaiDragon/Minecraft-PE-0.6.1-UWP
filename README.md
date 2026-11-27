@@ -28,8 +28,6 @@ This project is intended for educational and preservation purposes only. Feel fr
 
 <h2 align="center">Project status</h2>
 
-<div align="center">
-
 | Target        | Status                                               | Build system  |
 | ------------- | ---------------------------------------------------- | ------------- |
 | Windows x86   | Supported                                            | Visual Studio |
@@ -40,24 +38,6 @@ This project is intended for educational and preservation purposes only. Feel fr
 </div>
 
 This project focuses on UWP. Other platforms (Android, iOS) are not intended targets.
-
----
-
-<h2 align="center">Upstream projects and references</h2>
-
-This UWP project was transplanted from my win32 version [Minecraft-PE-0.6.1-Windows-Universal](https://github.com/CanghaiDragon/Minecraft-PE-0.6.1-Windows-Universal). The main features are the same.
-
-In early 2026, the source code of Minecraft Pocket Edition v0.6.1 was leaked on the Internet. You can find it at [Minecraft PE Source Code](https://archive.org/details/Minecraftpesorucecode). This is the reason why several revisions of MCPE0.6.1 appear on GitHub and other sites. This project is also a revision of the original source code. **None** of the revisions is directly authorized by Mojang.
-
-This project originated from [programmer1o1/MinecraftPE-v0.6.1](https://github.com/programmer1o1/MinecraftPE-v0.6.1), referred to below as **Project B**. Project B provides the main modernized source base and multi-platform porting work.
-
-Some Java Beta visual ideas and related implementation details were studied from [minecraft-pe-0.6.1-on-all](https://github.com/Minecraft-PE-0-6-1/minecraft-pe-0.6.1-on-all), referred to below as **Project A**.
-
-The Sky world and several visual behaviors were implemented with reference to Minecraft Java Edition Beta 1.7.3 source code using Mod Coder Pack 4.3. Alpha world is referenced to Java Edition Alpha 1.1.2_01 using Mod Coder Pack 1.6. The Indev and Infdev world generators are based on references from [RetroMCP-Java](https://github.com/MCPHackers/RetroMCP-Java). These references do not imply official affiliation or authorization by Mojang.
-
-A few images come from [Minecraft Wiki](https://minecraft.wiki/). Appx resources come from the official [Windows Phone 8.1 version of Minecraft PE](https://microsoft.com/p/-/9wzdncrdzsbb).
-
-The main work of this project is assisted with the help of Codex.
 
 ---
 
@@ -122,13 +102,19 @@ Details of the world types are shown below.
 - Welcome screen for choosing language, input mode, performance setting and GUI scale.
 - Adjustable GUI and D-pad sizes.
 - Adaptive layouts for various screen resolutions, from Windows Phone screen to Desktop window.
-- Multilingual framework with Simplified Chinese already supported.
+- Multilingual framework with Simplified Chinese already supported. (If you want your mother language to be supported, feel free to contact me via issue/discussion)
 
 ---
 
 <h2 align="center">World types</h2>
 
-**IMPORTANT**: Infinite, Sky and Alpha world have a level saving format different from both the original MCPE 0.6.1 and later MCPE infinite versions like 0.9. Please use "Convert to PE 0.9+" in world edit page to convert these saves. For Old and Indev worlds, I still recommend using this conversion function, as it performs better than original PE's. I **STRONGLY RECOMMEND** first open the converted world in a middle version (1.18 is tested and works well), as directly open it in Bedrock 1.26.x may cause compatibility issues. Meanwhile, classic finite worlds retain the original MCPE 0.6.1 save format. saves from 0.1-0.8 original PE are supported.
+### Compatibility
+
+Infinite, Sky and Alpha world have a level saving format different from both the original MCPE 0.6.1 and later MCPE infinite versions like 0.9. If you want to open them in later MCPE/BE versions, please use "Convert to PE 0.9+" in world edit page to convert these saves. For Old and Indev worlds, I still recommend using this conversion function, as it performs better than original PE's. I **STRONGLY RECOMMEND** first open the converted world in a middle version (1.18 is tested and works well), as directly open it in Bedrock 1.26.x may cause compatibility issues.
+
+This project remains based on MCPE 0.6.1, Saves from origin PE 0.1-0.6 can all be opened normally. Meanwhile, selected features from MCPE 0.7.x and 0.8.x are implemented primarily since v1.2.1, which means new blocks in PE 0.7-0.8 should also be supported.
+
+It should be noted that selected features from MCPE 0.7.x and 0.8.x are implemented primarily to improve compatibility with older multiplayer servers and imported worlds, rather than to expand the original single-player gameplay. This is a basic compatibility layer, **not a complete implementation of MCPE 0.8.x**. Some features, such as animal breeding, are intentionally not implemented. **Missing features from later versions should not be considered bugs.** Reporting or requesting such features does not imply that they will be implemented in future updates. Full MCPE 0.8.x compatibility is not a development goal of this project.
 
 ### Old (finite) world
 
@@ -146,7 +132,7 @@ The Sky world is a floating-island world type based on the unused Sky dimension 
 
 - Day-night cycle is kept in survival mode.
 
-- The lowest block of the floating island is around Y = 18, so in Java Edition, diamonds cannot spawn in Sky. Here, ores generate in the height range where blocks generate, so diamonds can be found. The gold ore generation rate is also increased, easier for making nether reactor.
+- The lowest block of the floating island is around Y = 18, so in Java Edition, diamonds cannot spawn in Sky. Here, ores generate in the height range where blocks generate, so diamonds can be found.
 
 - To balance the difficulty, mobs only spawn when the light level is low enough and there is at least one block above along the Y axis, which means mobs do not spawn at night in open areas.
   
@@ -318,6 +304,26 @@ Below are the default keyboard controls for keyboard input. They can be customiz
 <h2 align="center">Known limitations</h2>
 
 - Block-destruction vibration is currently not working on the tested Lumia 640.
+
+---
+
+<h2 align="center">Upstream projects and references</h2>
+
+This UWP project was transplanted from my win32 version [Minecraft-PE-0.6.1-Windows-Universal](https://github.com/CanghaiDragon/Minecraft-PE-0.6.1-Windows-Universal). The main features are the same.
+
+In early 2026, the source code of Minecraft Pocket Edition v0.6.1 was leaked on the Internet. You can find it at [Minecraft PE Source Code](https://archive.org/details/Minecraftpesorucecode). This is the reason why several revisions of MCPE0.6.1 appear on GitHub and other sites. This project is also a revision of the original source code. **None** of the revisions is directly authorized by Mojang.
+
+This project originally forked from [programmer1o1/MinecraftPE-v0.6.1](https://github.com/programmer1o1/MinecraftPE-v0.6.1), also referred as **Project B**. Project B provides the main modernized source base and multi-platform porting work.
+
+Some Java Beta visual ideas and related implementation details were studied from [minecraft-pe-0.6.1-on-all](https://github.com/Minecraft-PE-0-6-1/minecraft-pe-0.6.1-on-all), also referred as **Project A**.
+
+The Sky world and several visual behaviors were implemented with reference to Minecraft Java Edition Beta 1.7.3 source code using Mod Coder Pack 4.3. Alpha world is referenced to Java Edition Alpha 1.1.2_01 using Mod Coder Pack 1.6. The Indev and Infdev world generators are based on references from [RetroMCP-Java](https://github.com/MCPHackers/RetroMCP-Java). These references do not imply official affiliation or authorization by Mojang.
+
+Compatibility for PE 0.8 is referred to the decompiled code repository [MCPE-0.8.1](https://github.com/oldminecraftcommunity/MCPE-0.8.1).
+
+A few images come from [Minecraft Wiki](https://minecraft.wiki/). Appx resources come from the official [Windows Phone 8.1 version of Minecraft PE](https://microsoft.com/p/-/9wzdncrdzsbb).
+
+The main work of this project is assisted with the help of Codex.
 
 ---
 

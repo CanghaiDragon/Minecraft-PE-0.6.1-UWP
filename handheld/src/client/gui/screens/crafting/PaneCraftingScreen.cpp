@@ -17,6 +17,8 @@
 #include "../../../../world/level/Level.h"
 #include "../../../../world/item/DyePowderItem.h"
 #include "../../../../world/item/crafting/Recipe.h"
+#include "../../../../network/RakNetInstance.h"
+#include "../../../../network/ServerSideNetworkHandler.h"
 
 static NinePatchLayer* guiPaneFrame = NULL;
 
@@ -26,6 +28,55 @@ const int   descFrameWidth = 100;
 const int rgbActive = 0xfff0f0f0;
 const int rgbInactive = 0xc0635558;
 const int rgbInactiveShadow = 0xc0aaaaaa;
+
+static bool isBeta08Recipe(Recipe* recipe) {
+	if (!recipe) return false;
+	const ItemInstance result = recipe->getResultItem();
+	const int id = result.id;
+	const int aux = result.getAuxValue();
+	const std::vector<ItemInstance> ingredients = recipe->getItemPack().getItemInstances();
+	for (unsigned int i = 0; i < ingredients.size(); ++i) {
+		if (ingredients[i].id == Tile::hayBlockCompat->id
+		 || ingredients[i].id == Tile::coalBlockCompat->id)
+			return true;
+	}
+
+	if (id == Tile::wood->id && (aux == 1 || aux == 2)) return true;
+	if (id == Tile::stoneSlabHalf->id && aux >= 4 && aux <= 6) return true;
+	if (id == Tile::woodSlabCompat->id && (aux == 1 || aux == 2)) return true;
+	return id == Tile::cobbleWallCompat->id
+		|| id == Tile::hayBlockCompat->id
+		|| id == Tile::coalBlockCompat->id
+		|| id == Tile::stairsSpruceCompat->id
+		|| id == Tile::stairsBirchCompat->id
+		|| id == Tile::railCompat->id
+		|| id == Tile::goldenRailCompat->id
+		|| id == Tile::litPumpkinCompat->id
+		|| id == Tile::ironBarsCompat->id
+		|| id == Tile::carpetCompat->id
+		|| id == Tile::melon->id
+		|| id == Item::seeds_melon->id
+		|| id == Item::cake->id
+		|| id == Item::minecart->id
+		|| id == Item::bucket_empty->id;
+}
+
+static bool isMultiplayerWorld(Minecraft* minecraft) {
+	if (!minecraft || !minecraft->level || !minecraft->isOnline())
+		return false;
+
+	// A remote client gets a client-side level. A local host also runs an
+	// embedded server in ordinary singleplayer, so only count it as multiplayer
+	// when another player joined or the host explicitly opened the server.
+	if (minecraft->isOnlineClient() || minecraft->level->players.size() > 1)
+		return true;
+
+	if (!minecraft->raknetInstance || !minecraft->raknetInstance->isServer())
+		return false;
+	ServerSideNetworkHandler* server =
+		static_cast<ServerSideNetworkHandler*>(minecraft->netCallback);
+	return server->allowsIncomingConnections();
+}
 
 class CategoryButton: public ImageButton {
 	typedef ImageButton super;
@@ -67,10 +118,11 @@ PaneCraftingScreen::PaneCraftingScreen(int craftingSize)
 	guiBackground(NULL),
 	guiSlotCategory(NULL),
 	guiSlotCategorySelected(NULL),
-	numCategories(4)
+	numCategories(5),
+	showBeta08Recipes(false)
 {
 	for (int i = 0; i < numCategories; ++i) {
-		categoryBitmasks.push_back(1 << i);
+		categoryBitmasks.push_back(i < 4 ? (1 << i) : 0);
 		categoryIcons.push_back(i);
 	}
 }
@@ -116,6 +168,18 @@ void PaneCraftingScreen::init() {
 	guiSlotCategory = builder.createSymmetrical(IntRectangle(8, 32, 8, 8), 2, 2);
 	guiSlotCategorySelected = builder.createSymmetrical(IntRectangle(0, 32, 8, 8), 2, 2);
 
+	if (numCategories > 1) {
+		showBeta08Recipes = minecraft->options.pe08RecipesEnabled
+			&& isMultiplayerWorld(minecraft);
+		numCategories = showBeta08Recipes ? 5 : 4;
+		categoryBitmasks.clear();
+		categoryIcons.clear();
+		for (int i = 0; i < numCategories; ++i) {
+			categoryBitmasks.push_back(i < 4 ? (1 << i) : 0);
+			categoryIcons.push_back(i);
+		}
+	}
+
 	initCategories();
 }
 
@@ -150,7 +214,9 @@ void PaneCraftingScreen::initCategories() {
 
 void PaneCraftingScreen::setupPositions() {
 	// Left  - Categories
-	const int buttonHeight = (height - 16) / (Mth::Max(numCategories, 4));
+	const int originalButtonHeight = (height - 16) / 4;
+	const int buttonHeight = Mth::Max(1,
+		showBeta08Recipes ? originalButtonHeight / 2 : originalButtonHeight);
 	for (unsigned c = 0; c < _categoryButtons.size(); ++c) {
 		ImageButton* button = _categoryButtons[c];
 		button->x = (int)BorderPixels;
@@ -158,7 +224,7 @@ void PaneCraftingScreen::setupPositions() {
 		button->width = (int)buttonHeight;
 		button->height = (int)buttonHeight;
 
-		int icon = categoryIcons[c];
+		int icon = c < 4 ? categoryIcons[c] : 0;
 		ImageDef def;
 		def.x = 0;
 		def.width = def.height = (float)buttonHeight;
@@ -218,6 +284,15 @@ void PaneCraftingScreen::render(int xm, int ym, float a) {
 
 	// Buttons (Left side + crafting)
 	super::render(xm, ym, a);
+	if (_categoryButtons.size() > 4) {
+		ImageButton* button = _categoryButtons[4];
+		ItemInstance icon(Tile::workBench->id, 1, 0);
+		const float iconSize = (float)button->width * 0.72f;
+		const float iconOffset = ((float)button->width - iconSize) * 0.5f;
+		ItemRenderer::renderGuiItem(NULL, minecraft->textures, &icon,
+			(float)button->x + iconOffset, (float)button->y + iconOffset,
+			iconSize, iconSize, false);
+	}
 
 	// Mid
 	r.start();
@@ -242,7 +317,8 @@ void PaneCraftingScreen::render(int xm, int ym, float a) {
 			CItem::ReqItem& req = currentItem->neededItems[i];
 			reqItem = req.item;
 			if (reqItem.getAuxValue() == -1) reqItem.setAuxValue(0);
-			ItemRenderer::renderGuiItem(NULL, minecraft->textures, &reqItem, xx, yy, 16, 16, true);
+			ItemRenderer::renderGuiItem(NULL, minecraft->textures, &reqItem, xx, yy,
+				16, 16, true, ItemRenderer::PreviewCompatBlockModel);
 		}
 		t.endOverrideAndDraw();
 
@@ -390,6 +466,9 @@ void PaneCraftingScreen::addItem( Recipe* recipe )
 {
 	if (recipe == NULL)
 		return;
+	const bool beta08Recipe = isBeta08Recipe(recipe);
+	if (beta08Recipe && !showBeta08Recipes)
+		return;
 	ItemInstance instance = recipe->getResultItem();
 	Item* item = instance.getItem();
 	// A recipe can outlive an optional item registration during startup.  Do
@@ -403,6 +482,10 @@ void PaneCraftingScreen::addItem( Recipe* recipe )
 	if (item->id == Item::dye_powder->id)
 		ci->sortText = "ZDye " + ci->text;
 	_items.push_back(ci);
+	if (_categories.size() > 4 && beta08Recipe) {
+		_categories[4].push_back(ci);
+		return;
+	}
 
 	if (item->category < 0)
 		return;
@@ -426,7 +509,9 @@ void PaneCraftingScreen::onItemSelected(int buttonIndex, CItem* item) {
 	if (buttonIndex < 0 || buttonIndex >= (int)_categories.size() || item == NULL)
 		return;
 	currentItem = item;
-	currentItemDesc = I18n::getDescriptionString(currentItem->item);
+	currentItemDesc = buttonIndex == 4
+		? I18n::get("crafting.debugRecipes.description")
+		: I18n::getDescriptionString(currentItem->item);
 
 	if (buttonIndex != currentCategory) {
 		// Clear item buttons for this category

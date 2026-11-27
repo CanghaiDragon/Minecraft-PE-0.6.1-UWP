@@ -201,6 +201,18 @@ public:
 	static Item* netherbrick;
 	static Item* netherQuartz;
 
+	// Legacy Pocket Edition 0.8 item registrations. These are inert item
+	// placeholders used to preserve and display saved inventory entries.
+	static Item* pumpkinSeedsCompat;
+	static Item* carrotCompat;
+	static Item* potatoCompat;
+	static Item* bakedPotatoCompat;
+	static Item* pumpkinPieCompat;
+	static Item* beetrootCompat;
+	static Item* beetrootSeedsCompat;
+	static Item* beetrootSoupCompat;
+	static Item* spawnEggCompat;
+
     static Item* record_01;
     static Item* record_02;
 
@@ -208,6 +220,16 @@ public:
 
 	static void initItems();
 	static void teardownItems();
+	static bool usesPE08ItemAtlas(int itemId) {
+		switch (itemId) {
+		case 325: case 326: case 327: case 328: case 329: case 331: case 335:
+		case 342: case 343: case 354: case 361: case 383:
+		case 391: case 392: case 393: case 400: case 457: case 458: case 459:
+			return true;
+		default:
+			return false;
+		}
+	}
 
     Item(int id)
 	:	id(256 + id),
@@ -257,6 +279,11 @@ public:
     virtual bool useOn(ItemInstance* itemInstance, Player* player, Level* level, int x, int y, int z, int face, float clickX, float clickY, float clickZ) {
         return false;
     }
+
+	// Whether player targeting should include liquid source blocks for this item.
+	virtual bool isLiquidClipItem(int) const {
+		return false;
+	}
 
 	virtual int getUseDuration(ItemInstance* itemInstance) {
 		return 0;

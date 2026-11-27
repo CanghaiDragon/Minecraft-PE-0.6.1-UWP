@@ -60,6 +60,8 @@ int StoneSlabTile::getTexture(int face, int data) {
 		return Tile::redBrick->tex;
 	} else if (data == SMOOTHBRICK_SLAB) {
 		return Tile::stoneBrickSmooth->tex;
+	} else if (data == QUARTZ_SLAB && Tile::quartzBlock) {
+		return Tile::quartzBlock->getTexture(face, 0);
 	}
     return 6;
 }
@@ -122,7 +124,8 @@ void StoneSlabTile::addAABBs( Level* level, int x, int y, int z, const AABB* box
 }
 
 static bool isHalfSlab(int tileId) {
-	return tileId == Tile::stoneSlabHalf->id;// || tileId == Tile::woodSlabHalf->id;
+	return tileId == Tile::stoneSlabHalf->id ||
+		(Tile::woodSlabCompat != NULL && tileId == Tile::woodSlabCompat->id);
 }
 
 bool StoneSlabTile::shouldRenderFace(LevelSource* level, int x, int y, int z, int face) {

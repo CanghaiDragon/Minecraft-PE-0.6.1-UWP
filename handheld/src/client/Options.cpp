@@ -26,6 +26,7 @@ void Options::initDefaultValues(DefaultProfile profile) {
 	renderDebug = false;
 	debugScreenEnabled = false;
 	achievementsEnabled = false;
+	pe08RecipesEnabled = false;
 	isFlying = false;
 	smoothCamera = true;
 	fixedCamera = false;
@@ -262,6 +263,7 @@ const Options::Option
 	Options::Option::DEBUG_SCREEN         (28, "options.debugScreen", false, true),
 	Options::Option::ACHIEVEMENTS         (32, "options.achievements", false, true),
 	Options::Option::JAVA_UI              (29, "options.javaUi", false, true),
+	Options::Option::PE08_RECIPES          (33, "options.pe08Recipes", false, true),
 	Options::Option::PIXELS_PER_MILLIMETER(19, "options.pixelspermilimeter", true, false),
 	Options::Option::FOV                  (20, "options.fov",               true, false);
 
@@ -502,6 +504,9 @@ void Options::update()
 		if (key == OptionStrings::Extra_Achievements) {
 			readBool(value, achievementsEnabled);
 		}
+		if (key == OptionStrings::Extra_PE08Recipes) {
+			readBool(value, pe08RecipesEnabled);
+		}
 		if (key == OptionStrings::Extra_JavaUI) {
 			readBool(value, javaUi);
 		}
@@ -645,6 +650,7 @@ void Options::save()
 	addOptionToSaveOutput(stringVec, OptionStrings::Touch_Sneak, touchSneak);
 	addOptionToSaveOutput(stringVec, OptionStrings::Extra_DebugScreen, debugScreenEnabled);
 	addOptionToSaveOutput(stringVec, OptionStrings::Extra_Achievements, achievementsEnabled);
+	addOptionToSaveOutput(stringVec, OptionStrings::Extra_PE08Recipes, pe08RecipesEnabled);
 	addOptionToSaveOutput(stringVec, OptionStrings::Extra_JavaUI, javaUi);
 
 	// Input

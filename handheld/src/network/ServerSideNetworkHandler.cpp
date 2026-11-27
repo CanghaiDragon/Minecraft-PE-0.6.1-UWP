@@ -262,7 +262,8 @@ void ServerSideNetworkHandler::handle(const RakNet::RakNetGUID& source, LoginPac
             newPlayer->x, newPlayer->y - newPlayer->heightOffset, newPlayer->z,
             level->getLevelData()->getWorldType(),
             level->getLevelData()->getIndevType(),
-            minecraft->isExtendedMultiplayer()
+            minecraft->isExtendedMultiplayer(),
+            level->getLevelData()->getAlphaWinterMode()
         ).write(&bitStream);
 
         rakPeer->Send(&bitStream, HIGH_PRIORITY, RELIABLE_ORDERED, 0, source, false);

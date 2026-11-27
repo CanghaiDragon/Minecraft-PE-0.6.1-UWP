@@ -127,7 +127,9 @@ void InventoryPane::renderBatch( std::vector<GridItem>& items, float alpha )
 			t.noColor();
 			float xx = Gui::floorAlignToScreenPixel(item.xf + BorderPixels + 4);
 			float yy = Gui::floorAlignToScreenPixel(item.yf + BorderPixels + 4);
-			ItemRenderer::renderGuiItem(NULL, mc->textures, citem, xx, yy, 16, 16, false);
+			const ItemRenderer::GuiItemPreview preview = mc->isCreativeMode()
+				? ItemRenderer::PreviewCompatBlockModel : ItemRenderer::DefaultIcon;
+			ItemRenderer::renderGuiItem(NULL, mc->textures, citem, xx, yy, 16, 16, false, preview);
 
 			if (j == markerIndex && markerShare >= 0)
 				marked = &item, mxx = xx, myy = yy;

@@ -8,6 +8,7 @@
 #include "projectile/Snowball.h"
 #include "Painting.h"
 #include "item/FallingTile.h"
+#include "Minecart.h"
 
 Entity* EntityFactory::CreateEntity( int typeId, Level* level )
 {
@@ -19,6 +20,7 @@ Entity* EntityFactory::CreateEntity( int typeId, Level* level )
         case EntityTypes::IdThrownEgg:  return new ThrownEgg(level);
         case EntityTypes::IdSnowball:   return new Snowball(level);
 		case EntityTypes::IdPainting:   return new Painting(level);
+		case EntityTypes::IdMinecart:   return new Minecart(level);
 	}
 	return NULL;
 }

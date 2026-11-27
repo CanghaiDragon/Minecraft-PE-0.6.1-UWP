@@ -74,7 +74,7 @@ void Dimension::init()
 	else if (level->getLevelData()->getWorldType() == WorldType::Sky)
 		biomeSource = new FixedBiomeSource(Biome::sky, 0.5f, 0.0f);
 	else if (level->getLevelData()->getWorldType() == WorldType::Alpha) {
-		const bool winter = WorldType::isAlphaWinter(level->getSeed());
+		const bool winter = level->getLevelData()->getAlphaWinterMode();
 		biomeSource = new FixedBiomeSource(
 			winter ? Biome::winter : Biome::alpha, 0.84f, 0.70f);
 	}

@@ -243,9 +243,12 @@ void ChestTile::onRemove( Level* level, int x, int y, int z )
 	if (!level->isClientSide) {
 		TileEntity* te = level->getTileEntity(x, y, z);
 		if (te != NULL && te->type == TileEntityType::Chest) {
-			Container* container = (ChestTileEntity*) te;
-			for (int i = 0; i < container->getContainerSize(); i++) {
-				ItemInstance* item = container->getItem(i);
+			ChestTileEntity* chest = (ChestTileEntity*)te;
+			// Drop only this tile entity's saved 27 slots. A paired chest is
+			// exposed as 54 slots while open, but the neighboring half owns its
+			// own inventory and will be handled separately if it is removed.
+			for (int i = 0; i < chest->getLocalContainerSize(); i++) {
+				ItemInstance* item = chest->getLocalItem(i);
 				if (item != NULL) {
 					float xo = random.nextFloat() * 0.8f + 0.1f;
 					float yo = random.nextFloat() * 0.8f + 0.1f;
@@ -280,7 +283,10 @@ bool ChestTile::use( Level* level, int x, int y, int z, Player* player )
 
 	ChestTileEntity* chest = (ChestTileEntity*) te;
 
-	if (level->isSolidBlockingTile(x, y + 1, z)) return true;
+	ChestTileEntity* partner = chest->getLargeChestPartner();
+	if (level->isSolidBlockingTile(x, y + 1, z) ||
+		(partner != NULL && level->isSolidBlockingTile(partner->x, partner->y + 1, partner->z)))
+		return true;
 
 	// @fullchest
 	//if (level->getTile(x - 1, y, z) == id && (level->isSolidBlockingTile(x - 1, y + 1, z))) return true;

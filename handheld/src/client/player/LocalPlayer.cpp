@@ -240,6 +240,16 @@ void LocalPlayer::aiStep() {
     bool screenCovering = minecraft->screen && !minecraft->screen->passEvents;
 	if (!screenCovering)
 		input->tick(this);
+	if (ridingAt) {
+		if (ridingAt->removed || input->sneaking) {
+			ride(NULL);
+		} else {
+			ridingAt->positionRider(this);
+			ridingAt->setRidingInput(input->xa, input->ya);
+			jumping = false;
+			return;
+		}
+	}
 
 	// Sprint is a creative-mode convenience only.  KeyboardInput maps the
 	// configured forward key (W by default) to positive input->ya on every

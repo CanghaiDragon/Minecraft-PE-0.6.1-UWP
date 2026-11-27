@@ -28,8 +28,21 @@
 #include "Textures.h"
 #include "../gui/components/ImageButton.h"
 #include "Tesselator.h"
+#include "../../world/item/Item.h"
+#include "../../world/item/ItemInstance.h"
+#include "../../world/entity/player/Inventory.h"
 
 static int _shTicks = -1;
+
+static bool shouldClipLiquidsForHeldItem(Minecraft* minecraft) {
+	if (minecraft == NULL || minecraft->player == NULL || minecraft->player->inventory == NULL)
+		return false;
+	ItemInstance* heldItem = minecraft->player->inventory->getSelected();
+	if (heldItem == NULL)
+		return false;
+	Item* item = heldItem->getItem();
+	return item != NULL && item->isLiquidClipItem(heldItem->getAuxValue());
+}
 
 GameRenderer::GameRenderer( Minecraft* mc )
 :	mc(mc),
@@ -829,7 +842,8 @@ bool GameRenderer::updateFreeformPickDirection(float a, Vec3& outDir) {
     //sw.stop();
     //sw.printEvery(30, "unproject ");
 
-    const HitResult& hit = mc->hitResult = mc->level->clip(p0, p1, false);
+    const HitResult& hit = mc->hitResult = mc->level->clip(
+		p0, p1, shouldClipLiquidsForHeldItem(mc));
 
     // If in 3rd person view - verify that the hit target is within range
     if (!firstPerson && hit.isHit()) {
@@ -857,7 +871,8 @@ void GameRenderer::pick(float a) {
 		if (mc->options.isThirdPersonFront())
 			viewDirection = viewDirection * -1.0f;
 		Vec3 from = mc->cameraTargetPlayer->getPos(a);
-		mc->hitResult = mc->level->clip(from, from + viewDirection * range);
+		mc->hitResult = mc->level->clip(from, from + viewDirection * range,
+			shouldClipLiquidsForHeldItem(mc));
 		pickDirection = viewDirection;
     }
 

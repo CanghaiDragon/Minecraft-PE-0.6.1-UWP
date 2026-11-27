@@ -1,5 +1,6 @@
 #include "TileInclude.h"
 #include "../Level.h"
+#include "../../Facing.h"
 #include "../../entity/player/Player.h"
 #include "../../entity/item/ItemEntity.h"
 #include "../../item/Item.h"
@@ -22,6 +23,291 @@
 #include "../../item/StoneSlabTileItem.h"
 #include "../../item/SaplingTileItem.h"
 #include "../../item/ItemCategory.h"
+#include "../../item/TilePlanterItem.h"
+
+// The 0.8 crops share their growth and farmland rules. Their atlas has four
+// visible stages, while the saved metadata still uses the 0-7 growth range.
+class LegacyCropVisualTile : public CropTile {
+public:
+	LegacyCropVisualTile(int id, int tex, int resultItemId, int seedItemId)
+		: CropTile(id, tex), baseTexture(tex), resultItemId(resultItemId), seedItemId(seedItemId) {}
+	int getTexture(int face, int data) {
+		int stage = (data & 7) >> 1;
+		return baseTexture + stage;
+	}
+	int getTexture(LevelSource* level, int x, int y, int z, int face) {
+		return getTexture(face, level->getData(x, y, z));
+	}
+	int getResource(int data, Random* random) {
+		return (data == 7) ? resultItemId : -1;
+	}
+	int getResourceCount(Random* random) { return 1; }
+	void spawnResources(Level* level, int x, int y, int z, int data, float odds) {
+		Tile::spawnResources(level, x, y, z, data, odds);
+		if (level->isClientSide || seedItemId <= 0 || Item::items[seedItemId] == NULL) return;
+		for (int i = 0; i < 3; ++i) {
+			if (level->random.nextInt(15) > data) continue;
+			float offset = 0.15f;
+			float span = 0.7f;
+			ItemEntity* item = new ItemEntity(level,
+				x + level->random.nextFloat() * span + offset,
+				y + level->random.nextFloat() * span + offset,
+				z + level->random.nextFloat() * span + offset,
+				ItemInstance(Item::items[seedItemId]));
+			item->throwTime = 10;
+			level->addEntity(item);
+		}
+	}
+private:
+	int baseTexture;
+	int resultItemId;
+	int seedItemId;
+};
+
+class LegacyMetadataTile : public Tile {
+public:
+	LegacyMetadataTile(int id, int baseTex, const Material* material)
+		: Tile(id, baseTex, material), baseTexture(baseTex) {}
+	int getTexture(int face, int data) { return baseTexture + (data & 3); }
+protected:
+	int getSpawnResourcesAuxValue(int data) { return data & 3; }
+private:
+	int baseTexture;
+};
+
+class LegacyWoodSlabTile : public StoneSlabTile {
+public:
+	LegacyWoodSlabTile(int id, bool full) : StoneSlabTile(id, full) {}
+	int getTexture(int face, int data) { return 303 + (data & 3); }
+};
+
+class LegacyWoodStairTile : public StairTile {
+public:
+	LegacyWoodStairTile(int id, Tile* base, int tex) : StairTile(id, base), texture(tex) {}
+	int getTexture(int face, int data) { return texture; }
+	int getTexture(int face) { return texture; }
+	int getTexture(LevelSource* level, int x, int y, int z, int face) { return texture; }
+private:
+	int texture;
+};
+
+class LegacyCakeVisualTile : public Tile {
+public:
+	LegacyCakeVisualTile(int id) : Tile(id, 287, Material::cake) {
+		setShape(0.0625f, 0, 0.0625f, 0.9375f, 0.5f, 0.9375f);
+	}
+	int getTexture(int face, int data) {
+		if (face == Facing::UP) return 287;
+		if (face == Facing::DOWN) return 285;
+		return (face == Facing::NORTH && (data & 0x7) != 0) ? 286 : 288;
+	}
+	bool isSolidRender() { return false; }
+	bool isCubeShaped() { return false; }
+};
+
+class LegacyPumpkinVisualTile : public Tile {
+public:
+	LegacyPumpkinVisualTile(int id, bool lit) : Tile(id, lit ? 292 : 289, Material::wood), lit(lit) {}
+	bool mayPlace(Level* level, int x, int y, int z) {
+		int existing = level->getTile(x, y, z);
+		if (existing != 0 && !Tile::tiles[existing]->material->isReplaceable()) return false;
+		return level->isSolidBlockingTile(x, y - 1, z);
+	}
+	void setPlacedBy(Level* level, int x, int y, int z, Mob* by) {
+		if (by == NULL) return;
+		float facing = by->getYRot() * 4.0f / 360.0f + 2.5f;
+		int data = (int)facing;
+		if (facing < data) --data;
+		level->setData(x, y, z, data & 3);
+	}
+	int getTexture(int face, int data) {
+		// The 0.8 atlas stores the stemmed top, ribbed side, unlit face,
+		// and lit face in separate cells.
+		if (face == Facing::UP || face == Facing::DOWN) return 289;
+		// Both pumpkin variants have a directional face. The lit variant uses
+		// the brighter face cell; ordinary pumpkins use the unlit face cell.
+		// Legacy metadata order: 0=south, 1=west, 2=north, 3=east.
+		int front = Facing::SOUTH;
+		switch (data & 3) {
+		case 1: front = Facing::WEST; break;
+		case 2: front = Facing::NORTH; break;
+		case 3: front = Facing::EAST; break;
+		}
+		if (face == front) return lit ? 292 : 291;
+		return 290;
+	}
+	int getTexture(LevelSource* level, int x, int y, int z, int face) {
+		return getTexture(face, level->getData(x, y, z));
+	}
+private:
+	bool lit;
+};
+
+class LegacyRailVisualTile : public Tile {
+public:
+	LegacyRailVisualTile(int id, bool powered) : Tile(id, powered ? 297 : 295, Material::decoration), powered(powered) {
+		setShape(0, 0, 0, 1, 0.0625f, 1);
+	}
+	int getRenderShape() { return SHAPE_RAIL; }
+	void updateShape(LevelSource* level, int x, int y, int z) {
+		int data = level->getData(x, y, z);
+		int path = powered ? (data & 0x7) : data;
+		setShape(0, 0, 0, 1, (path >= 2 && path <= 5) ? 0.625f : 0.125f, 1);
+	}
+	int getTexture(int face, int data) {
+		// In the 0.8 source, every golden rail supplies minecart acceleration;
+		// render it in the active state even when no redstone bit is stored.
+		if (powered) return 298;
+		// Normal rails use metadata 6-9 for the four curves. Unlike powered
+		// rails, those values are not a direction field plus a power bit.
+		return data >= 6 ? 296 : 295;
+	}
+	// Rails are only visual and must not collide with minecart bounding boxes.
+	// The default Tile::getAABB uses setShape's thin top surface; that overlaps a
+	// cart seated on the rail and Entity::move then clears its horizontal motion.
+	AABB* getAABB(Level*, int, int, int) { return NULL; }
+	bool isSolidRender() { return false; }
+	bool isCubeShaped() { return false; }
+	bool mayPlace(Level* level, int x, int y, int z) {
+		return level->isSolidBlockingTile(x, y - 1, z);
+	}
+	void onPlace(Level* level, int x, int y, int z) { updateNearbyRails(level, x, y, z); }
+	void neighborChanged(Level* level, int x, int y, int z, int) {
+		if (!level->isSolidBlockingTile(x, y - 1, z)) {
+			level->setTile(x, y, z, 0);
+			return;
+		}
+		updateNearbyRails(level, x, y, z);
+	}
+private:
+	static bool railAt(Level* level, int x, int y, int z) {
+		int id = level->getTile(x, y, z);
+		return (Tile::railCompat && id == Tile::railCompat->id) ||
+			(Tile::goldenRailCompat && id == Tile::goldenRailCompat->id);
+	}
+	static bool hasRail(Level* level, int x, int y, int z) {
+		return railAt(level, x, y, z) || railAt(level, x, y + 1, z) || railAt(level, x, y - 1, z);
+	}
+	static void updateNearbyRails(Level* level, int x, int y, int z) {
+		// A rail can meet a ramp diagonally in x/y or z/y. Refresh the same-level
+		// neighbors plus one block above and below so placement order does not
+		// leave the first rail in a straight, stale shape.
+		for (int dx = -1; dx <= 1; ++dx) for (int dz = -1; dz <= 1; ++dz) {
+			if (dx != 0 && dz != 0) continue;
+			for (int dy = -1; dy <= 1; ++dy) {
+				int rx = x + dx, ry = y + dy, rz = z + dz;
+				if (!railAt(level, rx, ry, rz)) continue;
+				int railId = level->getTile(rx, ry, rz);
+				updateRail(level, rx, ry, rz,
+					Tile::goldenRailCompat && railId == Tile::goldenRailCompat->id);
+			}
+		}
+	}
+	static void updateRail(Level* level, int x, int y, int z, bool poweredRail) {
+		bool n = hasRail(level, x, y, z - 1), s = hasRail(level, x, y, z + 1);
+		bool w = hasRail(level, x - 1, y, z), e = hasRail(level, x + 1, y, z);
+		int data = level->getData(x, y, z);
+		int shape = poweredRail ? (data & 0x8) : 0; // normal rails use 6-9 for curves
+		int path = 0;
+		// Match BaseRailTile::Rail::place in 0.8: unpowered rails choose a
+		// corner when exactly two adjacent directions connect.
+		if (!poweredRail && s && e && !n && !w) path = 6;
+		else if (!poweredRail && s && w && !n && !e) path = 7;
+		else if (!poweredRail && n && w && !s && !e) path = 8;
+		else if (!poweredRail && n && e && !s && !w) path = 9;
+		// The elevation check must precede straight-track selection. A ramp has
+		// an ordinary neighbor at its low end and a neighbor one block higher;
+		// treating both as a plain east/west or north/south line erased the slope.
+		else if (e && railAt(level, x + 1, y + 1, z)) path = 2;
+		else if (w && railAt(level, x - 1, y + 1, z)) path = 3;
+		else if (n && railAt(level, x, y + 1, z - 1)) path = 4;
+		else if (s && railAt(level, x, y + 1, z + 1)) path = 5;
+		else if (n && s && !w && !e) path = 0;
+		else if (w && e && !n && !s) path = 1;
+		else if (n || s) path = 0;
+		else if (w || e) path = 1;
+		int current = level->getData(x, y, z);
+		int value = path | shape;
+		if ((current & 0xF) != value && level->setDataNoUpdate(x, y, z, value))
+			level->setTileDirty(x, y, z);
+	}
+	bool powered;
+};
+
+class LegacyPumpkinStemVisualTile : public StemTile {
+public:
+	LegacyPumpkinStemVisualTile(int id, Tile* pumpkin) : StemTile(id, pumpkin) {}
+	void spawnResources(Level* level, int x, int y, int z, int data, float odds) {
+		Tile::spawnResources(level, x, y, z, data, odds);
+		if (level->isClientSide || Item::items[361] == NULL) return;
+		for (int i = 0; i < 3; ++i) {
+			if (level->random.nextInt(15) > data) continue;
+			popResource(level, x, y, z, ItemInstance(Item::items[361]));
+		}
+	}
+};
+
+class LegacyDeadBushTile : public TallGrass {
+public:
+	LegacyDeadBushTile(int id, int tex) : TallGrass(id, tex) {}
+	int getTexture(int face, int data) { return 316; }
+};
+
+class LegacyTallGrassTile : public TallGrass {
+public:
+	LegacyTallGrassTile(int id, int tex) : TallGrass(id, tex) {}
+	int getTexture(int face, int data) {
+		if (data == DEAD_SHRUB) return 316;
+		// PE 0.8 stores fern as metadata 2 (the Java-era class constant is 3).
+		if (data == 2 || data == FERN) return 319;
+		return 318;
+	}
+};
+
+class LegacyHayBlockTile : public Tile {
+public:
+	LegacyHayBlockTile(int id) : Tile(id, 265, Material::wood) {}
+	int getTexture(int face, int data) {
+		return (face == Facing::UP || face == Facing::DOWN) ? 265 : 266;
+	}
+	int getTexture(LevelSource* level, int x, int y, int z, int face) {
+		return getTexture(face, level->getData(x, y, z));
+	}
+};
+
+class LegacyCobbleWallTile : public FenceTile {
+public:
+	LegacyCobbleWallTile(int id) : FenceTile(id, 16, Material::stone) {}
+	int getTexture(int face, int data) {
+		return (data & 1) ? 36 : 16;
+	}
+	int getSpawnResourcesAuxValue(int data) { return data & 1; }
+};
+
+// Carpet metadata is already the wool color index in PE 0.8.
+class LegacyCarpetVisualTile : public Tile {
+public:
+	LegacyCarpetVisualTile(int id) : Tile(id, 268, Material::cloth) {
+		setShape(0, 0, 0, 1, 1.0f / 16.0f, 1);
+	}
+	int getTexture(int face, int data) { return 268 + (data & 15); }
+	bool isSolidRender() { return false; }
+	bool isCubeShaped() { return false; }
+protected:
+	int getSpawnResourcesAuxValue(int data) { return data & 15; }
+};
+
+class LegacyCarpetTileItem : public TileItem {
+public:
+	LegacyCarpetTileItem(int id) : TileItem(id) {
+		setMaxDamage(0);
+		setStackedByData(true);
+	}
+	int getIcon(int auxValue) {
+		return Tile::carpetCompat->getTexture(2, auxValue);
+	}
+	int getLevelDataForAuxValue(int auxValue) { return auxValue; }
+};
 
 const int Tile::RENDERLAYER_OPAQUE          = 0;
 const int Tile::RENDERLAYER_ALPHATEST       = 1;
@@ -82,6 +368,15 @@ Tile* Tile::clay        = NULL;
 Tile* Tile::farmland    = NULL;
 Tile* Tile::stoneSlab   = NULL;
 Tile* Tile::stoneSlabHalf=NULL;
+Tile* Tile::sponge = NULL;
+Tile* Tile::goldenRailCompat = NULL;
+Tile* Tile::deadBushCompat = NULL;
+Tile* Tile::unused_28 = NULL;
+Tile* Tile::unused_29 = NULL;
+Tile* Tile::unused_30 = NULL;
+Tile* Tile::unused_33 = NULL;
+Tile* Tile::unused_34 = NULL;
+Tile* Tile::unused_36 = NULL;
 Tile* Tile::cloth       = NULL;
 Tile* Tile::flower      = NULL;
 Tile* Tile::rose        = NULL;
@@ -158,6 +453,24 @@ Tile* Tile::stairs_netherBricks   = NULL;
 Tile* Tile::stairs_sandStone   = NULL;
 Tile* Tile::quartzBlock   = NULL;
 Tile* Tile::stairs_quartz   = NULL;
+Tile* Tile::beetrootCompat = NULL;
+Tile* Tile::pumpkinStemCompat = NULL;
+Tile* Tile::railCompat = NULL;
+Tile* Tile::pumpkinCompat = NULL;
+Tile* Tile::litPumpkinCompat = NULL;
+Tile* Tile::cakeCompat = NULL;
+Tile* Tile::woodSlabCompat = NULL;
+Tile* Tile::doubleWoodSlabCompat = NULL;
+Tile* Tile::stairsSpruceCompat = NULL;
+Tile* Tile::stairsBirchCompat = NULL;
+Tile* Tile::stairsJungleCompat = NULL;
+Tile* Tile::ironBarsCompat = NULL;
+Tile* Tile::cobbleWallCompat = NULL;
+Tile* Tile::carrotsCompat = NULL;
+Tile* Tile::potatoesCompat = NULL;
+Tile* Tile::hayBlockCompat = NULL;
+Tile* Tile::carpetCompat = NULL;
+Tile* Tile::coalBlockCompat = NULL;
 
 /*static*/
 void Tile::initTiles() {
@@ -165,7 +478,7 @@ void Tile::initTiles() {
 	grass       = (GrassTile*) (new GrassTile(2))->init()->setDestroyTime(0.6f)->setSoundType(SOUND_GRASS)->setCategory(ItemCategory::Structures)->setDescriptionId("grass");
 	dirt        = (new DirtTile(3, 2))->init()->setDestroyTime(0.5f)->setSoundType(SOUND_GRAVEL)->setCategory(ItemCategory::Structures)->setDescriptionId("dirt");
 	stoneBrick  = (new CobblestoneTile(4, 16))->init()->setDestroyTime(2.0f)->setExplodeable(10)->setSoundType(SOUND_STONE)->setCategory(ItemCategory::Structures)->setDescriptionId("stonebrick");
-	wood        = (new Tile(5, 4, Material::wood))->init()->setDestroyTime(2.0f)->setExplodeable(5)->setSoundType(SOUND_WOOD)->setCategory(ItemCategory::Structures)->setDescriptionId("wood");
+	wood        = (new LegacyMetadataTile(5, 303, Material::wood))->init()->setDestroyTime(2.0f)->setExplodeable(5)->setSoundType(SOUND_WOOD)->setCategory(ItemCategory::Structures)->setDescriptionId("wood");
 	sapling     = (new Sapling(6, 15))->init()->setDestroyTime(0.0f)->setSoundType(SOUND_GRASS)->setCategory(ItemCategory::Structures)->setDescriptionId("sapling");//->sendTileData();
 	unbreakable = (new Tile(7, 17, Material::stone))->init()->setDestroyTime(-1)->setExplodeable(6000000)->setSoundType(SOUND_STONE)->setCategory(ItemCategory::Structures)->setDescriptionId("bedrock");
 	water       = (new LiquidTileDynamic(8, Material::water))->init()->setDestroyTime(100.0f)->setLightBlock(3)->setCategory(ItemCategory::Structures)->setDescriptionId("water");
@@ -186,8 +499,10 @@ void Tile::initTiles() {
 	sandStone   = (new SandStoneTile(24, (const int*)&SANDSTONE_TEXTURES, SANDSTONE_TEXTURE_COUNT))->init()->setSoundType(SOUND_STONE)->setDestroyTime(0.8f)->setCategory(ItemCategory::Structures)->setDescriptionId("sandStone");
 	bed         = (new BedTile(26))->init()->setDestroyTime(0.2f)->setCategory(ItemCategory::Structures)->setDescriptionId("bed");
 	web	        = (new WebTile(30, 11))->init()->setLightBlock(1)->setDestroyTime(4.0f)->setCategory(ItemCategory::Decorations)->setDescriptionId("web");
-	tallgrass   = (new TallGrass(31, 2 * 16 + 7))->init()->setDestroyTime(0.0f)->setSoundType(SOUND_GRASS)->setCategory(ItemCategory::Decorations)->setDescriptionId("tallgrass");
+	tallgrass   = (new LegacyTallGrassTile(31, 315))->init()->setDestroyTime(0.0f)->setSoundType(SOUND_GRASS)->setCategory(ItemCategory::Decorations)->setDescriptionId("tallgrass");
+	deadBushCompat = (new LegacyDeadBushTile(32, 315))->init()->setDestroyTime(0.0f)->setSoundType(SOUND_GRASS)->setCategory(ItemCategory::Decorations)->setDescriptionId("deadbush");
 	cloth       = (new ClothTile(35))->init()->setDestroyTime(0.8f)->setSoundType(SOUND_CLOTH)->setCategory(ItemCategory::Structures)->setDescriptionId("cloth");
+	sponge      = (new Tile(19, 284, Material::sponge))->init()->setDestroyTime(0.6f)->setSoundType(SOUND_GRASS)->setCategory(ItemCategory::Structures)->setDescriptionId("sponge");
 
 	flower      = (new Bush(37, 13))->init()->setDestroyTime(0.0f)->setSoundType(SOUND_GRASS)->setCategory(ItemCategory::Decorations)->setDescriptionId("flower");
 	rose        = (new Bush(38, 12))->init()->setDestroyTime(0.0f)->setSoundType(SOUND_GRASS)->setCategory(ItemCategory::Decorations)->setDescriptionId("rose");
@@ -205,6 +520,13 @@ void Tile::initTiles() {
 	torch       = (new TorchTile(50, 5 * 16))->init()->setDestroyTime(0.0f)->setLightEmission(15 / 16.0f)->setSoundType(SOUND_WOOD)->setCategory(ItemCategory::Tools)->setDescriptionId("torch");
 
 	stairs_wood = (new StairTile(53, wood))->init()->setCategory(ItemCategory::Structures)->setDescriptionId("stairsWood");
+	// Pocket Edition 0.8 uses its own block IDs here (157/158); 125/126 are
+	// Java Edition IDs and do not match the IDs stored in PE world chunks.
+	doubleWoodSlabCompat = (new LegacyWoodSlabTile(157, true))->init()->setDestroyTime(2.0f)->setSoundType(SOUND_WOOD)->setCategory(ItemCategory::Structures)->setDescriptionId("woodSlab");
+	woodSlabCompat = (new LegacyWoodSlabTile(158, false))->init()->setDestroyTime(2.0f)->setSoundType(SOUND_WOOD)->setCategory(ItemCategory::Structures)->setDescriptionId("woodSlab");
+	stairsSpruceCompat = (new LegacyWoodStairTile(134, wood, 304))->init()->setCategory(ItemCategory::Structures)->setDescriptionId("stairsSpruce");
+	stairsBirchCompat = (new LegacyWoodStairTile(135, wood, 305))->init()->setCategory(ItemCategory::Structures)->setDescriptionId("stairsBirch");
+	stairsJungleCompat = (new LegacyWoodStairTile(136, wood, 306))->init()->setCategory(ItemCategory::Structures)->setDescriptionId("stairsJungle");
 	chest		= (new ChestTile(54))->init()->setCategory(ItemCategory::Structures)->setDestroyTime(2.5f)->setSoundType(SOUND_WOOD)->setDescriptionId("chest");//->sendTileData();
 
 	emeraldOre  = (new OreTile(56, 16 * 3 + 2))->init()->setDestroyTime(3.0f)->setExplodeable(5)->setSoundType(SOUND_STONE)->setCategory(ItemCategory::Decorations)->setDescriptionId("oreDiamond");
@@ -239,14 +561,20 @@ void Tile::initTiles() {
 	//hellSand = (new HellSandTile(88, 8 + 6 * 16, Material::sand))->init()->setDestroyTime(0.5f)->setSoundType(SOUND_SAND)->setDescriptionId("hellsand");
 
 	lightGem	= (new LightGemTile(89, 9 + 16 * 6, Material::glass))->init()->setDestroyTime(0.3f)->setCategory(ItemCategory::Structures)->setSoundType(SOUND_GLASS)->setLightEmission(1.0f)->setDescriptionId("lightgem");
+	pumpkinCompat = (new LegacyPumpkinVisualTile(86, false))->init()->setDestroyTime(1.0f)->setSoundType(SOUND_WOOD)->setCategory(ItemCategory::Structures)->setDescriptionId("pumpkin");
+	litPumpkinCompat = (new LegacyPumpkinVisualTile(91, true))->init()->setDestroyTime(1.0f)->setLightEmission(1.0f)->setSoundType(SOUND_WOOD)->setCategory(ItemCategory::Structures)->setDescriptionId("litpumpkin");
+	cakeCompat = (new LegacyCakeVisualTile(92))->init()->setDestroyTime(0.5f)->setSoundType(SOUND_CLOTH)->setCategory(ItemCategory::FoodArmor)->setDescriptionId("cake");
 	invisible_bedrock = (new InvisibleTile(95, 0, Material::stone))->init()->setDestroyTime(-1)->setExplodeable(6000000);//->setSoundType(SOUND_SILENT);
 	trapdoor = (new TrapDoorTile(96, Material::wood))->init()->setDestroyTime(3.0f)->setSoundType(SOUND_WOOD)->setCategory(ItemCategory::Structures)->setDescriptionId("trapdoor");//->sendTileData();
 
 	stoneBrickSmooth = (new MultiTextureTile(98, (const int*)&STONE_BRICK_TEXTURES, STONE_BRICK_TEXTURE_COUNT, Material::stone))->init()->setDestroyTime(1.5f)->setExplodeable(10)->setSoundType(SOUND_STONE)->setCategory(ItemCategory::Structures)->setDescriptionId("stonebricksmooth");
 
 	thinGlass = (new ThinFenceTile(102, 1 + 3 * 16, 4 + 9 * 16, Material::glass, false))->init()->setDestroyTime(0.3f)->setSoundType(SOUND_GLASS)->setCategory(ItemCategory::Structures)->setDescriptionId("thinGlass");
+	pumpkinStemCompat = (new LegacyPumpkinStemVisualTile(104, pumpkinCompat))->init()->setDestroyTime(0.0f)->setSoundType(SOUND_GRASS)->setCategory(ItemCategory::Decorations)->setDescriptionId("pumpkinStem");
 	melon = (new MelonTile(103))->init()->setDestroyTime(1.0f)->setSoundType(SOUND_WOOD)->setCategory(ItemCategory::FoodArmor)->setDescriptionId("melon");
-	melonStem = (new StemTile(105, Tile::melon))->init()->setDestroyTime(0.0f)->setSoundType(SOUND_WOOD)->setCategory(ItemCategory::FoodArmor)->setDescriptionId("pumpkinStem");//->sendTileData();
+	melonStem = (new StemTile(105, Tile::melon))->init()->setDestroyTime(0.0f)->setSoundType(SOUND_WOOD)->setCategory(ItemCategory::FoodArmor)->setDescriptionId("melonStem");//->sendTileData();
+	railCompat = (new LegacyRailVisualTile(66, false))->init()->setDestroyTime(0.7f)->setSoundType(SOUND_METAL)->setCategory(ItemCategory::Mechanisms)->setDescriptionId("rail");
+	goldenRailCompat = (new LegacyRailVisualTile(27, true))->init()->setDestroyTime(0.7f)->setSoundType(SOUND_METAL)->setCategory(ItemCategory::Mechanisms)->setDescriptionId("goldenRail");
 	fenceGate = (new FenceGateTile(107, 4))->init()->setDestroyTime(2.0f)->setExplodeable(5)->setSoundType(SOUND_WOOD)->setCategory(ItemCategory::Structures)->setDescriptionId("fenceGate");//->sendTileData();
 	stairs_brick = (new StairTile(108, Tile::redBrick))->init()->setCategory(ItemCategory::Structures)->setDescriptionId("stairsBrick");//->sendTileData();
 
@@ -254,6 +582,17 @@ void Tile::initTiles() {
 	netherBrick    = (new Tile(112, 0 + 14 * 16, Material::stone))->init()->setDestroyTime(2.0f)->setExplodeable(10)->setSoundType(SOUND_STONE)->setCategory(ItemCategory::Structures)->setDescriptionId("netherBrick");
 	stairs_netherBricks = (new StairTile(114, Tile::netherBrick))->init()->setCategory(ItemCategory::Structures)->setDescriptionId("stairsNetherBrick");//->sendTileData();
 	stairs_sandStone = (new StairTile(128, Tile::sandStone))->init()->setCategory(ItemCategory::Structures)->setDescriptionId("stairsSandStone");//->sendTileData();
+
+	// MCPE 0.8 build 2+ block IDs. Their sprites use the extended lower half
+	// of terrain.png so the original 0.6 atlas and legacy wool cells stay intact.
+	ironBarsCompat = (new ThinFenceTile(101, 294, 294, Material::metal, true))->init()->setDestroyTime(5.0f)->setSoundType(SOUND_METAL)->setCategory(ItemCategory::Structures)->setDescriptionId("ironBars");
+	cobbleWallCompat = (new LegacyCobbleWallTile(139))->init()->setDestroyTime(2.0f)->setSoundType(SOUND_STONE)->setCategory(ItemCategory::Structures)->setDescriptionId("cobbleWall");
+	carrotsCompat = (new LegacyCropVisualTile(141, 257, 391, 391))->init()->setDestroyTime(0.0f)->setSoundType(SOUND_GRASS)->setCategory(ItemCategory::Structures)->setDescriptionId("carrots");
+	potatoesCompat = (new LegacyCropVisualTile(142, 261, 392, 392))->init()->setDestroyTime(0.0f)->setSoundType(SOUND_GRASS)->setCategory(ItemCategory::Structures)->setDescriptionId("potatoes");
+	hayBlockCompat = (new LegacyHayBlockTile(170))->init()->setDestroyTime(0.5f)->setSoundType(SOUND_WOOD)->setCategory(ItemCategory::Structures)->setDescriptionId("hayBlock");
+	carpetCompat = (new LegacyCarpetVisualTile(171))->init()->setDestroyTime(0.1f)->setSoundType(SOUND_CLOTH)->setCategory(ItemCategory::Structures)->setDescriptionId("carpet");
+	coalBlockCompat = (new Tile(173, 267, Material::stone))->init()->setDestroyTime(5.0f)->setSoundType(SOUND_STONE)->setCategory(ItemCategory::Structures)->setDescriptionId("blockCoal");
+	beetrootCompat = (new LegacyCropVisualTile(244, 299, 457, 458))->init()->setDestroyTime(0.0f)->setSoundType(SOUND_GRASS)->setCategory(ItemCategory::Decorations)->setDescriptionId("beetrootCrop");
 
 	quartzBlock   = (new QuartzBlockTile(155))->init()->setSoundType(SOUND_STONE)->setDestroyTime(0.8f)->setCategory(ItemCategory::Structures)->setDescriptionId("quartzBlock");
 	stairs_quartz = (new StairTile(156, Tile::quartzBlock))->init()->setCategory(ItemCategory::Structures)->setDescriptionId("stairsQuartz");//->sendTileData();
@@ -286,8 +625,25 @@ void Tile::initTiles() {
 	Item::items[sapling->id] = (new SaplingTileItem(sapling->id - 256))->setCategory(ItemCategory::Structures)->setDescriptionId("sapling");
 	Item::items[leaves->id] = (new LeafTileItem(leaves->id - 256))->setCategory(ItemCategory::Decorations)->setDescriptionId("leaves");
 	Item::items[sandStone->id] = (new AuxDataTileItem(sandStone->id - 256, sandStone))->setCategory(ItemCategory::Structures)->setDescriptionId("sandStone");
+	Item::items[wood->id] = (new AuxDataTileItem(wood->id - 256, wood))->setCategory(ItemCategory::Structures)->setDescriptionId("wood");
+	Item::items[doubleWoodSlabCompat->id] = (new AuxDataTileItem(doubleWoodSlabCompat->id - 256, doubleWoodSlabCompat))->setCategory(ItemCategory::Structures)->setDescriptionId("woodSlab");
+	Item::items[woodSlabCompat->id] = (new AuxDataTileItem(woodSlabCompat->id - 256, woodSlabCompat))->setCategory(ItemCategory::Structures)->setDescriptionId("woodSlab");
+	Item::items[deadBushCompat->id] = (new TileItem(deadBushCompat->id - 256))->setCategory(ItemCategory::Decorations)->setDescriptionId("deadbush");
 
 	Item::items[quartzBlock->id] = (new AuxDataTileItem(quartzBlock->id - 256, quartzBlock))->setCategory(ItemCategory::Structures)->setDescriptionId("quartzBlock");
+	Item::items[carpetCompat->id] = (new LegacyCarpetTileItem(carpetCompat->id - 256))->setCategory(ItemCategory::Structures);
+	Item::items[beetrootCompat->id] = (new AuxDataTileItem(beetrootCompat->id - 256, beetrootCompat))->setCategory(ItemCategory::Decorations)->setDescriptionId("beetrootCrop");
+	Item::items[cakeCompat->id] = (new TilePlanterItem(92, cakeCompat))->setMaxStackSize(1)->setIcon(13, 1)->setCategory(ItemCategory::FoodArmor)->setDescriptionId("cake");
+	// These compatibility blocks use aux values for facing, rail shape, or
+	// growth stage. Treat aux as block data, not item durability.
+	Item::items[pumpkinCompat->id] = (new AuxDataTileItem(pumpkinCompat->id - 256, pumpkinCompat))->setCategory(ItemCategory::Structures)->setDescriptionId("pumpkin");
+	Item::items[litPumpkinCompat->id] = (new AuxDataTileItem(litPumpkinCompat->id - 256, litPumpkinCompat))->setCategory(ItemCategory::Structures)->setDescriptionId("litpumpkin");
+	Item::items[pumpkinStemCompat->id] = (new AuxDataTileItem(pumpkinStemCompat->id - 256, pumpkinStemCompat))->setCategory(ItemCategory::Decorations)->setDescriptionId("pumpkinStem");
+	Item::items[railCompat->id] = (new AuxDataTileItem(railCompat->id - 256, railCompat))->setCategory(ItemCategory::Mechanisms)->setDescriptionId("rail");
+	Item::items[goldenRailCompat->id] = (new AuxDataTileItem(goldenRailCompat->id - 256, goldenRailCompat))->setCategory(ItemCategory::Mechanisms)->setDescriptionId("goldenRail");
+	Item::items[cobbleWallCompat->id] = (new AuxDataTileItem(cobbleWallCompat->id - 256, cobbleWallCompat))->setCategory(ItemCategory::Structures)->setDescriptionId("cobbleWall");
+	Item::items[carrotsCompat->id] = (new AuxDataTileItem(carrotsCompat->id - 256, carrotsCompat))->setCategory(ItemCategory::Structures)->setDescriptionId("carrots");
+	Item::items[potatoesCompat->id] = (new AuxDataTileItem(potatoesCompat->id - 256, potatoesCompat))->setCategory(ItemCategory::Structures)->setDescriptionId("potatoes");
 
     for (int i = 0; i < 256; i++) {
         if (Tile::tiles[i] != NULL) {
@@ -316,6 +672,12 @@ int Tile::transformToValidBlockId( int blockId ) {
 }
 
 int Tile::transformToValidBlockId( int blockId, int x, int y, int z ) {
+	// Keep the PE 0.8 wooden slab IDs registered when older code paths rebuild
+	// the tile table before loading saved chunks.
+	if (blockId == 157 && doubleWoodSlabCompat != NULL && tiles[157] != doubleWoodSlabCompat)
+		doubleWoodSlabCompat->init();
+	if (blockId == 158 && woodSlabCompat != NULL && tiles[158] != woodSlabCompat)
+		woodSlabCompat->init();
 	if (blockId != 0 && Tile::tiles[blockId] == NULL)
 		return (((x + y + z)&1) == 1)? Tile::info_updateGame1->id : Tile::info_updateGame2->id;
 	return blockId;

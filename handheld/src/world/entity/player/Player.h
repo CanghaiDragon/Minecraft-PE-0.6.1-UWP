@@ -61,6 +61,7 @@ public:
     static Player* asPlayer(Entity* e);
 
 	virtual void tick();
+	virtual void ride(Entity* vehicle);
     void aiStep();
 	void travel(float xa, float ya);
 

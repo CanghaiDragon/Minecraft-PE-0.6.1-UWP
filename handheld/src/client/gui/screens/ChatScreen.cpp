@@ -114,6 +114,31 @@ void ChatScreen::keyPressed(int eventKey)
 	Screen::keyPressed(eventKey);
 }
 
+bool ChatScreen::isMessageInputFocused() const
+{
+	return messageBox.focused;
+}
+
+const std::string& ChatScreen::messageText() const
+{
+	return messageBox.text;
+}
+
+void ChatScreen::setMessageText(const std::string& text)
+{
+	// ChatPacket's historical limit is measured in bytes. Keep that wire limit,
+	// but never leave a partial UTF-8 sequence at the end of the input.
+	size_t end = text.length();
+	if (end > messageBox.maxLength)
+	{
+		end = messageBox.maxLength;
+		while (end > 0 && end < text.length() &&
+			(static_cast<unsigned char>(text[end]) & 0xc0) == 0x80)
+			--end;
+	}
+	messageBox.text.assign(text, 0, end);
+}
+
 bool ChatScreen::handleBackEvent(bool isDown)
 {
 	if (!isDown)

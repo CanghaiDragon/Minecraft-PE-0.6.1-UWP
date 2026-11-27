@@ -200,8 +200,8 @@ bool TileRenderer::tesselateInWorld( Tile* tt, int x, int y, int z )
 		return tesselateLadderInWorld(tt, x, y, z);
 	} else if (shape == Tile::SHAPE_DOOR) {
 		return tesselateDoorInWorld(tt, x, y, z);
-    //} else if (shape == Tile::SHAPE_RAIL) {
-    //    return tesselateRailInWorld(tt, x, y, z);
+	} else if (shape == Tile::SHAPE_RAIL) {
+		return tesselateRailInWorld(tt, x, y, z);
 	} else if (shape == Tile::SHAPE_STAIRS) {
 		return tesselateStairsInWorld((StairTile*)tt, x, y, z);
     } else if (shape == Tile::SHAPE_FENCE) {
@@ -222,6 +222,66 @@ bool TileRenderer::tesselateInWorld( Tile* tt, int x, int y, int z )
 		return false;
 	}
 }
+
+bool TileRenderer::tesselateRailInWorld(Tile* tt, int x, int y, int z) {
+	Tesselator& t = Tesselator::instance;
+	const int data = level->getData(x, y, z);
+	// Normal rails store curves as metadata 6-9. Powered rails use bit 3 for
+	// power and only use the low three bits for direction/slope.
+	const int meta = tt->id == 66 ? data : (data & 0x7);
+
+	const int tex = tt->getTexture(level, x, y, z, Facing::UP);
+	const int xt = (tex & 0xf) << 4;
+	const int yt = (tex >> 4) * 16;
+	const float inset = 0.0f;
+	const float endInset = 0.01f;
+	const float u0 = (xt + inset) / 256.0f;
+	const float u1 = (xt + 16.0f - inset - endInset) / 256.0f;
+	const float v0 = (yt + inset) / 512.0f;
+	const float v1 = (yt + 16.0f - inset - endInset) / 512.0f;
+	const float brightness = tt->getBrightness(level, x, y, z);
+	t.color(brightness, brightness, brightness);
+
+	// Keep this renderer's original front-face winding. The 0.8 renderer emits
+	// a different vertex order (and duplicates the reverse face); copying that
+	// order here makes this GL_QUADS path back-face cull the rail entirely.
+	const float px[4] = { (float)x + 1, (float)x + 1, (float)x, (float)x };
+	const float pz[4] = { (float)z + 1, (float)z, (float)z, (float)z + 1 };
+	float py[4] = { (float)y + 0.0625f, (float)y + 0.0625f,
+		(float)y + 0.0625f, (float)y + 0.0625f };
+	float baseU[4] = { 1, 1, 0, 0 };
+	float baseV[4] = { 1, 0, 0, 1 };
+	switch (meta) {
+	case 1: case 2: case 3: case 7:
+		// 0.8 metadata 1-3 and 7 use source corners SE,SW,NW,NE.
+		baseU[0] = 1; baseU[1] = 0; baseU[2] = 0; baseU[3] = 1;
+		baseV[0] = 0; baseV[1] = 0; baseV[2] = 1; baseV[3] = 1;
+		if (meta == 2) { py[0] += 1.0f; py[1] += 1.0f; } // high east
+		else if (meta == 3) { py[2] += 1.0f; py[3] += 1.0f; } // high west
+		break;
+	case 4: // high north
+		py[1] += 1.0f; py[2] += 1.0f;
+		break;
+	case 5: // high south
+		py[0] += 1.0f; py[3] += 1.0f;
+		break;
+	case 8:
+		// 0.8 metadata 8 uses source corners SW,NW,NE,SE.
+		baseU[0] = 0; baseU[1] = 0; baseU[2] = 1; baseU[3] = 1;
+		baseV[0] = 0; baseV[1] = 1; baseV[2] = 1; baseV[3] = 0;
+		break;
+	case 9:
+		// 0.8 metadata 9 uses source corners NW,NE,SE,SW.
+		baseU[0] = 0; baseU[1] = 1; baseU[2] = 1; baseU[3] = 0;
+		baseV[0] = 1; baseV[1] = 1; baseV[2] = 0; baseV[3] = 0;
+		break;
+	}
+	for (int i = 0; i < 4; ++i) {
+		t.vertexUV(px[i], py[i], pz[i], u0 + baseU[i] * (u1 - u0), v0 + baseV[i] * (v1 - v0));
+	}
+	return true;
+}
+
 
 void TileRenderer::tesselateInWorldNoCulling( Tile* tile, int x, int y, int z )
 {
@@ -268,12 +328,12 @@ bool TileRenderer::tesselateLadderInWorld( Tile* tt, int x, int y, int z )
 	float br = tt->getBrightness(level, x, y, z);
 	t.color(br, br, br);
 	int xt = ((tex & 0xf) << 4);
-	int yt = tex & 0xf0;
+	int yt = (tex >> 4) * 16;
 
 	float u0 = (xt) / 256.0f;
 	float u1 = (xt + 15.99f) / 256.0f;
-	float v0 = (yt) / 256.0f;
-	float v1 = (yt + 15.99f) / 256.0f;
+	float v0 = (yt) / 512.0f;
+	float v1 = (yt + 15.99f) / 512.0f;
 
 	int face = level->getData(x, y, z);
 
@@ -372,17 +432,17 @@ void TileRenderer::tesselateTorch( Tile* tt, float x, float y, float z, float xx
 
 	if (fixedTexture >= 0) tex = fixedTexture;
 	int xt = (tex & 0xf) << 4;
-	int yt = tex & 0xf0;
+	int yt = (tex >> 4) * 16;
 	float u0 = (xt) / 256.0f;
 	float u1 = (xt + 15.99f) / 256.0f;
-	float v0 = (yt) / 256.0f;
-	float v1 = (yt + 15.99f) / 256.0f;
+	float v0 = (yt) / 512.0f;
+	float v1 = (yt + 15.99f) / 512.0f;
 
 
 	float uc0 = u0 + 7 / 256.0f;
-	float vc0 = v0 + 6 / 256.0f;
+	float vc0 = v0 + 6 / 512.0f;
 	float uc1 = u0 + 9 / 256.0f;
-	float vc1 = v0 + 8 / 256.0f;
+	float vc1 = v0 + 8 / 512.0f;
 	x += 0.5f;
 	z += 0.5f;
 
@@ -427,11 +487,11 @@ void TileRenderer::tesselateCrossTexture( Tile* tt, int data, float x, float y, 
 
 	if (fixedTexture >= 0) tex = fixedTexture;
 	int xt = (tex & 0xf) << 4;
-	int yt = tex & 0xf0;
+	int yt = (tex >> 4) * 16;
 	float u0 = (xt) / 256.0f;
 	float u1 = (xt + 15.99f) / 256.0f;
-	float v0 = (yt) / 256.0f;
-	float v1 = (yt + 15.99f) / 256.0f;
+	float v0 = (yt) / 512.0f;
+	float v1 = (yt + 15.99f) / 512.0f;
 
 	float x0 = x + 0.5f - 0.45f;
 	float x1 = x + 0.5f + 0.45f;
@@ -463,11 +523,11 @@ void TileRenderer::tesselateStemTexture( Tile* tt, int data, float h, float x, f
 	int tex = tt->getTexture(0, data);
 	if(fixedTexture >= 0) tex = fixedTexture;
 	int xt = (tex & 0xf) << 4;
-	int yt = tex & 0xf0;
+	int yt = (tex >> 4) * 16;
 	float u0 = (xt) / 256.0f;
 	float u1 = (xt + 15.99f) / 256.0f;
-	float v0 = (yt) / 256.0f;
-	float v1 = (yt + 15.99f * h) / 256.0f;
+	float v0 = (yt) / 512.0f;
+	float v1 = (yt + 15.99f * h) / 512.0f;
 
 	float x0 = x + 0.5f - 0.45f;
 	float x1 = x + 0.5f + 0.45f;
@@ -501,11 +561,11 @@ void TileRenderer::tesselateStemDirTexture( Tile* tt, int data, int dir, float h
 
 	if (fixedTexture >= 0) tex = fixedTexture;
 	int xt = (tex & 0xf) << 4;
-	int yt = tex & 0xf0;
+	int yt = (tex >> 4) * 16;
 	float u0 = (xt) / 256.0f;
 	float u1 = (xt + 15.99f) / 256.0f;
-	float v0 = (yt) / 256.0f;
-	float v1 = (yt + 15.99f * h) / 256.0f;
+	float v0 = (yt) / 512.0f;
+	float v1 = (yt + 15.99f * h) / 512.0f;
 
 	float x0 = x + 0.5f - 0.5f;
 	float x1 = x + 0.5f + 0.5f;
@@ -586,25 +646,28 @@ bool TileRenderer::tesselateWaterInWorld( Tile* tt, int x, int y, int z )
 			tex = tt->getTexture(2, data);
 		}
 		int xt = (tex & 0xf) << 4;
-		int yt = tex & 0xf0;
+		int yt = (tex >> 4) * 16;
 
 		float uc = (xt + 0.5f * 16) / 256.0f;
-		float vc = (yt + 0.5f * 16) / 256.0f;
+		float vc = (yt + 0.5f * 16) / 512.0f;
 		if (angle < -999) {
 			angle = 0;
 		} else {
 			uc = (xt + 1 * 16) / 256.0f;
-			vc = (yt + 1 * 16) / 256.0f;
+			vc = (yt + 1 * 16) / 512.0f;
 		}
-		float s = (Mth::sin(angle) * 8) / 256.5f; // @attn: to get rid of "jitter" (caused
-		float c = (Mth::cos(angle) * 8) / 256.5f; //  of fp rounding errors) in big oceans)
+		float sU = (Mth::sin(angle) * 8) / 256.5f;
+		float cU = (Mth::cos(angle) * 8) / 256.5f;
+		// Keep animated water texture offsets proportional to the full-height atlas.
+		float sV = (Mth::sin(angle) * 8) / 512.5f;
+		float cV = (Mth::cos(angle) * 8) / 512.5f;
 
 		float br = tt->getBrightness(level, x, y, z);
 		t.color(c11 * br, c11 * br, c11 * br);
-		t.vertexUV((float)x + 0, (float)y + h0, (float)z + 0, uc - c - s, vc - c + s);
-		t.vertexUV((float)x + 0, (float)y + h1, (float)z + 1, uc - c + s, vc + c + s);
-		t.vertexUV((float)x + 1, (float)y + h2, (float)z + 1, uc + c + s, vc + c - s);
-		t.vertexUV((float)x + 1, (float)y + h3, (float)z + 0, uc + c - s, vc - c - s);
+		t.vertexUV((float)x + 0, (float)y + h0, (float)z + 0, uc - cU - sU, vc - cV + sV);
+		t.vertexUV((float)x + 0, (float)y + h1, (float)z + 1, uc - cU + sU, vc + cV + sV);
+		t.vertexUV((float)x + 1, (float)y + h2, (float)z + 1, uc + cU + sU, vc + cV - sV);
+		t.vertexUV((float)x + 1, (float)y + h3, (float)z + 0, uc + cU - sU, vc - cV - sV);
 	}
 
 	if (noCulling || down) {
@@ -626,7 +689,7 @@ bool TileRenderer::tesselateWaterInWorld( Tile* tt, int x, int y, int z )
 
 		int tex = tt->getTexture(face + 2, data);
 		int xTex = (tex & 0xf) << 4;
-		int yTex = tex & 0xf0;
+		int yTex = (tex >> 4) * 16;
 
 		if (noCulling || dirs[face]) {
 			float hh0;
@@ -666,9 +729,9 @@ bool TileRenderer::tesselateWaterInWorld( Tile* tt, int x, int y, int z )
 			float u0 = (xTex + 0 * 16) / 256.0f;
 			float u1 = (xTex + 1 * 16 - 0.01f) / 256.0f;
 
-			float v01 = (yTex + (1 - hh0) * 16) / 256.0f;
-			float v02 = (yTex + (1 - hh1) * 16) / 256.0f;
-			float v1 = (yTex + 1 * 16 - 0.01f) / 256.0f;
+			float v01 = (yTex + (1 - hh0) * 16) / 512.0f;
+			float v02 = (yTex + (1 - hh1) * 16) / 512.0f;
+			float v1 = (yTex + 1 * 16 - 0.01f) / 512.0f;
 
 			float br = tt->getBrightness(level, xt, yt, zt);
 			if (face < 2) br *= c2;
@@ -1548,12 +1611,12 @@ bool TileRenderer::tesselateBedInWorld(Tile *tt, int x, int y, int z) {
 		int tex = tt->getTexture(level, x, y, z, Facing::DOWN);
 
 		int xt = (tex & 0xf) << 4;
-		int yt = tex & 0xf0;
+		int yt = (tex >> 4) * 16;
 
 		float u0 = (xt) / 256.0f;
 		float u1 = (xt + 16 - 0.01f) / 256.0f;
-		float v0 = (yt) / 256.0f;
-		float v1 = (yt + 16 - 0.01f) / 256.0f;
+		float v0 = (yt) / 512.0f;
+		float v1 = (yt + 16 - 0.01f) / 512.0f;
 
 		float x0 = x + tt->xx0;
 		float x1 = x + tt->xx1;
@@ -1575,12 +1638,12 @@ bool TileRenderer::tesselateBedInWorld(Tile *tt, int x, int y, int z) {
 	int tex = tt->getTexture(level, x, y, z, Facing::UP);
 
 	int xt = (tex & 0xf) << 4;
-	int yt = tex & 0xf0;
+	int yt = (tex >> 4) * 16;
 
 	float u0 = (xt) / 256.0f;
 	float u1 = (xt + 16 ) / 256.0f;
-	float v0 = (yt) / 256.0f;
-	float v1 = (yt + 16) / 256.0f;
+	float v0 = (yt) / 512.0f;
+	float v1 = (yt + 16) / 512.0f;
 
 	// Default is west
 	float topLeftU = u0;
@@ -1816,20 +1879,20 @@ void TileRenderer::renderFaceDown( Tile* tt, float x, float y, float z, int tex 
 
 	if (fixedTexture >= 0) tex = fixedTexture;
 	int xt = (tex & 0xf) << 4;
-	int yt = tex & 0xf0;
+	int yt = (tex >> 4) * 16;
 
 	float u0 = (xt + tt->xx0 * 16) / 256.0f;
 	float u1 = (xt + tt->xx1 * 16 - 0.01f) / 256.0f;
-	float v0 = (yt + tt->zz0 * 16) / 256.0f;
-	float v1 = (yt + tt->zz1 * 16 - 0.01f) / 256.0f;
+	float v0 = (yt + tt->zz0 * 16) / 512.0f;
+	float v1 = (yt + tt->zz1 * 16 - 0.01f) / 512.0f;
 
 	if (tt->xx0 < 0 || tt->xx1 > 1) {
 		u0 = (xt + 0 * 15.99f) / 256.0f;
 		u1 = (xt + 1 * 15.99f) / 256.0f;
 	}
 	if (tt->zz0 < 0 || tt->zz1 > 1) {
-		v0 = (yt + 0 * 15.99f) / 256.0f;
-		v1 = (yt + 1 * 15.99f) / 256.0f;
+		v0 = (yt + 0 * 15.99f) / 512.0f;
+		v1 = (yt + 1 * 15.99f) / 512.0f;
 	}
 
 	float x0 = x + tt->xx0;
@@ -1861,20 +1924,20 @@ void TileRenderer::renderFaceUp( Tile* tt, float x, float y, float z, int tex )
 
 	if (fixedTexture >= 0) tex = fixedTexture;
 	int xt = (tex & 0xf) << 4;
-	int yt = tex & 0xf0;
+	int yt = (tex >> 4) * 16;
 
 	float u0 = (xt + tt->xx0 * 16) / 256.0f;
 	float u1 = (xt + tt->xx1 * 16 - 0.01f) / 256.0f;
-	float v0 = (yt + tt->zz0 * 16) / 256.0f;
-	float v1 = (yt + tt->zz1 * 16 - 0.01f) / 256.0f;
+	float v0 = (yt + tt->zz0 * 16) / 512.0f;
+	float v1 = (yt + tt->zz1 * 16 - 0.01f) / 512.0f;
 
 	if (tt->xx0 < 0 || tt->xx1 > 1) {
 		u0 = (xt + 0 * 15.99f) / 256.0f;
 		u1 = (xt + 1 * 15.99f) / 256.0f;
 	}
 	if (tt->zz0 < 0 || tt->zz1 > 1) {
-		v0 = (yt + 0 * 15.99f) / 256.0f;
-		v1 = (yt + 1 * 15.99f) / 256.0f;
+		v0 = (yt + 0 * 15.99f) / 512.0f;
+		v1 = (yt + 1 * 15.99f) / 512.0f;
 	}
 
 	float x0 = x + tt->xx0;
@@ -1906,11 +1969,11 @@ void TileRenderer::renderNorth( Tile* tt, float x, float y, float z, int tex )
 
 	if (fixedTexture >= 0) tex = fixedTexture;
 	int xt = (tex & 0xf) << 4;
-	int yt = tex & 0xf0;
+	int yt = (tex >> 4) * 16;
 	float u0 = (xt + tt->xx0 * 16) / 256.0f;
 	float u1 = (xt + tt->xx1 * 16 - 0.01f) / 256.0f;
-	float v0 = (yt + 16 - tt->yy1 * 16) / 256.0f;
-	float v1 = (yt + 16 - tt->yy0 * 16 - 0.01f) / 256.0f;
+	float v0 = (yt + 16 - tt->yy1 * 16) / 512.0f;
+	float v1 = (yt + 16 - tt->yy0 * 16 - 0.01f) / 512.0f;
 	if (xFlipTexture) {
 		float tmp = u0;
 		u0 = u1;
@@ -1922,8 +1985,8 @@ void TileRenderer::renderNorth( Tile* tt, float x, float y, float z, int tex )
 		u1 = (xt + 1 * 15.99f) / 256.0f;
 	}
 	if (tt->yy0 < 0 || tt->yy1 > 1) {
-		v0 = (yt + 0 * 15.99f) / 256.0f;
-		v1 = (yt + 1 * 15.99f) / 256.0f;
+		v0 = (yt + 0 * 15.99f) / 512.0f;
+		v1 = (yt + 1 * 15.99f) / 512.0f;
 	}
 
 	float x0 = x + tt->xx0;
@@ -1955,12 +2018,12 @@ void TileRenderer::renderSouth( Tile* tt, float x, float y, float z, int tex )
 
 	if (fixedTexture >= 0) tex = fixedTexture;
 	int xt = (tex & 0xf) << 4;
-	int yt = tex & 0xf0;
+	int yt = (tex >> 4) * 16;
 
 	float u0 = (xt + tt->xx0 * 16) / 256.0f;
 	float u1 = (xt + tt->xx1 * 16 - 0.01f) / 256.0f;
-	float v0 = (yt + 16 - tt->yy1 * 16) / 256.0f;
-	float v1 = (yt + 16 - tt->yy0 * 16 - 0.01f) / 256.0f;
+	float v0 = (yt + 16 - tt->yy1 * 16) / 512.0f;
+	float v1 = (yt + 16 - tt->yy0 * 16 - 0.01f) / 512.0f;
 	if (xFlipTexture) {
 		float tmp = u0;
 		u0 = u1;
@@ -1972,8 +2035,8 @@ void TileRenderer::renderSouth( Tile* tt, float x, float y, float z, int tex )
 		u1 = (xt + 1 * 15.99f) / 256.0f;
 	}
 	if (tt->yy0 < 0 || tt->yy1 > 1) {
-		v0 = (yt + 0 * 15.99f) / 256.0f;
-		v1 = (yt + 1 * 15.99f) / 256.0f;
+		v0 = (yt + 0 * 15.99f) / 512.0f;
+		v1 = (yt + 1 * 15.99f) / 512.0f;
 	}
 
 	float x0 = x + tt->xx0;
@@ -2005,12 +2068,12 @@ void TileRenderer::renderWest( Tile* tt, float x, float y, float z, int tex )
 
 	if (fixedTexture >= 0) tex = fixedTexture;
 	int xt = (tex & 0xf) << 4;
-	int yt = tex & 0xf0;
+	int yt = (tex >> 4) * 16;
 
 	float u0 = (xt + tt->zz0 * 16) / 256.0f;
 	float u1 = (xt + tt->zz1 * 16 - 0.01f) / 256.0f;
-	float v0 = (yt + 16 - tt->yy1 * 16) / 256.0f;
-	float v1 = (yt + 16 - tt->yy0 * 16 - 0.01f) / 256.0f;
+	float v0 = (yt + 16 - tt->yy1 * 16) / 512.0f;
+	float v1 = (yt + 16 - tt->yy0 * 16 - 0.01f) / 512.0f;
 	if (xFlipTexture) {
 		float tmp = u0;
 		u0 = u1;
@@ -2022,8 +2085,8 @@ void TileRenderer::renderWest( Tile* tt, float x, float y, float z, int tex )
 		u1 = (xt + 1 * 15.99f) / 256.0f;
 	}
 	if (tt->yy0 < 0 || tt->yy1 > 1) {
-		v0 = (yt + 0 * 15.99f) / 256.0f;
-		v1 = (yt + 1 * 15.99f) / 256.0f;
+		v0 = (yt + 0 * 15.99f) / 512.0f;
+		v1 = (yt + 1 * 15.99f) / 512.0f;
 	}
 
 	float x0 = x + tt->xx0;
@@ -2055,12 +2118,12 @@ void TileRenderer::renderEast( Tile* tt, float x, float y, float z, int tex )
 
 	if (fixedTexture >= 0) tex = fixedTexture;
 	int xt = (tex & 0xf) << 4;
-	int yt = tex & 0xf0;
+	int yt = (tex >> 4) * 16;
 
 	float u0 = (xt + tt->zz0 * 16) / 256.0f;
 	float u1 = (xt + tt->zz1 * 16 - 0.01f) / 256.0f;
-	float v0 = (yt + 16 - tt->yy1 * 16) / 256.0f;
-	float v1 = (yt + 16 - tt->yy0 * 16 - 0.01f) / 256.0f;
+	float v0 = (yt + 16 - tt->yy1 * 16) / 512.0f;
+	float v1 = (yt + 16 - tt->yy0 * 16 - 0.01f) / 512.0f;
 	if (xFlipTexture) {
 		float tmp = u0;
 		u0 = u1;
@@ -2072,8 +2135,8 @@ void TileRenderer::renderEast( Tile* tt, float x, float y, float z, int tex )
 		u1 = (xt + 1 * 15.99f) / 256.0f;
 	}
 	if (tt->yy0 < 0 || tt->yy1 > 1) {
-		v0 = (yt + 0 * 15.99f) / 256.0f;
-		v1 = (yt + 1 * 15.99f) / 256.0f;
+		v0 = (yt + 0 * 15.99f) / 512.0f;
+		v1 = (yt + 1 * 15.99f) / 512.0f;
 	}
 
 	float x1 = x + tt->xx1;
@@ -2402,21 +2465,21 @@ bool TileRenderer::tesselateThinFenceInWorld(ThinFenceTile* tt, int x, int y, in
 	}
 
 	const int xt = (tex & 0xf) << 4;
-	const int yt = tex & 0xf0;
+	const int yt = (tex >> 4) * 16;
 	float u0 = (xt) / 256.0f;
 	const float u1 = (xt + 7.99f) / 256.0f;
 	const float u2 = (xt + 15.99f) / 256.0f;
-	const float v0 = (yt) / 256.0f;
-	const float v2 = (yt + 15.99f) / 256.0f;
+	const float v0 = (yt) / 512.0f;
+	const float v2 = (yt + 15.99f) / 512.0f;
 
 	const int xet = (edgeTex & 0xf) << 4;
-	const int yet = edgeTex & 0xf0;
+	const int yet = (edgeTex >> 4) * 16;
 
 	const float iu0 = (xet + 7) / 256.0f;
 	const float iu1 = (xet + 8.99f) / 256.0f;
-	const float iv0 = (yet) / 256.0f;
-	const float iv1 = (yet + 8) / 256.0f;
-	const float iv2 = (yet + 15.99f) / 256.0f;
+	const float iv0 = (yet) / 512.0f;
+	const float iv1 = (yet + 8) / 512.0f;
+	const float iv2 = (yet + 15.99f) / 512.0f;
 
 	const float x0 = (float)x;
 	const float x1 = x0 + .5f;
@@ -2824,11 +2887,11 @@ void TileRenderer::tesselateRowTexture( Tile* tt, int data, float x, float y, fl
 		tex = fixedTexture;
 
 	int xt = (tex & 0xf) << 4;
-	int yt = tex & 0xf0;
+	int yt = (tex >> 4) * 16;
 	float u0 = (xt) / 256.0f;
 	float u1 = (xt + 15.99f) / 256.f;
-	float v0 = (yt) / 256.0f;
-	float v1 = (yt + 15.99f) / 256.0f;
+	float v0 = (yt) / 512.0f;
+	float v1 = (yt + 15.99f) / 512.0f;
 
 	float x0 = x + 0.5f - 0.25f;
 	float x1 = x + 0.5f + 0.25f;

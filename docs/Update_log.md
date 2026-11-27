@@ -2,6 +2,26 @@
 
 This changelog covers the UWP project. It is separate from the Win32 changelog.
 
+## 1.2.1
+
+Bug fix:
+
+- Water behavior is normal near world edge in finite world.
+
+- Solving yellow wool, brown wool, lapis ore's icon error.
+
+- Deciding whether a Indev/Alpha world is a hidden world no longer depends on seed.
+
+Improvements:
+
+- Support Chinese typing and gray with "/" on chatting.
+
+- Blocks and items from PE 0.7 and 0.8 are compatible. Their crafting recipies can also be shown in server. Meanwhile, their full functions are not planed to be added.
+
+- Ores' generation chance adjustment for Sky and Indev world. Now find enough diamonds in Indev-Floating and Sky worlds are easier.
+
+- A few text adjustments.
+
 ## 1.2
 
 New features:

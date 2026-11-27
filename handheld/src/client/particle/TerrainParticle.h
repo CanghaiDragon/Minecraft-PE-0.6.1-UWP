@@ -40,8 +40,10 @@ public:
     void render(Tesselator& t, float a, float xa, float ya, float za, float xa2, float za2) {
         float u0 = ((tex & 15) + uo / 4.0f) / 16.0f;
         float u1 = u0 + 0.999f / 16.0f / 4;
-        float v0 = ((tex >> 4) + vo / 4.0f) / 16.0f;
-        float v1 = v0 + 0.999f / 16.0f / 4;
+        // terrain.png is 256x512 in the PE 0.8 atlas. Its 32 tile rows
+        // require half the normalized V scale used by the old 256x256 atlas.
+        float v0 = ((tex >> 4) + vo / 4.0f) / 32.0f;
+        float v1 = v0 + 0.999f / 32.0f / 4;
         float r = 0.1f * size;
 
         float x = (float) (xo + (this->x - xo) * a - xOff);

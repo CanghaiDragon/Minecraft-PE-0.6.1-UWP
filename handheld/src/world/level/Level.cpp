@@ -660,6 +660,16 @@ bool Level::hasChunksAt(int x, int y, int z, int r) {
 
 bool Level::hasChunksAt(int x0, int y0, int z0, int x1, int y1, int z1) {
     if (y1 < 0 || y0 >= Level::DEPTH) return false;
+	// Finite-world exterior is a known solid boundary, not an unloaded chunk.
+	// Clip checks to the 256x256 playable area so edge liquid ticks and entity
+	// contact checks only require chunks that can exist in the world.
+	if (!levelData.isInfinite()) {
+		if (x0 < 0) x0 = 0;
+		if (z0 < 0) z0 = 0;
+		if (x1 >= LEVEL_WIDTH) x1 = LEVEL_WIDTH - 1;
+		if (z1 >= LEVEL_DEPTH) z1 = LEVEL_DEPTH - 1;
+		if (x0 > x1 || z0 > z1) return true;
+	}
 
     x0 >>= 4;
     z0 >>= 4;

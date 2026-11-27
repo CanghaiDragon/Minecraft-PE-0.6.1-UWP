@@ -30,6 +30,7 @@ public:
 	static const int IdSnowball	= 81;
 	static const int IdThrownEgg= 82;
 	static const int IdPainting = 83;
+	static const int IdMinecart = 84;
 };
 
 // For now; mobs 0-63

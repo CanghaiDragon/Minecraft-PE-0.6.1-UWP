@@ -12,6 +12,7 @@
 
 
 class JoinGameScreen;
+class OptionButton;
 
 class AvailableGamesList : public ScrolledSelectionList
 {
@@ -95,6 +96,7 @@ private:
 	Button* bBack;
 	Button* bTitle;
 	Button* bConnect;
+	OptionButton* bPe08Recipes;
 	TextBox addressBox;
 	TextBox portBox;
 	std::string errorMessage;

@@ -118,14 +118,14 @@ public:
 	static bool betaFancyGraphics;
 	static void setBetaFancyGraphics(bool enabled) { betaFancyGraphics = enabled; }
 	static bool useBetaFancyGraphics() { return betaFancyGraphics; }
-	// Alpha 1.1.2_01 material slots appended to the shared terrain atlas.
-	// They are kept outside the normal PE/Beta tile slots so existing worlds
-	// continue to use their original atlas coordinates.
-	static const int ALPHA_GRASS_TOP_TEXTURE = 160;
-	static const int ALPHA_GRASS_BOTTOM_TEXTURE = 161;
-	static const int ALPHA_GRASS_SIDE_TEXTURE = 162;
-	static const int ALPHA_LEAVES_TEXTURE = 163;
-	static const int ALPHA_COBBLESTONE_TEXTURE = 164;
+	// Alpha 1.1.2_01 material slots occupy unused cells at the end of the
+	// extended terrain atlas. Keep legacy slots 160-164 intact (slot 160 is the
+	// lapis ore texture).
+	static const int ALPHA_GRASS_TOP_TEXTURE = 480;
+	static const int ALPHA_GRASS_BOTTOM_TEXTURE = 481;
+	static const int ALPHA_GRASS_SIDE_TEXTURE = 482;
+	static const int ALPHA_LEAVES_TEXTURE = 483;
+	static const int ALPHA_COBBLESTONE_TEXTURE = 484;
 	static bool alphaTextures;
 	static void setAlphaTextures(bool enabled) { alphaTextures = enabled; }
 	static bool useAlphaTextures() { return alphaTextures; }
@@ -161,12 +161,12 @@ public:
     static Tile* sandStone;
     static Tile* musicBlock;
     static Tile* bed;
-    static Tile* unused_27;
+    static Tile* goldenRailCompat;
     static Tile* unused_28;
     static Tile* unused_29;
     static Tile* unused_30;
     static Tile* tallgrass;
-    static Tile* unused_32;
+    static Tile* deadBushCompat;
     static Tile* unused_33;
     static Tile* unused_34;
     static Tile* unused_36;
@@ -249,6 +249,26 @@ public:
 	static Tile* stairs_sandStone;
 	static Tile* quartzBlock;
 	static Tile* stairs_quartz;
+
+	// PE 0.8 compatibility blocks registered at their saved block IDs.
+	static Tile* ironBarsCompat;
+	static Tile* cobbleWallCompat;
+	static Tile* carrotsCompat;
+	static Tile* potatoesCompat;
+	static Tile* hayBlockCompat;
+	static Tile* carpetCompat;
+	static Tile* coalBlockCompat;
+	static Tile* beetrootCompat;
+	static Tile* pumpkinStemCompat;
+	static Tile* railCompat;
+	static Tile* pumpkinCompat;
+	static Tile* litPumpkinCompat;
+	static Tile* cakeCompat;
+	static Tile* woodSlabCompat;
+	static Tile* doubleWoodSlabCompat;
+	static Tile* stairsSpruceCompat;
+	static Tile* stairsBirchCompat;
+	static Tile* stairsJungleCompat;
 
 	// invisible bedrock is used to block off empty chunks (i.e. prevent player movement)
 	static Tile* invisible_bedrock;

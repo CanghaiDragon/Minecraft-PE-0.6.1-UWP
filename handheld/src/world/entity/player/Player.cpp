@@ -257,6 +257,17 @@ void Player::tick() {
 	}
 }
 
+void Player::ride(Entity* vehicle) {
+	Entity* oldVehicle = ridingAt;
+	Entity::ride(vehicle);
+	if (oldVehicle && !ridingAt && !vehicle) {
+		setPos(oldVehicle->x + 1.0f, oldVehicle->bb.y1 + heightOffset, oldVehicle->z);
+		xd = oldVehicle->xd;
+		yd = 0.0f;
+		zd = oldVehicle->zd;
+	}
+}
+
 int Player::getMaxHealth() {
 	return MAX_HEALTH;
 }

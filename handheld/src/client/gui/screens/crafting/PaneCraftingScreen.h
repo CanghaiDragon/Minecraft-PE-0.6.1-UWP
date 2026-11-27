@@ -97,6 +97,7 @@ private:
 	//int paneW;
 
 	int numCategories;
+	bool showBeta08Recipes;
 	std::vector<int> categoryBitmasks;
 	std::vector<int> categoryIcons;
 	ImageButton* selectedCategoryButton;

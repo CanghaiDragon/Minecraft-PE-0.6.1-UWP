@@ -1,6 +1,7 @@
 #include "ChestTileEntity.h"
 #include "../ChestTile.h"
 #include "../../Level.h"
+#include "../../../Facing.h"
 #include "../../../entity/player/Player.h"
 #include "../../../../nbt/NbtIo.h"
 #include "../../../../platform/log.h"
@@ -31,77 +32,209 @@ static void traceChestPersistence(const char* phase, const ChestTileEntity* ches
 ChestTileEntity::ChestTileEntity()
 :	super(TileEntityType::Chest),
 	FillingContainer(ItemsSize, 0, ContainerType::CONTAINER, false),
-	tickInterval(0),
-	openCount(0),
-	openness(0), oOpenness(0),
 	hasCheckedNeighbors(false),
-	n(NULL), s(NULL), w(NULL), e(NULL)
+	n(NULL), e(NULL), w(NULL), s(NULL),
+	openness(0), oOpenness(0),
+	openCount(0),
+	tickInterval(0),
+	remoteContainerSize(ItemsSize)
 {
 	//rendererId = TR_CHEST_RENDERER;
 }
 
 int ChestTileEntity::getContainerSize() const
 {
+	if (clientSideOnly)
+		return remoteContainerSize;
+	return getLargeChestPartner() != NULL ? ItemsSize * 2 : ItemsSize;
+}
+
+ChestTileEntity* ChestTileEntity::findCompatibleNeighbor() const
+{
+	if (clientSideOnly || level == NULL)
+		return NULL;
+
+	static const int offsets[4][2] = {
+		{-1, 0}, {1, 0}, {0, -1}, {0, 1}
+	};
+	const int direction = level->getData(x, y, z);
+	ChestTileEntity* found = NULL;
+
+	for (int i = 0; i < 4; ++i) {
+		const int dx = offsets[i][0];
+		const int dz = offsets[i][1];
+		const int nx = x + dx;
+		const int nz = z + dz;
+		if (level->getTile(nx, y, nz) != Tile::chest->id)
+			continue;
+
+		TileEntity* neighbor = level->getTileEntity(nx, y, nz);
+		if (!TileEntity::isType(neighbor, TileEntityType::Chest))
+			continue;
+		if (level->getData(nx, y, nz) != direction)
+			continue;
+
+		// PE 0.8 pairs only chests sharing the same facing, along the axis
+		// perpendicular to that facing.
+		if ((dx == 0 && direction != Facing::WEST && direction != Facing::EAST) ||
+			(dz == 0 && direction != Facing::NORTH && direction != Facing::SOUTH))
+			continue;
+
+		if (found != NULL)
+			return NULL; // Ambiguous multi-chest layouts are not double chests.
+		found = (ChestTileEntity*)neighbor;
+	}
+
+	return found;
+}
+
+ChestTileEntity* ChestTileEntity::getLargeChestPartner() const
+{
+	ChestTileEntity* partner = findCompatibleNeighbor();
+	if (partner == NULL || partner->findCompatibleNeighbor() != this)
+		return NULL;
+	return partner;
+}
+
+ChestTileEntity* ChestTileEntity::getContainerForSlot(int& slot) const
+{
+	if (clientSideOnly) {
+		if (slot < 0 || slot >= remoteContainerSize)
+			return NULL;
+		return const_cast<ChestTileEntity*>(this);
+	}
+	if (slot < 0)
+		return NULL;
+
+	ChestTileEntity* partner = getLargeChestPartner();
+	if (partner == NULL)
+		return slot < ItemsSize ? const_cast<ChestTileEntity*>(this) : NULL;
+	if (slot >= ItemsSize * 2)
+		return NULL;
+
+	const bool thisIsFirstHalf = x < partner->x || (x == partner->x && z < partner->z);
+	if (slot >= ItemsSize) {
+		slot -= ItemsSize;
+		return thisIsFirstHalf ? partner : const_cast<ChestTileEntity*>(this);
+	}
+	return thisIsFirstHalf ? const_cast<ChestTileEntity*>(this) : partner;
+}
+
+void ChestTileEntity::setRemoteContainerSize(int size)
+{
+	if (!clientSideOnly)
+		return;
+
+	remoteContainerSize = size >= ItemsSize * 2 ? ItemsSize * 2 : ItemsSize;
+	numTotalSlots = remoteContainerSize;
+	items.resize(remoteContainerSize, NULL);
+}
+
+int ChestTileEntity::getLocalContainerSize() const
+{
 	return ItemsSize;
 }
 
-ItemInstance* ChestTileEntity::getItem( int slot )
+ItemInstance* ChestTileEntity::getLocalItem(int slot)
 {
+	if (slot < 0 || slot >= ItemsSize)
+		return NULL;
 	return items[slot];
+}
+
+ItemInstance* ChestTileEntity::getItem(int slot)
+{
+	int localSlot = slot;
+	ChestTileEntity* owner = getContainerForSlot(localSlot);
+	if (owner == NULL || localSlot < 0 || localSlot >= (int)owner->items.size())
+		return NULL;
+	return owner->items[localSlot];
 }
 
 bool ChestTileEntity::add(ItemInstance* item)
 {
 	const int countBefore = item != NULL ? item->count : 0;
-	const bool added = FillingContainer::add(item);
-	if (item != NULL && item->count != countBefore)
-		setChanged();
+	if (clientSideOnly || item == NULL || item->isNull()) {
+		const bool added = FillingContainer::add(item);
+		if (item != NULL && item->count != countBefore)
+			setChanged();
+		return added;
+	}
+
+	ChestTileEntity* partner = getLargeChestPartner();
+	if (partner == NULL) {
+		const bool added = FillingContainer::add(item);
+		if (item->count != countBefore)
+			setChanged();
+		return added;
+	}
+
+	const bool thisIsFirstHalf = x < partner->x || (x == partner->x && z < partner->z);
+	ChestTileEntity* first = thisIsFirstHalf ? this : partner;
+	ChestTileEntity* second = thisIsFirstHalf ? partner : this;
+	bool added = first->FillingContainer::add(item);
+	if (item->count > 0)
+		added = second->FillingContainer::add(item) || added;
+	if (item->count != countBefore) {
+		first->setChanged();
+		second->setChanged();
+	}
 	return added;
 }
 
 ItemInstance ChestTileEntity::removeItem(int slot, int count)
 {
-	if (slot < 0 || slot >= getContainerSize() || count <= 0)
+	if (count <= 0)
 		return ItemInstance();
 
-	ItemInstance* current = getItem(slot);
+	int localSlot = slot;
+	ChestTileEntity* owner = getContainerForSlot(localSlot);
+	if (owner == NULL)
+		return ItemInstance();
+
+	ItemInstance* current = owner->items[localSlot];
 	if (current == NULL || current->isNull())
 		return ItemInstance();
 
 	const int removedCount = count < current->count ? count : current->count;
 	ItemInstance removed(*current);
 	removed.count = removedCount;
-	if (removedCount >= current->count)
-		clearSlot(slot);
-	else {
+	if (removedCount >= current->count) {
+		owner->FillingContainer::clearSlot(localSlot);
+		owner->setChanged();
+	} else {
 		current->count -= removedCount;
-		setChanged();
+		owner->setChanged();
 	}
 	return removed;
 }
 
 void ChestTileEntity::clearSlot(int slot)
 {
-	if (slot < 0 || slot >= getContainerSize())
+	int localSlot = slot;
+	ChestTileEntity* owner = getContainerForSlot(localSlot);
+	if (owner == NULL)
 		return;
 
-	ItemInstance* current = getItem(slot);
+	ItemInstance* current = owner->items[localSlot];
 	const bool changed = current != NULL && !current->isNull();
-	FillingContainer::clearSlot(slot);
+	owner->FillingContainer::clearSlot(localSlot);
 	if (changed)
-		setChanged();
+		owner->setChanged();
 }
 
 void ChestTileEntity::setItem(int slot, ItemInstance* item)
 {
-	if (slot < 0 || slot >= getContainerSize())
+	int localSlot = slot;
+	ChestTileEntity* owner = getContainerForSlot(localSlot);
+	if (owner == NULL)
 		return;
 
-	FillingContainer::setItem(slot, item);
-	ItemInstance* stored = getItem(slot);
+	owner->FillingContainer::setItem(localSlot, item);
+	ItemInstance* stored = owner->items[localSlot];
 	if (stored != NULL && stored->count > getMaxStackSize())
 		stored->count = getMaxStackSize();
-	setChanged();
+	owner->setChanged();
 }
 
 std::string ChestTileEntity::getName() const

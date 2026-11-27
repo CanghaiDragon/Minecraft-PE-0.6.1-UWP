@@ -13,7 +13,9 @@
 #include "../../../../src/platform/input/Mouse.h"
 #include "../../../../src/platform/input/Multitouch.h"
 #include "../../../../src/client/Minecraft.h"
+#include "../../../../src/client/gui/screens/ChatScreen.h"
 #include "../../../../src/client/gui/screens/ProgressScreen.h"
+#include "../../../../src/client/gui/Gui.h"
 #include "../../../../src/client/Options.h"
 #include "../../../../src/client/gui/Font.h"
 #include <windows.graphics.display.h>
@@ -81,6 +83,39 @@ namespace
 			result.push_back(character >= 0 && character <= 0x7f
 				? static_cast<char>(character) : '?');
 		return result;
+	}
+
+	std::string Utf8FromPlatformString(Platform::String^ text)
+	{
+		if (text == nullptr || text->Length() == 0)
+			return std::string();
+		const int sourceLength = static_cast<int>(text->Length());
+		const int byteCount = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS,
+			text->Data(), sourceLength, nullptr, 0, nullptr, nullptr);
+		if (byteCount <= 0)
+			return std::string();
+		std::string result(static_cast<size_t>(byteCount), '\0');
+		if (WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS,
+			text->Data(), sourceLength, &result[0], byteCount,
+			nullptr, nullptr) != byteCount)
+			return std::string();
+		return result;
+	}
+
+	Platform::String^ PlatformStringFromUtf8(const std::string& text)
+	{
+		if (text.empty())
+			return ref new Platform::String(L"");
+		const int sourceLength = static_cast<int>(text.length());
+		const int characterCount = MultiByteToWideChar(CP_UTF8,
+			MB_ERR_INVALID_CHARS, text.data(), sourceLength, nullptr, 0);
+		if (characterCount <= 0)
+			return ref new Platform::String(L"");
+		std::wstring result(static_cast<size_t>(characterCount), L'\0');
+		if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
+			text.data(), sourceLength, &result[0], characterCount) != characterCount)
+			return ref new Platform::String(L"");
+		return ref new Platform::String(result.c_str());
 	}
 }
 using namespace Windows::UI::Xaml;
@@ -465,28 +500,44 @@ void MainPage::SaveActiveWorld()
 		return;
 
 	// Suspension does not necessarily arrive from the CompositionTarget frame
-	// callback.  Paint one complete save surface here before the synchronous
+	// callback. Paint one complete ProgressScreen frame before the synchronous
 	// chunk/player flush so a suspension-triggered save never exposes the blue
 	// ANGLE clear colour.
-	RenderSavingWorldFrame(false);
+	RenderSavingWorldFrame();
 	// Keep the world alive during suspension.  UwpMinecraftCore::saveGame()
 	// performs the original chunk-source saveAll(true) before level/player
 	// metadata, including the final population drain.
 	m_core.saveGame();
 }
 
-void MainPage::RenderSavingWorldFrame(bool frameAlreadyBegun)
+void MainPage::RenderSavingWorldFrame()
 {
 	if (!m_angle.isInitialized())
+		return;
+	Minecraft* originalMinecraft = m_originalClientHost.minecraft();
+	if (originalMinecraft == nullptr ||
+		(!m_originalClientHost.isOriginalClientLoopEnabled() &&
+			!m_originalClientHost.isOriginalWorldTickEnabled()))
 		return;
 
 	const float width = static_cast<float>(AnglePanel->ActualWidth);
 	const float height = static_cast<float>(AnglePanel->ActualHeight);
 	if (width <= 0.0f || height <= 0.0f)
 		return;
-	if (!frameAlreadyBegun)
-		m_angle.beginFrame(width, height);
-	m_ui.renderSavingWorld(width, height);
+	m_angle.beginFrame(width, height);
+
+	// Match Universal: render the localized save caption as an ordinary
+	// ProgressScreen through Minecraft -> GameRenderer -> Font.  Keep the
+	// current screen alive because UWP completes this synchronous save after
+	// presenting just one transition frame.
+	Screen* previousScreen = originalMinecraft->screen;
+	ProgressScreen savingScreen(true);
+	savingScreen.init(originalMinecraft,
+		static_cast<int>(originalMinecraft->width * Gui::InvGuiScale),
+		static_cast<int>(originalMinecraft->height * Gui::InvGuiScale));
+	originalMinecraft->screen = &savingScreen;
+	m_originalClientHost.render(0.0f);
+	originalMinecraft->screen = previousScreen;
 	m_angle.present();
 }
 
@@ -559,6 +610,7 @@ void MainPage::OnRendering(Object^, Object^)
 	// invokes the original Minecraft -> GameRenderer -> LevelRenderer chain;
 	// OnGameRender only prepares the UWP HUD overlay afterward.
 	m_gameLoop.advance(elapsedSeconds);
+	SyncChatImeHost();
 	SyncOriginalMouseCursor();
 	if (m_core.isActive() && !m_originalMenuActive)
 	{
@@ -1624,14 +1676,13 @@ void MainPage::OnGameTick(std::uint64_t tick)
 			// Minecraft::leaveGame() has already detached the borrowed pointers
 			// without deleting them.  Clear renderer references before the owning
 			// UWP session saves and destroys the Level/LocalPlayer.
+			if (m_core.isActive())
+				RenderSavingWorldFrame();
 			m_originalClientHost.setWorldTickEnabled(false);
 			m_originalClientHost.detachWorld();
 			m_worldRenderer.setLevel(nullptr);
 			if (m_core.isActive())
-			{
-				RenderSavingWorldFrame(true);
 				m_core.stop();
-			}
 			if (m_exitAfterWorldSave)
 			{
 				m_exitAfterWorldSave = false;
@@ -1672,6 +1723,32 @@ void MainPage::OnGameTick(std::uint64_t tick)
 	}
 	if (m_originalClientHost.isOriginalWorldTickEnabled())
 	{
+		if (m_worldLeaveSavePending)
+		{
+			// Keep the ordinary ProgressScreen on screen for at least one full
+			// presented frame before the synchronous UWP save begins.
+			if (!m_worldLeaveProgressRendered)
+				return;
+
+			m_worldLeaveSavePending = false;
+			m_worldLeaveProgressRendered = false;
+			m_originalClientHost.setWorldTickEnabled(false);
+			m_originalClientHost.detachWorld();
+			m_worldRenderer.setLevel(nullptr);
+			if (m_core.isActive())
+				m_core.stop();
+			if (m_exitAfterWorldSave)
+			{
+				m_exitAfterWorldSave = false;
+				Windows::ApplicationModel::Core::CoreApplication::Exit();
+				return;
+			}
+			m_worldCreationPending = false;
+			m_originalClientHost.setLoopEnabled(true);
+			m_originalMenuActive = m_originalClientHost.showStartMenu();
+			return;
+		}
+
 		// The original client now owns Level/LocalPlayer simulation.  Keep the
 		// UWP scheduler as the single frame source, but route this tick through
 		// NinecraftApp::updateFixedStep -> Minecraft::updateUwpFixedStep ->
@@ -1696,15 +1773,20 @@ void MainPage::OnGameTick(std::uint64_t tick)
 		{
 			// Minecraft::leaveGame() detached the borrowed pointers from the
 			// original client.  UwpCoreSession remains the owner and performs the
-			// save/destruction here, after all renderer references are cleared.
+			// save/destruction here. Let its normal ProgressScreen render for one
+			// complete frame before stopping the session.
+			if (m_core.isActive() && originalMinecraft != nullptr)
+			{
+				originalMinecraft->setScreen(new ProgressScreen(true));
+				m_worldLeaveSavePending = true;
+				m_worldLeaveProgressRendered = false;
+				return;
+			}
 			m_originalClientHost.setWorldTickEnabled(false);
 			m_originalClientHost.detachWorld();
 			m_worldRenderer.setLevel(nullptr);
 			if (m_core.isActive())
-			{
-				RenderSavingWorldFrame(true);
 				m_core.stop();
-			}
 			if (m_exitAfterWorldSave)
 			{
 				m_exitAfterWorldSave = false;
@@ -1829,6 +1911,13 @@ void MainPage::OnGameRender(float alpha)
 		// GameRenderer -> LevelRenderer chain, without advancing simulation here.
 		consumeOriginalLightUpdates();
 		m_originalClientHost.render(alpha);
+		if (m_worldLeaveSavePending)
+		{
+			Minecraft* originalMinecraft = m_originalClientHost.minecraft();
+			if (originalMinecraft != nullptr &&
+				dynamic_cast<ProgressScreen*>(originalMinecraft->screen) != nullptr)
+				m_worldLeaveProgressRendered = true;
+		}
 		Mouse::reset2();
 		// Do not submit the UWP terrain pass on top of the original frame;
 		// MainPage only keeps the UWP HUD overlay and final EGL presentation.
@@ -2029,6 +2118,11 @@ void MainPage::OnKeyDown(Windows::UI::Core::CoreWindow^,
 		e->Handled = true;
 		return;
 	}
+	// The focused XAML edit host owns chat keystrokes so the UWP text service
+	// can compose IME input. Its KeyDown handler forwards only chat submit/cancel.
+	if (m_chatImeSessionActive && ChatImeHost->FocusState !=
+		Windows::UI::Xaml::FocusState::Unfocused)
+		return;
 	const auto coreWindow = Windows::UI::Core::CoreWindow::GetForCurrentThread();
 	const auto controlState = coreWindow != nullptr
 		? coreWindow->GetKeyState(VirtualKey::Control)
@@ -2173,7 +2267,11 @@ void MainPage::OnKeyUp(Windows::UI::Core::CoreWindow^,
 	}
 	if (!FeedOriginalKeyboard(e->VirtualKey, false))
 		return;
-	e->Handled = true;
+	// Let the native chat edit host receive key-up events for IME processing,
+	// while still releasing any game key that was pressed before chat opened.
+	if (!m_chatImeSessionActive || ChatImeHost->FocusState ==
+		Windows::UI::Xaml::FocusState::Unfocused)
+		e->Handled = true;
 	if (m_originalMenuActive &&
 		(e->VirtualKey == VirtualKey::Up || e->VirtualKey == VirtualKey::Down))
 		Keyboard::feed(e->VirtualKey == VirtualKey::Up ? 38 : 40,
@@ -2293,6 +2391,13 @@ void MainPage::OnCharacterReceived(Windows::UI::Core::CoreWindow^,
 		e->Handled = true;
 		return;
 	}
+	if (m_chatImeSessionActive && ChatImeHost->FocusState !=
+		Windows::UI::Xaml::FocusState::Unfocused)
+	{
+		// Chat text now comes from the focused native text control. Do not also
+		// enqueue it; leave the event unhandled so XAML TextBox can process it.
+		return;
+	}
 	const unsigned int code = e->KeyCode;
 	if (code == 'v' || code == 'V')
 	{
@@ -2331,6 +2436,90 @@ void MainPage::OnCharacterReceived(Windows::UI::Core::CoreWindow^,
 			Keyboard::feedText(static_cast<char>(0x80u | ((code >> 6) & 0x3fu)));
 			Keyboard::feedText(static_cast<char>(0x80u | (code & 0x3fu)));
 		}
+	}
+}
+
+void MainPage::OnChatImeTextChanged(Platform::Object^,
+	Windows::UI::Xaml::Controls::TextChangedEventArgs^)
+{
+	if (!m_chatImeSessionActive)
+		return;
+	Minecraft* minecraft = m_originalClientHost.minecraft();
+	ChatScreen* chat = minecraft != nullptr
+		? dynamic_cast<ChatScreen*>(minecraft->screen) : nullptr;
+	if (chat == nullptr || !chat->isMessageInputFocused())
+		return;
+
+	const std::string enteredText = Utf8FromPlatformString(ChatImeHost->Text);
+	chat->setMessageText(enteredText);
+	const std::string& acceptedText = chat->messageText();
+	if (acceptedText != enteredText)
+	{
+		ChatImeHost->Text = PlatformStringFromUtf8(acceptedText);
+		ChatImeHost->SelectionStart = ChatImeHost->Text->Length();
+	}
+}
+
+void MainPage::OnChatImeKeyDown(Platform::Object^,
+	Windows::UI::Xaml::Input::KeyRoutedEventArgs^ e)
+{
+	if (!m_chatImeSessionActive || e == nullptr || e->Handled)
+		return;
+	using Windows::System::VirtualKey;
+	if (e->Key == VirtualKey::Enter)
+	{
+		Keyboard::feed(static_cast<unsigned char>(Keyboard::KEY_RETURN),
+			KeyboardAction::KEYDOWN);
+		e->Handled = true;
+	}
+	else if (e->Key == VirtualKey::Escape)
+	{
+		Keyboard::feed(static_cast<unsigned char>(Keyboard::KEY_ESCAPE),
+			KeyboardAction::KEYDOWN);
+		e->Handled = true;
+	}
+}
+
+void MainPage::SyncChatImeHost()
+{
+	Minecraft* minecraft = m_originalClientHost.minecraft();
+	ChatScreen* chat = minecraft != nullptr
+		? dynamic_cast<ChatScreen*>(minecraft->screen) : nullptr;
+	const bool shouldActivate = chat != nullptr && chat->isMessageInputFocused();
+	if (shouldActivate)
+	{
+		ChatImeHost->Visibility = Windows::UI::Xaml::Visibility::Visible;
+		m_chatImeSessionActive = ChatImeHost->FocusState !=
+			Windows::UI::Xaml::FocusState::Unfocused;
+		if (!m_chatImeSessionActive)
+		{
+			ChatImeHost->Text = PlatformStringFromUtf8(chat->messageText());
+			ChatImeHost->SelectionStart = ChatImeHost->Text->Length();
+			// Control::Focus ignores the request while IsTabStop is false.
+			// Add this hidden host to tab navigation only for the chat session.
+			ChatImeHost->IsTabStop = true;
+			// Only take over CoreWindow input if the native edit host actually
+			// receives focus. Otherwise ordinary keyboard input keeps its old path.
+			m_chatImeSessionActive = ChatImeHost->Focus(
+				Windows::UI::Xaml::FocusState::Programmatic);
+			if (!m_chatImeSessionActive)
+				ChatImeHost->IsTabStop = false;
+		}
+		return;
+	}
+
+	if (m_chatImeSessionActive || ChatImeHost->FocusState !=
+		Windows::UI::Xaml::FocusState::Unfocused ||
+		ChatImeHost->Visibility != Windows::UI::Xaml::Visibility::Collapsed)
+	{
+		const bool hostHadFocus = ChatImeHost->FocusState !=
+			Windows::UI::Xaml::FocusState::Unfocused;
+		m_chatImeSessionActive = false;
+		ChatImeHost->Text = L"";
+		if (hostHadFocus)
+			Focus(Windows::UI::Xaml::FocusState::Programmatic);
+		ChatImeHost->IsTabStop = false;
+		ChatImeHost->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
 	}
 }
 
@@ -2739,6 +2928,7 @@ void MainPage::BeginOriginalClientTexturePreload()
         "gui/inventory_slot.png",
 		"gui/gui_blocks.png",
 		"gui/items.png",
+		"gui/items_0.8.png",
 		"gui/icons.png",
 		"gui/cursor.png",
 		"gui/touchgui.png",
@@ -2752,6 +2942,7 @@ void MainPage::BeginOriginalClientTexturePreload()
 		"gui/badge/minecon140.png",
 		"item/arrows.png",
 		"item/sign.png",
+		"entity/minecart.png",
 		"environment/clouds.png",
 		"environment/snow.png",
 		"terrain/sun.png",

@@ -40,6 +40,7 @@ public:
 	virtual void remove();
 
     virtual void setPos(float x, float y, float z);
+	float getYRot() const { return yRot; }
 	virtual void move(float xa, float ya, float za);
 	virtual void moveTo(float x, float y, float z, float yRot, float xRot);
 	virtual void moveRelative(float xa, float za, float speed);
@@ -85,6 +86,9 @@ public:
     virtual bool isShootable();
 
 	virtual bool isSneaking();
+	virtual void ride(Entity* vehicle);
+	virtual void positionRider(Entity* passenger);
+	virtual void setRidingInput(float strafe, float forward) {}
 
 	virtual bool isAlive();
 	virtual bool isOnFire();
@@ -162,6 +166,8 @@ public:
 	float xd, yd, zd;
 	float yRot, xRot;
 	float yRotO, xRotO;
+	Entity* ridingAt;
+	Entity* rider;
 
 	AABB bb;
 

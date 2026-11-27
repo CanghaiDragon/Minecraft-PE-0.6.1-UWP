@@ -39,4 +39,5 @@ const char* OptionStrings::Skin_Menu = "skin_menu";
 const char* OptionStrings::Touch_Sneak = "touch_sneak";
 const char* OptionStrings::Extra_DebugScreen = "extra_debug_screen";
 const char* OptionStrings::Extra_Achievements = "extra_achievements";
+const char* OptionStrings::Extra_PE08Recipes = "extra_pe08_recipes";
 const char* OptionStrings::Extra_JavaUI = "extra_java_ui";

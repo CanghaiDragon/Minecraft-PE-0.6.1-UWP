@@ -17,15 +17,19 @@ public:
 	int worldType;
 	int indevType;
 	bool hasExtendedWorldInfo;
+	bool alphaWinterMode;
+	bool hasAlphaWinterMode;
 
 	StartGamePacket()
 	: levelSeed(0), levelGeneratorVersion(0), gameType(0), entityId(0),
-	  x(0), y(0), z(0), worldType(0), indevType(0), hasExtendedWorldInfo(false)
+	  x(0), y(0), z(0), worldType(0), indevType(0), hasExtendedWorldInfo(false),
+	  alphaWinterMode(false), hasAlphaWinterMode(false)
 	{
 	}
 
 	StartGamePacket(long seed, int levelGeneratorVersion, int gameType, int entityId, float x, float y, float z,
-		int worldType = 0, int indevType = 0, bool hasExtendedWorldInfo = false)
+		int worldType = 0, int indevType = 0, bool hasExtendedWorldInfo = false,
+		bool alphaWinterMode = false)
 	:	levelSeed(seed),
 		levelGeneratorVersion(levelGeneratorVersion),
 		gameType(gameType),
@@ -35,7 +39,9 @@ public:
 		z(z),
 		worldType(worldType),
 		indevType(indevType),
-		hasExtendedWorldInfo(hasExtendedWorldInfo)
+		hasExtendedWorldInfo(hasExtendedWorldInfo),
+		alphaWinterMode(alphaWinterMode),
+		hasAlphaWinterMode(false)
 	{
 	}
 
@@ -53,6 +59,7 @@ public:
 		if (hasExtendedWorldInfo) {
 			bitStream->Write(worldType);
 			bitStream->Write(indevType);
+			bitStream->Write(alphaWinterMode);
 		}
 	}
 
@@ -71,6 +78,10 @@ public:
 			bitStream->Read(worldType);
 			bitStream->Read(indevType);
 			hasExtendedWorldInfo = true;
+			if (bitStream->GetNumberOfUnreadBits() >= 1) {
+				bitStream->Read(alphaWinterMode);
+				hasAlphaWinterMode = true;
+			}
 		}
 	}
 
