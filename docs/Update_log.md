@@ -2,6 +2,18 @@
 
 This changelog covers the UWP project. It is separate from the Win32 changelog.
 
+## 1.2.1.1
+
+Bug fix:
+
+- Winter world can correctly convert to PE 0.9+.
+
+Improvements:
+
+- Slightly expand the reginal determination for activating nethor reactor.
+
+- Add the option to directly output .mcworld file when converting to PE 0.9+. 
+
 ## 1.2.1
 
 Bug fix:

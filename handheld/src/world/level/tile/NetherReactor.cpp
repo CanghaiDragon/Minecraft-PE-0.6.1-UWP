@@ -69,7 +69,7 @@ bool NetherReactor::allPlayersCloseToReactor( Level* level, int x, int y, int z 
 	for(PlayerList::const_iterator i =  level->players.begin(); i != level->players.end(); ++i) {
 		Player* currentPlayer = (*i);
 		if(!(currentPlayer->x >= x - 5 && currentPlayer->x <= x + 5)) return false;
-		if(!(currentPlayer->y - currentPlayer->heightOffset >= y -1 &&  currentPlayer->y - currentPlayer->heightOffset <= y + 1)) return false;
+		if(!(currentPlayer->y - currentPlayer->heightOffset >= y - 1.5f && currentPlayer->y - currentPlayer->heightOffset <= y + 1.5f)) return false;
 		if(!(currentPlayer->z >= z - 5 && currentPlayer->z <= z + 5)) return false;
 	}
 	return true;

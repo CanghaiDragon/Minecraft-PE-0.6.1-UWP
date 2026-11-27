@@ -13,7 +13,8 @@ legacy block-light or player-data migration.
 
 The sea-level checkbox removes old `y=63` water/ice. A separate Winter-only
 checkbox can also freeze `y=62` water, but it is applied only to Alpha worlds
-whose seed selects the Winter biome and only when sea-level lowering is enabled.
+whose saved `AlphaWinterMode` selects Winter and only when sea-level lowering
+is enabled. Older Alpha saves without this flag use the original seed rule.
 
 A separate Sky-only checkbox can fill air at `y=0..4` with bedrock, giving
 converted Sky chunks a continuous bottom floor.

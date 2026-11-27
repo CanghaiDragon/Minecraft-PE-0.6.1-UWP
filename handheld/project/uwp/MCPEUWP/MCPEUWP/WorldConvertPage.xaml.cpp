@@ -114,6 +114,8 @@ void WorldConvertPage::SetWorldContext(
 			showFloatingBedrock ? visible : collapsed;
 		FloatingBedrockFloorCheckBox->IsChecked = false;
 	}
+	if (McWorldOutputCheckBox != nullptr)
+		McWorldOutputCheckBox->IsChecked = false;
 	if (StorageFormatWarningText != nullptr)
 		StorageFormatWarningText->Visibility =
 			currentStorageFormat ? collapsed : visible;
@@ -132,8 +134,11 @@ void WorldConvertPage::SetWorldContext(
 
 	if (DestinationPathText != nullptr)
 	{
-		DestinationPathText->Text = ref new String(
-			L"Choose a destination ZIP file after clicking Convert");
+		String^ destinationHint =
+			UwpXamlLocalization::get("uwp.worldConvert.destinationHint");
+		DestinationPathText->Text = destinationHint != nullptr
+			? destinationHint
+			: ref new String(L"Choose a destination file after clicking Convert");
 	}
 	UpdateConversionMode();
 
@@ -224,7 +229,7 @@ void WorldConvertPage::OnConvertClick(
 	if (ConversionProgressBar != nullptr)
 		ConversionProgressBar->Visibility =
 			Windows::UI::Xaml::Visibility::Visible;
-	SetStatus(L"Choose a destination ZIP file...");
+	SetStatus(L"Choose a destination file...");
 
 	const std::wstring sourceDirectory(m_sourceDirectory->Data());
 	const std::wstring worldName = m_worldName == nullptr
@@ -246,14 +251,26 @@ void WorldConvertPage::OnConvertClick(
 		FloatingBedrockFloorCheckBox->IsChecked != nullptr &&
 		FloatingBedrockFloorCheckBox->IsChecked->Value;
 	const bool convertTo17VoidWorld = m_convertTo17VoidWorld;
+	const bool saveAsMcWorld = McWorldOutputCheckBox != nullptr &&
+		McWorldOutputCheckBox->IsChecked != nullptr &&
+		McWorldOutputCheckBox->IsChecked->Value;
 	auto result = std::make_shared<ConversionResult>();
 	auto picker = ref new FileSavePicker();
 	picker->SuggestedStartLocation = PickerLocationId::Downloads;
 	picker->SuggestedFileName = ref new String(L"converted_world");
-	auto zipExtensions = ref new Platform::Collections::Vector<String^>();
-	zipExtensions->Append(ref new String(L".zip"));
+	picker->DefaultFileExtension = saveAsMcWorld ? L".mcworld" : L".zip";
+	auto archiveExtensions = ref new Platform::Collections::Vector<String^>();
+	archiveExtensions->Append(ref new String(
+		saveAsMcWorld ? L".mcworld" : L".zip"));
+	String^ archiveTypeName = UwpXamlLocalization::get(saveAsMcWorld
+		? "uwp.worldConvert.mcworldArchive"
+		: "uwp.worldConvert.zipArchive");
+	if (archiveTypeName == nullptr)
+		archiveTypeName = ref new String(saveAsMcWorld
+			? L"Minecraft world (.mcworld)"
+			: L"ZIP archive");
 	picker->FileTypeChoices->Insert(
-		ref new String(L"ZIP archive"), zipExtensions);
+		archiveTypeName, archiveExtensions);
 
 	create_task(picker->PickSaveFileAsync())
 		.then([this, sourceDirectory, worldName, testLimit, lowerSeaLevel,
@@ -270,7 +287,7 @@ void WorldConvertPage::OnConvertClick(
 			result->outputPath = outputFile->Path->Data();
 			if (DestinationPathText != nullptr)
 				DestinationPathText->Text = outputFile->Path;
-			SetStatus(L"Converting the world and preparing the ZIP file...");
+			SetStatus(L"Converting the world and preparing the archive...");
 
 			return create_task(UwpStoragePaths::ensureTemporaryWorldsFolderAsync())
 			.then([](StorageFolder^ root) {
@@ -358,8 +375,16 @@ void WorldConvertPage::OnConvertClick(
 				if (result->cancelled)
 					SetStatus(L"Conversion cancelled.");
 				else if (result->success)
-					SetStatus(std::wstring(L"Conversion complete. ZIP saved to:\n") +
-						result->outputPath);
+				{
+					String^ completionPrefix =
+						UwpXamlLocalization::get("uwp.worldConvert.complete");
+					std::wstring message = completionPrefix != nullptr
+						? std::wstring(completionPrefix->Data())
+						: std::wstring(L"Conversion complete. Archive saved to:");
+					message += L"\n";
+					message += result->outputPath;
+					SetStatus(message);
+				}
 				else
 					SetStatus(L"Conversion failed: " + result->error);
 			}
@@ -399,7 +424,17 @@ void WorldConvertPage::OnConvertClick(
 void WorldConvertPage::SetStatus(const std::wstring& text)
 {
 	if (ConversionStatusText != nullptr)
-		ConversionStatusText->Text = ref new String(text.c_str());
+	{
+		String^ status = ref new String(text.c_str());
+		const char* key = UwpXamlLocalization::findKey(status);
+		if (key != nullptr)
+		{
+			String^ localized = UwpXamlLocalization::get(key);
+			if (localized != nullptr)
+				status = localized;
+		}
+		ConversionStatusText->Text = status;
+	}
 }
 
 void WorldConvertPage::OnBackClick(

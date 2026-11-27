@@ -81,6 +81,13 @@ int64_t longValue(const Tag& t, int64_t fallback = 0) {
  for (int i = 0; i < 8; ++i) value |= uint64_t(t.scalar[i]) << (i * 8);
  return static_cast<int64_t>(value);
 }
+bool resolveAlphaWinterMode(const Tag& source, bool alphaWorld, int64_t seed) {
+ if (!alphaWorld) return false;
+ const Tag savedMode = child(source, "AlphaWinterMode");
+ if (savedMode.type == 1 && !savedMode.scalar.empty())
+  return savedMode.scalar[0] != 0;
+ return converter::legacy::BiomeSource::isAlphaWinterSeed(seed);
+}
 double doubleValue(const Tag& t, double fallback = 0.0) {
  if (t.type != 6 || t.scalar.size() < 8) return fallback;
  uint64_t value = 0;
@@ -649,10 +656,11 @@ bool blocksLightBlock(uint8_t id) {
  case 37: case 38: case 39: case 40: case 50: case 51: case 55:
  case 59: case 63: case 64: case 65: case 66: case 68: case 69:
  case 70: case 71: case 72: case 75: case 76: case 77: case 78:
- case 83: case 90: case 92: case 93: case 94: case 96: case 104:
+ case 83: case 90: case 92: case 93: case 94: case 96: case 101:
+ case 102: case 104:
  case 105: case 106: case 111: case 115: case 127: case 131:
- case 132: case 141: case 142: case 143: case 147: case 148:
- case 149: case 150: case 157:
+ case 132: case 139: case 141: case 142: case 143: case 147: case 148:
+ case 149: case 150: case 171: case 244:
   return false;
  default:
   return true;
@@ -1098,8 +1106,8 @@ bool Convert(const Options& o,const Log& log,std::wstring& error) try {
  const bool skyWorld = sourceWorldType == 2;
  const bool alphaWorld = sourceWorldType == 3;
  const bool plainsWorld = sourceWorldType == 4 || sourceWorldType == 5;
- const bool winterWorld = alphaWorld && ((static_cast<std::uint64_t>(sourceSeed) & 3ULL) == 0ULL);
- legacy::BiomeSource biomes(sourceSeed,skyWorld,alphaWorld,plainsWorld);
+ const bool winterWorld = resolveAlphaWinterMode(source, alphaWorld, sourceSeed);
+ legacy::BiomeSource biomes(sourceSeed,skyWorld,alphaWorld,plainsWorld,winterWorld);
  const bool freezeWinterWater = o.lowerSeaLevel && o.freezeWinterWater && winterWorld;
  const bool skyBedrockFloor = o.skyBedrockFloor && skyWorld;
  const bool floatingIndevWorld = sourceWorldType == 4 && sourceIndevType == 2;
@@ -1147,8 +1155,7 @@ bool Convert(const Options& o,const Log& log,std::wstring& error) try {
   std::wstring biomeSourceDescription = finiteWorld ? L"Finite world seed climate" : L"Beta climate noise";
   if (skyWorld) biomeSourceDescription = L"Sky (fixed Ice Plains)";
   else if (alphaWorld) {
-   const bool winter = (static_cast<std::uint64_t>(sourceSeed) & 3ULL) == 0ULL;
-   biomeSourceDescription = winter ? L"Alpha/Winter (fixed Ice Plains)" : L"Alpha (fixed Plains)";
+   biomeSourceDescription = winterWorld ? L"Alpha/Winter (fixed Ice Plains)" : L"Alpha (fixed Plains)";
   }
   else if (plainsWorld) biomeSourceDescription = L"Indev/EarlyInfdev (fixed Plains)";
   log(L"Legacy biome source: "+biomeSourceDescription);
@@ -1248,7 +1255,8 @@ bool Convert17(const Options17& o,const Log& log,std::wstring& error) try {
   }
 
   const int64_t sourceSeed=longValue(child(source,"RandomSeed"));
-  legacy::BiomeSource biomes(sourceSeed,skyWorld,alphaWorld,plainsWorld);
+  const bool winterWorld=resolveAlphaWinterMode(source,alphaWorld,sourceSeed);
+  legacy::BiomeSource biomes(sourceSeed,skyWorld,alphaWorld,plainsWorld,winterWorld);
 
   if(skyWorld) {
    // Do not remap Sky to Plains: the existing snow/ice blocks must retain a

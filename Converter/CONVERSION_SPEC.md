@@ -43,9 +43,10 @@ future changes can be compared against a known baseline.
   disabled by default and is available for finite, Infinite, and Alpha
   sources; all of these 0.6.1 world types use the y=63 sea surface.
 - A separate Winter-only option can be used together with the sea-level
-  adjustment. For an Alpha world whose seed selects `Biome::winter`, it
-  changes remaining water at `y=62` (IDs 8 and 9) to ice (ID 79). It has no
-  effect for ordinary Infinite, Sky, or non-Winter Alpha worlds.
+  adjustment. For an Alpha world whose saved `AlphaWinterMode` selects Winter,
+  it changes remaining water at `y=62` (IDs 8 and 9) to ice (ID 79). It has no
+  effect for ordinary Infinite, Sky, or non-Winter Alpha worlds. Legacy Alpha
+  saves without `AlphaWinterMode` use the original seed rule as a fallback.
 - A separate Sky-only option replaces air at `y=0..4` with bedrock (ID 7) in
   each converted chunk. Existing non-air blocks in that range are preserved;
   the option has no effect for Infinite or Alpha worlds.
@@ -57,8 +58,8 @@ future changes can be compared against a known baseline.
 
 For ordinary Infinite worlds, the source climate calculation is the Beta-era
 UWP `BiomeSource`/`Biome` algorithm, seeded from `RandomSeed`. Sky worlds use
-their fixed Sky biome, and Alpha worlds use the seed-selected fixed Alpha or
-Winter biome. The selected 0.9 mapping is:
+their fixed Sky biome, and Alpha worlds use the fixed biome selected by the
+saved `AlphaWinterMode` flag. The selected 0.9 mapping is:
 
 | 0.6.1 biome | 0.9 biome |
 |---|---|
@@ -77,8 +78,9 @@ Winter biome. The selected 0.9 mapping is:
 | Alpha | Plains (1) |
 | Winter | Ice Plains (12) |
 
-Alpha worlds use the same seed rule as the source game: `seed & 3 == 0`
-selects the fixed Winter biome; all other seeds select the fixed Alpha biome.
+For older Alpha saves without `AlphaWinterMode`, the converter falls back to
+the original rule: `seed & 3 == 0` selects the fixed Winter biome; all other
+seeds select the fixed Alpha biome.
 
 When a legacy column contains a snow layer (IDs 78 or 80), its target biome
 is forced to Snowy Plains / Ice Plains (12) unless it is already Ice Plains

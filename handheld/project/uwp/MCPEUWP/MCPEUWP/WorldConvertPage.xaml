@@ -39,18 +39,26 @@
                            TextWrapping="Wrap"
                            Margin="0,0,0,12" />
 
-                <TextBlock Text="Output ZIP file"
+                <TextBlock Text="Output archive"
                            Foreground="White"
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="18"
                            Margin="0,4,0,4" />
                 <TextBlock x:Name="DestinationPathText"
-                           Text="Choose a destination ZIP file after clicking Convert"
+                           Text="Choose a destination file after clicking Convert"
                            Foreground="#FFB0E0FF"
                            FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
                            FontSize="14"
                            TextWrapping="Wrap"
                            Margin="0,0,0,14" />
+
+                <CheckBox x:Name="McWorldOutputCheckBox"
+                          Content="Export as .mcworld (Minecraft world)"
+                          IsChecked="False"
+                          Foreground="White"
+                          FontFamily="ms-appx:///data/fonts/minecraft.ttf#Minecraft,ms-appx:///data/fonts/unifont-18.0.01.otf#Unifont"
+                          FontSize="16"
+                          Margin="0,2,0,12" />
 
                 <CheckBox x:Name="TestLimitCheckBox"
                           Content="Convert at most 64 chunks near the saved player (test)"

@@ -1244,8 +1244,9 @@ uwp.worldImport.failed=Could not import ZIP.
 uwp.worldConvert.title=Convert to PE 0.9+
 uwp.worldConvert.source=Source world
 uwp.worldConvert.notConfigured=Not configured
-uwp.worldConvert.output=Output ZIP file
-uwp.worldConvert.destinationHint=Choose a destination ZIP file after clicking Convert
+uwp.worldConvert.output=Output archive
+uwp.worldConvert.destinationHint=Choose a destination file after clicking Convert
+uwp.worldConvert.mcworldOutput=Export as .mcworld (Minecraft world)
 uwp.worldConvert.chunkLimit=Convert at most 64 chunks near the saved player (test)
 uwp.worldConvert.voidWorld=Convert to 1.17+ void world
 uwp.worldConvert.lowerSea=Lower sea level: clear y=63 water/ice and restore grass at y=62
@@ -1259,16 +1260,18 @@ uwp.save=Save
 
 uwp.worldConvert.peSelected=PE 0.9 conversion selected.
 uwp.worldConvert.zipArchive=ZIP archive
+uwp.worldConvert.mcworldArchive=Minecraft world (.mcworld)
 uwp.worldConvert.needsUpgrade=Conversion is unavailable until this world is opened and saved in the game to upgrade it to the latest UWP storage format.
 uwp.worldConvert.unsupported=This world type is not supported by the PE 0.9 converter.
 uwp.key.leftCtrl=Left Ctrl
 uwp.worldConvert.noSource=No source world is configured.
 uwp.worldConvert.voidSelectedShort=Bedrock 1.17+ void conversion selected. New chunks will be pure void.
-uwp.worldConvert.converting=Converting the world and preparing the ZIP file...
+uwp.worldConvert.converting=Converting the world and preparing the archive...
 uwp.key.mouseRight=Mouse Right
 uwp.worldImport.incompatible=This world cannot be imported by Minecraft PE 0.6.1.
 uwp.key.enter=Enter
-uwp.worldConvert.chooseDestination=Choose a destination ZIP file...
+uwp.worldConvert.chooseDestination=Choose a destination file...
+uwp.worldConvert.complete=Conversion complete. Archive saved to:
 uwp.worldConvert.blocked=Conversion blocked. Open and save this world in the game first to upgrade its UWP storage format.
 uwp.key.leftShift=Left Shift
 uwp.worldConvert.fullSelected=Full conversion is enabled by default. The original world is not modified.
@@ -1365,10 +1368,4 @@ tile.stairsBirch.name=Birch Wood Stairs
 tile.stairsJungle.name=Jungle Wood Stairs
 tile.pumpkinStem.name=Pumpkin Stem
 tile.ironBars.name=Iron Bars
-tile.cobbleWall.name=Cobblestone Wall
-tile.carrots.name=Carrots
-tile.potatoes.name=Potatoes
-tile.hayBlock.name=Hay Bale
-tile.blockCoal.name=Block of Coal
-tile.beetrootCrop.name=Beetroot Crops
-                                                                                
+tile.cobbleWa

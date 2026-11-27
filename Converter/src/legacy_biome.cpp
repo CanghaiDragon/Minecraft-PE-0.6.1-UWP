@@ -140,19 +140,19 @@ std::int32_t BiomeSource::seedProduct(std::int64_t seedValue, std::int32_t multi
 }
 
 bool BiomeSource::isAlphaWinterSeed(std::int64_t seedValue) {
-    // Keep this identical to WorldType::isAlphaWinter in the UWP/Win32 game.
+    // Compatibility fallback for older Alpha saves without AlphaWinterMode.
     return (static_cast<std::uint64_t>(seedValue) & 3ULL) == 0ULL;
 }
 
 BiomeSource::BiomeSource(std::int64_t seedValue, bool skyWorld, bool alphaWorld,
-                         bool plainsWorld)
+                         bool plainsWorld, bool alphaWinter)
     : temperature_(seedProduct(seedValue, 9871), 4),
       downfall_(seedProduct(seedValue, 39811), 4),
       noise_(seedProduct(seedValue, 543321), 2),
       skyWorld_(skyWorld),
       alphaWorld_(alphaWorld),
       plainsWorld_(plainsWorld),
-      alphaWinter_(alphaWorld && isAlphaWinterSeed(seedValue)) {}
+      alphaWinter_(alphaWorld && alphaWinter) {}
 
 std::uint8_t BiomeSource::classify(float temperature, float downfall) {
     downfall *= temperature;

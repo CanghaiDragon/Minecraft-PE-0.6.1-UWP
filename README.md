@@ -75,7 +75,7 @@ The Debug function includes four features: a Java Edition-style debug screen (to
 
 ![Debug](docs/debug.png)
 
-<img title="" src="docs/debug_game_en.png" alt="" data-align="center" style="zoom:100%;">
+<img title="" src="docs/debug_game.png" alt="" data-align="center" style="zoom:100%;">
 
 <div align="center"> Debug Function</div>
 

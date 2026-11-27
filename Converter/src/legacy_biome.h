@@ -52,16 +52,17 @@ private:
 class BiomeSource {
 public:
     // skyWorld and alphaWorld correspond to WorldType::Sky and
-    // WorldType::Alpha in the UWP source.  Both use a FixedBiomeSource there,
-    // so no climate noise is sampled for those world types.  Alpha's fixed
-    // biome is selected from the seed in the same way as the game: seeds whose
-    // low two bits are zero use Winter, all other seeds use Alpha.
+    // WorldType::Alpha in the UWP source. Both use a FixedBiomeSource there,
+    // so no climate noise is sampled for those world types. The caller passes
+    // Alpha's resolved saved Winter mode; legacy saves without that field use
+    // the old seed rule as a fallback.
     BiomeSource(std::int64_t seed, bool skyWorld, bool alphaWorld,
-                bool plainsWorld = false);
+                bool plainsWorld, bool alphaWinter);
 
     std::uint8_t targetBiomeId(int blockX, int blockZ) const;
     std::uint32_t targetBiomeColor(std::uint8_t id) const;
     bool isFixedPlainsWorld() const { return plainsWorld_; }
+    static bool isAlphaWinterSeed(std::int64_t seed);
 
 private:
     PerlinNoise temperature_;
@@ -73,7 +74,6 @@ private:
     bool alphaWinter_ = false;
 
     static std::int32_t seedProduct(std::int64_t seed, std::int32_t multiplier);
-    static bool isAlphaWinterSeed(std::int64_t seed);
     static std::uint8_t classify(float temperature, float downfall);
 };
 

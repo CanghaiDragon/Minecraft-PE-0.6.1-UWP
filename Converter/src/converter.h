@@ -18,7 +18,7 @@ struct Options {
   bool lowerSeaLevel = false;
 
   // Winter-only option. Applied only with lowerSeaLevel and for an Alpha
-  // world whose seed selects Biome::winter.
+  // world whose saved AlphaWinterMode selects Winter.
   bool freezeWinterWater = false;
 
   // Alpha/Winter surface snow is derived automatically when lowerSeaLevel is
